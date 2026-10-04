@@ -76,12 +76,14 @@ public static class JsonAssert
     {
         var ev = expected.GetDouble();
         var av = actual.GetDouble();
+        // Always compare exactly unless a tolerance is given; comparing raw text would treat two
+        // very large integers as equal when they differ (e.g. 9007199254740993 vs ...94).
         if (tolerance > 0)
         {
             if (Math.Abs(ev - av) > tolerance)
                 throw Fail(path, $"expected {Fmt(ev)} ±{Fmt(tolerance)}, got {Fmt(av)}");
         }
-        else if (!expected.GetRawText().Equals(actual.GetRawText(), StringComparison.Ordinal) && ev != av)
+        else if (ev != av)
         {
             throw Fail(path, $"expected {Fmt(ev)}, got {Fmt(av)}");
         }

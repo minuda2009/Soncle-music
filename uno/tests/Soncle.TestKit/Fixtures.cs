@@ -3,14 +3,13 @@ namespace Soncle.TestKit;
 
 /// <summary>
 /// Locates the repository's shared <c>fixtures/</c> folder. Tests run from a per-project output
-/// directory, so we walk up until a folder containing <c>fixtures</c> is found.
+/// directory, so we walk up until a folder containing <c>fixtures</c> is found. The root is looked
+/// up lazily on each call, so the helper keeps working whether or not M01 has added the folder yet.
 /// </summary>
 public static class Fixtures
 {
-    private static readonly Lazy<string> Root = new(FindRoot);
-
     /// <summary>The absolute path to the repository's <c>fixtures/</c> folder.</summary>
-    public static string RootPath => Root.Value;
+    public static string RootPath => FindRoot();
 
     /// <summary>The absolute path to a file or folder inside <c>fixtures/</c>.</summary>
     public static string Path(string relative)
@@ -27,6 +26,9 @@ public static class Fixtures
         {
             var candidate = System.IO.Path.Combine(dir.FullName, "fixtures");
             if (Directory.Exists(candidate)) return candidate;
+            // a checkout without fixtures/ (before M01) still has uno/; use its parent
+            if (File.Exists(System.IO.Path.Combine(dir.FullName, "uno", "Soncle.sln")))
+                return System.IO.Path.Combine(dir.FullName, "fixtures");
             dir = dir.Parent;
         }
         throw new DirectoryNotFoundException(

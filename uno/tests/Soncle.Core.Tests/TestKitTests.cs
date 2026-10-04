@@ -36,16 +36,11 @@ public class TestKitTests
     }
 
     [Fact]
-    public void Fixtures_ResolvesUnderTheRepositoryFixturesFolder()
+    public void Fixtures_ResolvesTheRepositoryFixturesFolder()
     {
-        // M01 adds fixtures/; until then the walk correctly reports that it is missing.
-        if (!Directory.Exists(FindFixturesSibling()))
-        {
-            Assert.Throws<DirectoryNotFoundException>(() => Fixtures.Path("yt/raw/example.json"));
-            return;
-        }
+        // M01 adds fixtures/; either way the helper must point at the repo's fixtures folder.
         var p = Fixtures.Path("yt/raw/example.json");
-        Assert.StartsWith(Fixtures.RootPath, p, StringComparison.Ordinal);
+        Assert.EndsWith(Path.Combine("fixtures", "yt", "raw", "example.json"), p);
     }
 
     [Fact]
@@ -59,6 +54,18 @@ public class TestKitTests
     }
 
     [Fact]
+    public void AudioAssert_TruePeakNeverReadsBelowAHighFrequencyTone()
+    {
+        // 21 kHz at 48 kHz: the true peak is at full scale. A weaker interpolator (the one this
+        // helper used to have) read ~0.5 dB low here, so a clipping signal could pass a test.
+        var tone = new float[4800];
+        for (var i = 0; i < tone.Length; i++)
+            tone[i] = (float)Math.Sin(2 * Math.PI * 21000 * i / 48000);
+        Assert.InRange(AudioAssert.PeakDb(tone), -0.1, 0.0);         // samples nearly reach the peak
+        Assert.InRange(AudioAssert.TruePeakDb(tone), -0.05, 0.05);   // the true peak is full scale
+    }
+
+    [Fact]
     public void AudioAssert_TruePeakSeesBetweenSamples()
     {
         // A 12 kHz tone at 48 kHz lands a sample on every peak at ±1, but the true peak between
@@ -69,15 +76,11 @@ public class TestKitTests
         Assert.True(AudioAssert.TruePeakDb(tone) >= AudioAssert.PeakDb(tone) - 0.05);
     }
 
-    private static string FindFixturesSibling()
+    [Fact]
+    public void JsonAssert_DoesNotTreatTwoLargeIntegersAsEqual()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = System.IO.Path.Combine(dir.FullName, "fixtures");
-            if (Directory.Exists(candidate)) return candidate;
-            dir = dir.Parent;
-        }
-        return "<none>";
+        // 2^53 and 2^53+1 both round to the same double; the raw text differs.
+        Assert.Throws<JsonException>(() =>
+            JsonAssert.Equal("""{"id":9007199254740993}""", """{"id":9007199254740994}"""));
     }
 }
