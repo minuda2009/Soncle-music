@@ -309,7 +309,100 @@ idle / playing / after an hour, CPU idle and playing, processes. Today's known n
 The roadmap's next desktop version (smart crossfade, Flow full-pool analysis) still ships in
 Electron first, as committed; its tests become fixtures so the C# port has to match them.
 
-## 12. Risks
+## 12. Code transfer, file by file
+
+### 12.1 How the code moves
+- **Same repo, new folder.** The C# solution lives in `uno/` in minuda2009/Soncle-music, next to
+  the Electron and Capacitor apps, so both sides use one `fixtures/` folder and one CI. Work lands on
+  `main` in small steps; nothing in `uno/` ships until the switch.
+- **Path filters first.** `android.yml` gets `paths-ignore: [uno/**, docs/**]` and a new
+  `uno.yml` builds only on `uno/**` or `fixtures/**` changes, so C# work never replaces the APK
+  and Electron/Android fixes never wait on .NET builds.
+- **One unit per pull request:** the C# file(s), their tests, and the fixtures they share with the
+  JS tests. A port is done when the C# output equals the JS output on the same fixtures (a "golden
+  diff" test), not when it compiles.
+- **The JS stays the source of truth until the switch.** Any fix to a JS file that already has a
+  C# port gets the same fix in C# in the same PR (the upstream-watch habit, applied to ourselves).
+  The ledger below tracks this.
+- **Headers carry over:** `// Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later`
+  on every C# file; THIRD_PARTY_NOTICES.md gains the new libraries (Uno, Uno.Themes, Concentus,
+  SoundTouch, Jint, H.NotifyIcon, Material Color Utilities, CommunityToolkit).
+
+### 12.2 Transfer map
+**P** = port line by line (same logic, C# idioms) · **R** = rewrite for the platform ·
+**K** = keep as is (Java) · **D** = drop (no longer needed).
+
+| Today | Lines | Goes to | How | Proven by |
+| --- | ---: | --- | :-: | --- |
+| `src/defaults.mjs` | 19 | `Soncle.Core/Settings.cs`, `LibraryStore.cs` | P | round-trip of a real `library.json` |
+| `src/preload.cjs` (the `window.api` contract) | 82 | `Soncle.Core/Contracts/*.cs` (interfaces, §1) | R | every method mapped in a checklist |
+| `src/yt.mjs` | 802 | `Soncle.YouTube/` (`Normalize.cs`, `Catalog.cs`, `StreamResolver.cs`) | P | golden diff on recorded responses (home, search, album, artist, playlist, radio, lyrics) |
+| `src/botguard.mjs` | 51 | `Soncle.YouTube/BotGuard.cs` | P | existing botguard test vectors |
+| `src/potoken.mjs` + `po_token.html` | 103 + 214 | `Soncle.Windows/PoTokenWebView.cs` (WebView2); page reused unchanged | R | a token mints and a YTMUSIC+PO stream resolves on a real PC |
+| `src/streamproxy.mjs` | 132 | `Soncle.Streams/` (with the `SoncleStreams.java` design, §1) | R | downloader tests vs fake googlevideo + `streamproxy` test cases |
+| `src/autoeq.mjs` | 128 | `Soncle.Services/AutoEq.cs` | P | same profile parsed to the same filters |
+| `src/spotify.mjs` | 192 | `Soncle.Services/Import.cs` | P | existing spotify/CSV fixtures |
+| `src/local.mjs` | 236 | `Soncle.Services/LocalLibrary.cs` (+ `FileSystemWatcher`) | P | local test folder → same tracks JSON |
+| `src/legacy.mjs` | 70 | `Soncle.Services/CarryOver.cs` (now also from `%APPDATA%\Soncle`) | P | legacy tests + an Electron profile copy |
+| `src/browser-signin.mjs` | 97 | `Soncle.Windows/BrowserSignIn.cs` (CDP over pipe) | P | manual sign-in by minuda2009; cookie never logged |
+| `src/ducking.mjs` | 148 | `Soncle.Windows/Ducking.cs` (WASAPI session events) | R | another app's sound lowers Soncle |
+| `src/discord.mjs` | 127 | `Soncle.Services/Discord.cs` | P | stays hidden until Soncle has a client id |
+| `src/main.mjs` | 830 | `Soncle.Windows/` (`App.xaml.cs`, `Shell`, tray, SMTC, taskbar, downloads, store, lyrics) | R | §4 Windows rows |
+| `renderer/engine.js` | 761 | `Soncle.Audio/` (`Deck.cs`, `MasterChain.cs`, `Transitions.cs`, `Eq.cs`) | R | crossfade/gapless reference tests (§5) |
+| `renderer/audio/worklets.js` | 219 | `Soncle.Audio/Dsp/` (`TruePeakLimiter.cs`, `LoudnessMeter.cs`) | P | worklet tests: no overs, −23 LUFS tone, same meter readings ±0.1 dB |
+| `renderer/flow/webm.js`, `sampler.js` | 105 + 51 | `Soncle.Flow/WebmCues.cs`, `Sampler.cs` (also used by the decoder) | P | flow tests |
+| `renderer/flow/analyze.js`, `flow.js` | 243 + 158 | `Soncle.Flow/Analyze.cs`, `Planner.cs` | P | synthetic-groove tempo/key tests, same `planFlow` order |
+| `renderer/devices.js` | 64 | `Soncle.Services/DeviceProfiles.cs` | P | devices tests |
+| `renderer/icons.js` | 38 | `Soncle.Design/Icons.xaml` (weight-600 font glyphs) | R | icon sheet screenshot vs SVGs |
+| `renderer/styles.css` | ~970 | `Soncle.Design/` (tokens, styles, motion) | R | gallery page vs CSS components (§2) |
+| `renderer/index.html` | 156 | `Shell.xaml` | R | shell screenshot |
+| `renderer/app.js` | 4,260 | split below | R | page screenshots + view-model tests |
+| `mobile/src/backend.js` | 447 | Android head services (same interfaces) | R | Android parity rows |
+| `mobile/src/native.js`, `mse.js`, `build.mjs`, `mobile.css` | 93 + 61 + 48 + 149 | — (Capacitor glue; the phone layout becomes adaptive XAML) | D | — |
+| `SoncleMediaService.java` | 195 | Android head, Java library + .NET binding | K | Maps, lock screen, headset, car |
+| `SonclePlugin.java` (BotGuard WebView, sign-in, requests) | 326 | BotGuard part kept as Java (K); request/sign-in parts → C# (R) | K/R | token mints on a phone |
+| `SoncleStreams.java` | 356 | replaced by `Soncle.Streams` | D (after parity) | same downloader tests on Android |
+| `MainActivity.java` | 54 | Android head `MainActivity.cs` (gesture-free autoplay, timers) | P | next song starts without a tap |
+| `build/after-pack.mjs` | 36 | — (the .NET project sets icon and version) | D | exe shows Soncle's icon and name |
+| `tools/upstream-sync.mjs`, `watch-upstreams.mjs`, `project-knowledge.mjs`, `make-icon.mjs` | — | stay in Node (repo tooling) | K | CI green |
+
+### 12.3 Splitting `renderer/app.js` (4,260 lines)
+Its own section markers give the split. Logic goes into view models and services with unit
+tests; markup and CSS become XAML.
+
+| app.js section | Lines (approx.) | C# home |
+| --- | ---: | --- |
+| helpers, persistent state | 14–184 | `Soncle.Core` (formatting, `LibraryStore`, history, liked, playlists) |
+| theming | 185–340 | `Soncle.Design/DynamicColor.cs` (Material Color Utilities) |
+| router | 341–507 | `NavigationService` (keys and back/forward stack as today) |
+| item actions, context menus, dialogs, local playlists | 508–867 | `ItemActions.cs`, `MenuFactory`, dialog view models |
+| components, sidebar, views (home, search, collections, library, history) | 548–1292 | page view models + XAML pages (§3) |
+| settings | 1293–1438 | `SettingsViewModel` (rows generated from one table, platform-hidden rows) |
+| equalizer, Sound page, stats | 1439–1801 | `SoundViewModel`, `EqualizerViewModel`, `StatsViewModel` |
+| audio output devices, lyrics timing, mini player | 1802–1940 | `DeviceService`, `LyricsViewModel`, `MiniPlayerWindow` |
+| search box | 1941–2024 | `SearchSuggestViewModel` |
+| **player** (queue, load, transitions, crossfade/gapless, prev/next, stall watch, media session, monitor loop) | 2025–2840 | **`PlaybackController`** (no UI; the state machine in §9) + `TransitionPlanner` |
+| queue panel, now playing, lyrics, synced lyrics | 2841–3219 | `QueueViewModel`, `NowPlayingViewModel`, `LyricsView` |
+| ripple, wiring (keyboard, window events) | 3220–3353 | M3 ripple in `Soncle.Design`; `KeyboardAccelerator`s |
+| Flow radio | 3354–3524 | `FlowRadioService` (with the roadmap's full-pool fix) |
+| welcome, first-run notice | 3525–3633, 3913–3973 | `WelcomeViewModel`, `NoticeViewModel` (wording unchanged) |
+| smart ducking, focus mode, command bar | 3634–3912 | `DuckingService`, `FocusViewModel`, `CommandPaletteViewModel` |
+| local files, import | 3974–end | `FilesViewModel`, `ImportViewModel` |
+
+### 12.4 Order
+1. Contracts + `Soncle.Core` (store round-trip) → 2. `worklets` DSP and `flow` (pure maths, easiest
+golden diffs) → 3. `yt.mjs` + `botguard` → 4. `Soncle.Streams` → 5. `engine.js` → 6. services
+(`autoeq`, `spotify`, `local`, `legacy`, `devices`, `discord`) → 7. `app.js` player section as
+`PlaybackController` → 8. the rest of `app.js` page by page with the design system → 9. `main.mjs`
+Windows shell → 10. Android head (`backend.js`, Java bindings).
+
+### 12.5 Ledger (kept up to date in this file)
+
+| Unit | Status | JS changes since port |
+| --- | --- | --- |
+| everything in 12.2 | not started | — |
+
+## 13. Risks
 
 - **YouTube changes mid-port** — two implementations to keep alive for a while. Mitigation: the
   upstream watch, shared fixtures, port `yt.mjs` last-known-good and keep it in sync weekly.
