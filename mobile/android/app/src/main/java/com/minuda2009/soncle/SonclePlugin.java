@@ -238,7 +238,7 @@ public class SonclePlugin extends Plugin {
         // BLE audio (LE Audio earbuds) — common on newer Galaxy/Pixel phones — is Bluetooth too.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 && (t == AudioDeviceInfo.TYPE_BLE_HEADSET || t == AudioDeviceInfo.TYPE_BLE_SPEAKER
-                    || t == AudioDeviceInfo.TYPE_BLE_BROADCAST || t == AudioDeviceInfo.TYPE_BLE_HEARING_AID)) return true;
+                    || t == AudioDeviceInfo.TYPE_BLE_BROADCAST || t == AudioDeviceInfo.TYPE_HEARING_AID)) return true;
         return false;
     }
 
@@ -264,7 +264,7 @@ public class SonclePlugin extends Plugin {
             default:
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                         && (t == AudioDeviceInfo.TYPE_BLE_HEADSET || t == AudioDeviceInfo.TYPE_BLE_SPEAKER
-                            || t == AudioDeviceInfo.TYPE_BLE_BROADCAST || t == AudioDeviceInfo.TYPE_BLE_HEARING_AID)) return "bluetooth";
+                            || t == AudioDeviceInfo.TYPE_BLE_BROADCAST || t == AudioDeviceInfo.TYPE_HEARING_AID)) return "bluetooth";
                 return "other";
         }
     }
