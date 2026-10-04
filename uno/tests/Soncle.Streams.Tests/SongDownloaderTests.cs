@@ -51,7 +51,7 @@ public class SongDownloaderTests : IDisposable
         Assert.Equal(200_000, head.Length);
         Assert.Equal(data.Take(200_000), head);
         // the first request is the small first piece (≤ 256 KB), so playback can start early
-        Assert.True(server.Ranges.TryPeek(out var first));
+        var first = server.FirstRange;
         Assert.True(first.To - first.From + 1 <= 256 * 1024, $"first piece was {first.To - first.From + 1} bytes");
     }
 

@@ -24,6 +24,14 @@ internal sealed class FakeGooglevideo : IStreamFetcher
     internal int Calls;
     internal readonly ConcurrentDictionary<string, int> CallsByKey = new();
     internal readonly ConcurrentBag<(long From, long To)> Ranges = new();
+    private readonly object _firstLock = new();
+    private (long From, long To)? _firstRange;
+
+    /// <summary>The very first request's range (the small first piece), captured deterministically.</summary>
+    internal (long From, long To) FirstRange
+    {
+        get { lock (_firstLock) return _firstRange ?? throw new InvalidOperationException("no calls yet"); }
+    }
 
     private int _refused;
     private int _gated;
@@ -33,6 +41,7 @@ internal sealed class FakeGooglevideo : IStreamFetcher
         Interlocked.Increment(ref Calls);
         CallsByKey.AddOrUpdate(KeyOf(url), 1, (_, n) => n + 1);
         Ranges.Add((from, to));
+        lock (_firstLock) _firstRange ??= (from, to);
 
         if (FirstCallGate is not null && Interlocked.Increment(ref _gated) == 1)
             await FirstCallGate.Task.ConfigureAwait(false);
