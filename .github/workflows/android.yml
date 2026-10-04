@@ -19,7 +19,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - name: Install and build the web layer
         working-directory: mobile
         run: |
