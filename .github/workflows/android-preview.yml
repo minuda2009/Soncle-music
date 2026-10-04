@@ -1,0 +1,57 @@
+name: Android preview APK
+# Builds a preview APK from agent branches (openhands/**, preview/**) on GitHub's servers.
+# It installs as a separate app, "Soncle Preview", so the normal app keeps working, and is attached
+# to the "android-preview" release (the latest branch build replaces the previous one).
+on:
+  push:
+    branches: ['openhands/**', 'preview/**']
+    paths: ['mobile/**', 'renderer/**', 'src/**', 'assets/**', 'THIRD_PARTY_NOTICES.md', '.github/workflows/android-preview.yml', 'mobile/android/app/build.gradle']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# one build at a time; a newer push replaces a build still running, so an older APK never wins
+concurrency:
+  group: android-preview
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      # The runner image already has the Android SDK (ANDROID_HOME).
+      - name: Install and build the web layer
+        working-directory: mobile
+        run: |
+          npm ci
+          npm run sync
+      - name: Build the APK
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          # a separate app ("Soncle Preview", com.minuda2009.soncle.preview) next to the normal one
+          sed -i 's|<string name="app_name">Soncle</string>|<string name="app_name">Soncle Preview</string>|' app/src/main/res/values/strings.xml
+          ./gradlew assembleDebug -PsoncleBuildPreview --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/Soncle-preview.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soncle-preview
+          path: Soncle-preview.apk
+          if-no-files-found: error
+      - name: Publish to the android-preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-preview --yes --cleanup-tag || true
+          gh release create android-preview Soncle-preview.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Soncle Preview (branch ${GITHUB_REF_NAME})" \
+            --notes "Test build from branch ${GITHUB_REF_NAME} at ${GITHUB_SHA::7}. Installs as a separate app, Soncle Preview, next to your normal Soncle (its library starts empty). On your phone: tap Soncle-preview.apk."

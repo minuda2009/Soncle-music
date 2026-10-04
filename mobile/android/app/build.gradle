@@ -30,6 +30,11 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.soncleTest
+            // Preview builds from agent branches (-PsoncleBuildPreview) install next to the normal app
+            if (project.hasProperty('soncleBuildPreview')) {
+                applicationIdSuffix '.preview'
+                versionNameSuffix '-preview'
+            }
         }
         release {
             minifyEnabled false
