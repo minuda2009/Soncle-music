@@ -203,6 +203,9 @@ runs in **our own render loop** instead of Web Audio:
   measured start delay, no 12 ms overlap trick. Beat-phase alignment and tempo nudge from the
   roadmap become straightforward. Skip-silence reads the decoded samples instead of polling an
   analyser.
+- **Crossfade rule (Oct 2026 fix):** no blend style may make the overlap louder than either song
+  (`test/crossfade.test.mjs`); a "mix" is the user's curve and length plus the bass swap, until
+  beat-phase alignment lands. The C# port starts from this, not from the old 16-beat mix.
 - **Reference tests carried over:** no true-peak overs on the test signals; −23 LUFS reference
   tone; gapless handover clean (sample-exact, checked by rendering offline); crossfade curves
   match the JS curves within 0.1 dB.

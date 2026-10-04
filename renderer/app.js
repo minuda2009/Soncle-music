@@ -1754,7 +1754,7 @@ function soundPage(view, redraw) {
       h('div', { class: 'snd-row' }, h('div', { style: { width: '160px' } }, 'Crossfade', h('div', { class: 'muted', style: { fontSize: '13px' } }, 'Off = gapless')), slider, out),
       h('div', { class: 'seg' + (xf ? '' : ' disabled') }, [['smart', 'Smart mix'], ['classic', 'Classic fade']].map(([k, l]) => h('button', { class: style === k ? 'on' : '', onclick: () => { setSetting('xfStyle', k); drawTr(); } }, l))),
       h('div', { class: 'muted', style: { fontSize: '13px', margin: '10px 0 4px' } }, style === 'smart'
-        ? 'When two songs go well together (tempo and key, learned on this PC) they’re blended like a DJ would: 16 beats long, bass lines swapped in the middle so they never clash. Songs that would clash get a short fade instead.'
+        ? 'When two songs go well together (tempo and key, learned on this PC) they’re blended with a bass swap: the bass lines trade places in the middle so they never pile up. Songs that would clash get a shorter fade.'
         : 'A plain crossfade of the length you set, using the curve chosen in Settings.'),
       h('div', { class: 'snd-row' }, h('div', { style: { flex: 1 } }, 'Gapless albums', h('div', { class: 'muted', style: { fontSize: '13px' } }, 'Songs from the same album run straight into each other, with no gap and no fade (live and concept albums).')),
         h('div', { class: 'switch' + (S().crossfadeGapless !== false ? ' on' : ''), onclick: () => { setSetting('crossfadeGapless', S().crossfadeGapless === false); drawTr(); } })));
@@ -2254,8 +2254,8 @@ engine.addEventListener('loudness', (e) => {
 
 // How to go from the playing song to the next one:
 //   gapless — albums (and crossfade off): the next song starts on the last one's final sample
-//   mix     — both songs' tempo/key are known and they go well together: a beat-timed DJ blend
-//             (16 beats, bass swap in the middle)
+//   mix     — both songs' tempo/key are known and they go well together: your crossfade length
+//             and curve, plus a bass swap in the middle
 //   fade    — the classic crossfade; shortened when two songs would clash
 const albumOf = (x) => x?.album?.id || (x?.album?.name ? x.album.name + '|' + (x.albumArtist || artistNames(x)) : null);
 function transitionPlan(cur, nt) {
@@ -2270,12 +2270,13 @@ function transitionPlan(cur, nt) {
     const fa = featRanked(cur.id), fb = featRanked(nt.id);
     if (fa && fb && S().flowXf !== false) {
       const tr = transition(cur, fa, nt, fb);
-      if (tr.sure > 0.5 && tr.score < 0.45) v.dur = Math.min(xf, 2.5);   // clash: keep it short
+      // clash: a shorter blend, but never a jarring cut (it used to drop to 2.5 s whatever you chose)
+      if (tr.sure > 0.5 && tr.score < 0.45) v.dur = Math.min(xf, Math.max(3, xf * 0.6));
+      // good match: same length as your setting, plus a bass swap so the basslines don't pile up.
+      // (A mix used to stretch to 16 beats — up to 14 s when you chose 5 s — with both songs at
+      // full volume and unaligned beats. Beat-aligned mixes come with the roadmap's beat-phase work.)
       else if (S().xfStyle !== 'classic' && tr.sure > 0.5 && tr.score >= 0.6 && fa.bpm > 60) {
-        const beat = 60 / fa.bpm;
-        let secs = 16 * beat;
-        if (secs > Math.max(xf, 4) * 2) secs = 8 * beat;
-        v = { kind: 'mix', dur: Math.max(4, Math.min(14, secs)), bpm: fa.bpm };
+        v = { kind: 'mix', dur: xf, bpm: fa.bpm };
       }
     }
   }
@@ -2788,7 +2789,7 @@ setInterval(() => {
     const xf = plan && plan.kind !== 'gapless' ? plan.dur : 0;
     if (xf > 0 && smart) {
       lvl = engine.levelDb();
-      if (lvl > -60 && t > 5 && d - t > xf + 12) P.lvlAvg = P.lvlAvg == null ? lvl : P.lvlAvg * 0.99 + lvl * 0.01;
+      if (lvl > -60 && t > 5 && d - t > xf + 4) P.lvlAvg = P.lvlAvg == null ? lvl : P.lvlAvg * 0.99 + lvl * 0.01;
     }
     if (plan?.kind === 'gapless') {
       if (!P.xfPending && !P.current._noGapless && d - t <= 3 && d - t > 0.05 && d > 5) {
@@ -2797,8 +2798,10 @@ setInterval(() => {
       }
     } else if (plan) {
       let start = d - t <= xf, early = false;
-      if (!start && lvl != null && P.lvlAvg != null && t > 30 && d - t <= xf + 12) {
-        if (lvl < P.lvlAvg - 22) { P.quietMs = (P.quietMs || 0) + 100; if (P.quietMs >= 700) start = early = true; } else P.quietMs = 0;
+      // Only a real tail counts: the last few seconds, quiet for over a second. (It used to look
+      // 12 s ahead, so a quiet break before a song's last chorus started the blend and cut it off.)
+      if (!start && lvl != null && P.lvlAvg != null && t > 30 && d - t <= xf + 4) {
+        if (lvl < P.lvlAvg - 22) { P.quietMs = (P.quietMs || 0) + 100; if (P.quietMs >= 1200) start = early = true; } else P.quietMs = 0;
       }
       if (start && d > xf * 2.5 && d - t > 0.4 && !P.xfPending) {
         P.xfPending = true;

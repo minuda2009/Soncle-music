@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased: crossfades that sound right
+
+Measured against the curves in `engine.js`. The plain fade was already the same as Metrolist's;
+the problems were in what Soncle adds on top. Desktop and Android both get this.
+- **"Smart mix" no longer piles two songs up.** It held both songs near full volume for a third of
+  the blend (+3 dB louder, +6 dB on coinciding kicks), with beats that weren't aligned, so kicks
+  flammed and the limiter squashed it. It now uses your crossfade curve, plus the bass swap in the
+  middle. Beat-aligned mixes come with the roadmap's beat-phase work.
+- **A mix lasts as long as your crossfade setting.** It used to stretch to 16 beats: 9.6 s when you
+  chose 5 s, up to 14 s.
+- **Songs that would clash get a shorter fade, not a cut.** 60 % of your setting (at least 3 s),
+  instead of 2.5 s whatever you chose.
+- **Smart crossfade no longer cuts off a last chorus.** It started the blend on any quiet moment in
+  the last 12 s plus the crossfade; now only a real tail counts (the last few seconds, quiet for
+  over a second).
+- New tests: no crossfade curve may make the overlap louder than either song.
+
 ## Android 0.1.6: built for listening on the move
 
 - **Each song downloads in full to the phone's cache**, as fast as the connection allows. The

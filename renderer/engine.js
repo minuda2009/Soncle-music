@@ -51,6 +51,21 @@ export function specToBands(spec) {
 
 const FADE = 0.14;
 
+/**
+ * Crossfade gains [incoming, outgoing] at position x (0…1) of the blend.
+ *  smooth     the new song rises fast, the old one clears out early; amplitudes sum to 1
+ *             (the same curve Metrolist uses)
+ *  equalpower constant loudness for unrelated songs
+ *  linear     straight lines
+ * Shared by every blend style, so no style can make the overlap louder than either song.
+ */
+export function xfGains(curve, x) {
+  x = Math.max(0, Math.min(1, x));
+  if (curve === 'equalpower') return [Math.sin((x * Math.PI) / 2), Math.cos((x * Math.PI) / 2)];
+  if (curve === 'linear') return [x, 1 - x];
+  return [1 - (1 - x) * (1 - x), (1 - x) * (1 - x)];
+}
+
 export class Engine extends EventTarget {
   constructor() {
     super();
@@ -557,25 +572,18 @@ export class Engine extends EventTarget {
   /**
    * Blend into the next song over `duration` seconds.
    * style 'fade': volume crossfade with the chosen curve.
-   * style 'mix':  DJ-style — the new song comes in with its bass cut, both play full for a moment,
-   *               then the basslines swap in the middle and the old song fades out, so two kick drums
-   *               and basslines never pile up.
+   * style 'mix':  the same volume curve, plus a DJ bass swap — the new song comes in with its bass
+   *               cut and the basslines trade places in the middle, so two basslines never pile up.
+   *               (It used to hold both songs at full volume for a third of the blend: +3 dB louder,
+   *               +6 dB on coinciding kicks, and unaligned beats flammed. Beat alignment comes first.)
    */
   async crossfadeTo(track, { src, lufs, loudness, duration = 5, style = 'fade' }) {
     const { from, to } = await this.#startOther(track, { src, lufs, loudness });
     const t = this.ctx.currentTime;
     const n = 64, inC = new Float32Array(n), outC = new Float32Array(n);
     const startOut = from.fade.gain.value;
-    const curve = this.opts.xfCurve;
     for (let i = 0; i < n; i++) {
-      const x = i / (n - 1);
-      let a, b;
-      if (style === 'mix') {
-        a = x < 0.45 ? Math.sin((x / 0.45) * Math.PI / 2) : 1;                 // in: full by 45 %
-        b = x < 0.5 ? 1 : Math.cos(((x - 0.5) / 0.5) * Math.PI / 2);          // out: holds, then fades
-      } else if (curve === 'equalpower') { a = Math.sin((x * Math.PI) / 2); b = Math.cos((x * Math.PI) / 2); }
-      else if (curve === 'linear') { a = x; b = 1 - x; }
-      else { a = 1 - (1 - x) * (1 - x); b = (1 - x) * (1 - x); } // smooth: new song rises fast, old one clears out early
+      const [a, b] = xfGains(this.opts.xfCurve, i / (n - 1));
       inC[i] = a;
       outC[i] = b * startOut;
     }
