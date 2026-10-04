@@ -5,17 +5,68 @@
    "id": "pear-desktop",
    "repo": "pear-devs/pear-desktop",
    "why": "YouTube Music desktop app (Electron; formerly th-ch/youtube-music). Same platform as Soncle: sign-in, playback, plugins such as crossfade, equalizer, lyrics, skip silences.",
-   "paths": ["src/plugins/crossfade", "src/plugins/equalizer", "src/plugins/audio-compressor", "src/plugins/skip-silences", "src/plugins/synced-lyrics", "src/plugins/downloader", "src/providers/", "src/loader/", "src/index.ts"],
-   "keywords": ["fix", "crash", "playback", "stream", "login", "sign in", "sign-in", "cookie", "crossfade", "equalizer", "lyrics", "audio", "memory", "cpu", "performance"],
-   "ours": ["src/main.mjs", "renderer/app.js", "renderer/engine.js"]
+   "paths": [
+    "src/plugins/crossfade",
+    "src/plugins/equalizer",
+    "src/plugins/audio-compressor",
+    "src/plugins/skip-silences",
+    "src/plugins/synced-lyrics",
+    "src/plugins/downloader",
+    "src/providers/",
+    "src/loader/",
+    "src/index.ts"
+   ],
+   "keywords": [
+    "fix",
+    "crash",
+    "playback",
+    "stream",
+    "login",
+    "sign in",
+    "sign-in",
+    "cookie",
+    "crossfade",
+    "equalizer",
+    "lyrics",
+    "audio",
+    "memory",
+    "cpu",
+    "performance"
+   ],
+   "ours": [
+    "src/main.mjs",
+    "renderer/app.js",
+    "renderer/engine.js"
+   ]
   },
   {
    "id": "youtubei.js",
    "repo": "LuanRT/YouTube.js",
    "why": "The library Soncle uses for every YouTube request. Most 'YouTube changed something' fixes land here first (Dependabot also opens the version bump).",
-   "paths": ["src/core/Player", "src/core/clients/", "src/core/managers/", "src/utils/Constants", "src/platform/", "src/parser/ytmusic/"],
-   "keywords": ["fix", "player", "decipher", "signature", "n param", "nsig", "po token", "client", "music", "ytmusic", "breaking"],
-   "ours": ["src/yt.mjs"]
+   "paths": [
+    "src/core/Player",
+    "src/core/clients/",
+    "src/core/managers/",
+    "src/utils/Constants",
+    "src/platform/",
+    "src/parser/ytmusic/"
+   ],
+   "keywords": [
+    "fix",
+    "player",
+    "decipher",
+    "signature",
+    "n param",
+    "nsig",
+    "po token",
+    "client",
+    "music",
+    "ytmusic",
+    "breaking"
+   ],
+   "ours": [
+    "src/yt.mjs"
+   ]
   },
   {
    "id": "yt-dlp",
@@ -23,17 +74,61 @@
    "why": "Early warning: yt-dlp usually reacts within hours when YouTube changes stream clients, client versions or PO token rules.",
    "paths": [],
    "require": "youtube",
-   "keywords": ["fix", "client", "po token", "pot", "player", "nsig", "n-challenge", "signature", "sabr"],
-   "ours": ["src/yt.mjs", "src/potoken.mjs"]
+   "keywords": [
+    "fix",
+    "client",
+    "po token",
+    "pot",
+    "player",
+    "nsig",
+    "n-challenge",
+    "signature",
+    "sabr"
+   ],
+   "ours": [
+    "src/yt.mjs",
+    "src/potoken.mjs"
+   ]
   },
   {
    "id": "metrolist",
    "repo": "MetrolistGroup/Metrolist",
    "why": "Releases and fix commits of the upstream Android app (file-level porting is handled by tools/upstream-sync.mjs).",
    "paths": [],
-   "keywords": ["fix", "crash", "playback", "stream", "po token", "potoken", "client", "login", "crossfade", "normaliz", "lyrics", "kmp", "desktop"],
+   "keywords": [
+    "fix",
+    "crash",
+    "playback",
+    "stream",
+    "po token",
+    "potoken",
+    "client",
+    "login",
+    "crossfade",
+    "normaliz",
+    "lyrics",
+    "kmp",
+    "desktop"
+   ],
    "ours": []
   }
  ],
- "seen": {}
+ "seen": {
+  "pear-desktop": {
+   "commit": "a8830222afffb4af98aaa9b19287ebc24952605b",
+   "at": "2026-10-04T00:46:46.028Z"
+  },
+  "youtubei.js": {
+   "commit": "bad89d2657e88f907011655f199fba9fb615c339",
+   "at": "2026-10-04T00:46:46.028Z"
+  },
+  "yt-dlp": {
+   "commit": "51bab8a0116f4d8004c315706d809782607d5847",
+   "at": "2026-10-04T00:46:46.028Z"
+  },
+  "metrolist": {
+   "commit": "f758c86de9278481bcead7b0120786ca46398251",
+   "at": "2026-10-04T00:46:46.028Z"
+  }
+ }
 }
