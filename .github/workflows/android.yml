@@ -1,25 +1,29 @@
 name: Android APK
 # Builds the Android app (mobile/) on GitHub's servers, so no PC with Android Studio is needed.
-# The APK appears under the run's "Artifacts".
+# The APK is attached to the "android-latest" release (open it on the phone and tap the .apk),
+# and also kept as a run artifact.
 on:
   push:
     branches: [main]
     paths: ['mobile/**', 'renderer/**', 'src/**', 'assets/**', 'THIRD_PARTY_NOTICES.md', '.github/workflows/android.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
+      # The runner image already has the Android SDK (ANDROID_HOME).
       - name: Install and build the web layer
         working-directory: mobile
         run: |
@@ -30,8 +34,17 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/Soncle-android.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: soncle-android-debug
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: soncle-android
+          path: Soncle-android.apk
           if-no-files-found: error
+      - name: Publish to the android-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --yes --cleanup-tag || true
+          gh release create android-latest Soncle-android.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Soncle for Android (latest build)" \
+            --notes "Built from ${GITHUB_SHA::7}. On your phone: tap Soncle-android.apk, then allow installing from your browser if Android asks."
