@@ -13,7 +13,8 @@ agents write, test and ship the code. Licence: GPL-3.0-or-later.
   `mobile/android/app/src/main/java/com/minuda2009/soncle/` (`SonclePlugin`, `SoncleMediaService`,
   `SoncleStreams`).
 - **Plans:** `ROADMAP.md` (features), `docs/WINUI_PLAN.md` (later move to Uno Platform / C#),
-  `docs/tasks/` (one file per task handed to an agent). `CHANGELOG.md` gets an entry for every change
+  `docs/tasks/` (one file per task handed to an agent; the C# migration tasks are in
+  `docs/tasks/uno/`, start with its README). `CHANGELOG.md` gets an entry for every change
   that ships.
 
 ## Setup and checks (all must pass before you push)
