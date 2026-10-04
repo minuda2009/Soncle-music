@@ -44,7 +44,7 @@ internal sealed class FakeGooglevideo : IStreamFetcher
         lock (_firstLock) _firstRange ??= (from, to);
 
         if (FirstCallGate is not null && Interlocked.Increment(ref _gated) == 1)
-            await FirstCallGate.Task.ConfigureAwait(false);
+            await FirstCallGate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);   // honours cancel
 
         if (from >= RefuseFromByte && Interlocked.Increment(ref _refused) <= RefuseCount)
             throw new IOException("dead zone");

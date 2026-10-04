@@ -61,7 +61,7 @@ public class SongDownloaderTests : IDisposable
         var data = TestData.Make(2_500_000);
         var server = new FakeGooglevideo(data)
         {
-            RefuseFromByte = 800_000,   // the next request after ~512 KB is refused a few times
+            RefuseFromByte = 800_000,   // the request after ~512 KB is refused a few times
             RefuseCount = 3,
         };
         var clock = new FakeStreamClock();
@@ -72,7 +72,28 @@ public class SongDownloaderTests : IDisposable
         var got = await ReadAllAsync(read);
 
         Assert.Equal(data, got);
+        // it really did hit the outage partway through (not just at the first byte) and back off
+        Assert.True(server.Ranges.Any(r => r.From >= 800_000), "no request reached the dead zone");
+        Assert.NotEmpty(clock.Delays);
         Assert.True(server.Calls > 3);                          // it retried through the dead zone
+    }
+
+    [Fact]
+    public async Task RemovingASongStopsItsDownloadAndDeletesTheFile()
+    {
+        var data = TestData.Make(1_000_000);
+        var server = new FakeGooglevideo(data) { FirstCallGate = new TaskCompletionSource() };
+        var dl = NewDownloader(server);
+        dl.Register("v1", TestData.Source("v1", data.Length));
+        await WaitUntilAsync(() => server.Calls >= 1);
+
+        var file = Directory.GetFiles(_dir, "*.part").Single();
+        dl.Forget("v1");
+
+        // the download task must end (the gate stays closed) and the file must go
+        await WaitUntilAsync(() => dl.Status("v1") is null);
+        await WaitUntilAsync(() => !File.Exists(file), 5000);
+        Assert.Null(dl.Status("v1"));
     }
 
     [Fact]
@@ -122,7 +143,7 @@ public class SongDownloaderTests : IDisposable
     }
 
     [Fact]
-    public async Task FarSeekIsServedFromTheNetworkImmediately()
+    public async Task FarSeekIsServedFromTheNetworkImmediatelyAndCompletes()
     {
         var data = TestData.Make(5_000_000);
         var server = new FakeGooglevideo(data) { FirstCallGate = new TaskCompletionSource() };
@@ -130,12 +151,16 @@ public class SongDownloaderTests : IDisposable
         dl.Register("v1", TestData.Source("v1", data.Length));
         await WaitUntilAsync(() => server.Calls >= 1);
 
-        // 4 MB in: far past whatever has downloaded (held at 0)
+        // 4 MB in: far past whatever has downloaded (held at 0). Read the whole tail, not just the
+        // first bytes — a wrong end-of-stream check (0 vs −1) would hang after the first piece.
         using var read = dl.OpenRead("v1", 4_000_000);
-        var buf = new byte[1000];
-        var n = await read.ReadAsync(buf);
-        Assert.Equal(1000, n);
-        Assert.Equal(data.Skip(4_000_000).Take(1000), buf);
+        var tail = await ReadAllAsync(read);
+        Assert.Equal(1_000_000, tail.Length);
+        Assert.Equal(data.Skip(4_000_000), tail);
+
+        // the far seek did not stop the background download: release it and it finishes
+        server.FirstCallGate!.SetResult();
+        await WaitUntilAsync(() => dl.Status("v1")!.Value.Done);
     }
 
     [Fact]
@@ -174,6 +199,24 @@ public class SongDownloaderTests : IDisposable
         Assert.NotNull(dl.Status("v5"));
         var parts = Directory.GetFiles(_dir, "*.part");
         Assert.True(parts.Length <= 4, $"kept {parts.Length} files");
+    }
+
+    [Fact]
+    public async Task GivesUpAfterTheRetryLimit()
+    {
+        var data = TestData.Make(1_000_000);
+        // refuse every request: the retry budget must end it rather than loop forever
+        var server = new FakeGooglevideo(data) { RefuseFromByte = 0, RefuseCount = int.MaxValue };
+        var clock = new FakeStreamClock();
+        var dl = NewDownloader(server, refresher: null, clock: clock);
+        dl.Register("v1", TestData.Source("v1", data.Length));
+
+        using var read = dl.OpenRead("v1", 0);
+        await Assert.ThrowsAnyAsync<Exception>(async () => await ReadAllAsync(read));
+        await WaitUntilAsync(() => dl.Status("v1")!.Value.Failed);
+        // it backed off on every attempt and then stopped (the Java budget is 45 tries)
+        Assert.InRange(clock.Delays.Count, 40, 50);
+        Assert.True(server.Calls <= 50);
     }
 
     [Fact]

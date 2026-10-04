@@ -62,7 +62,8 @@ public sealed class SongDownloader
         {
             if (_songs.TryGetValue(songKey, out var existing))
             {
-                // re-registration (e.g. a refreshed URL) hands the new source to the running download
+                // re-registration (e.g. a refreshed URL) hands the new source to the running
+                // download; the download task is already in flight, so don't start a second one
                 existing.Source = source;
                 existing.Pump();
                 return;
@@ -135,7 +136,7 @@ public sealed class SongDownloader
         lock (_gate)
         {
             foreach (var s in _songs.Values)
-                if (!ReferenceEquals(s, me) && s.Started && !s.Finished) return true;
+                if (!ReferenceEquals(s, me) && s.Downloading && !s.Finished) return true;
             return false;
         }
     }
@@ -159,13 +160,14 @@ public sealed class SongDownloader
     {
         internal readonly SongDownloader _owner;
         private readonly List<TaskCompletionSource> _waiters = new();
+        private readonly CancellationTokenSource _cts = new();
 
         internal long _have;
         internal bool _done;
         internal bool _cancelled;
         internal string? _failure;
         private bool _wanted;
-        private bool _started;
+        private bool _downloading;
         private Task? _task;
 
         internal Song(string key, SongDownloader owner, StreamSource source, string file)
@@ -186,7 +188,7 @@ public sealed class SongDownloader
         internal bool Done { get { lock (_owner._gate) return _done; } }
         internal bool Cancelled { get { lock (_owner._gate) return _cancelled; } }
         internal string? Failure { get { lock (_owner._gate) return _failure; } }
-        internal bool Started { get { lock (_owner._gate) return _started; } }
+        internal bool Downloading { get { lock (_owner._gate) return _downloading; } }
         internal bool Finished { get { lock (_owner._gate) return _done || _cancelled || _failure is not null; } }
 
         internal SongProgress Snapshot() => new(_have, Length, _done, _failure is not null || _cancelled, _failure);
@@ -202,11 +204,16 @@ public sealed class SongDownloader
         }
 
         internal void MarkWanted() { lock (_owner._gate) { _wanted = true; Pump(); } }
+
+        /// <summary>
+        /// Stops the download. Cancelling the token aborts a stalled connection (the Java original
+        /// left it hanging); the cache file is deleted once the writer has closed it.
+        /// </summary>
         internal void Cancel()
         {
-            lock (_owner._gate) { _cancelled = true; }
+            lock (_owner._gate) _cancelled = true;
+            try { _cts.Cancel(); } catch (ObjectDisposedException) { }
             Pump();
-            Streaming.TryDelete(File);
         }
 
         internal void SetFailure(string? message)
@@ -243,77 +250,83 @@ public sealed class SongDownloader
             // A song fetched ahead of time waits until the one playing is complete, so it never
             // competes with it on a weak connection.
             while (!Cancelled && !_wanted && _owner.OtherDownloadRunning(this))
-                await _owner._clock.DelayAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                await _owner._clock.DelayAsync(TimeSpan.FromSeconds(1), _cts.Token).ConfigureAwait(false);
 
-            lock (_owner._gate) _started = true;
+            lock (_owner._gate) _downloading = true;
 
             var pos = 0L;
             var fails = 0;
             try
             {
-                using var file = new FileStream(File, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                var buffer = new byte[32 * 1024];
-                while (!Cancelled && pos < Length)
+                using (var file = new FileStream(File, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
                 {
-                    var source = Source;
-                    var to = Math.Min(Length - 1, pos + (pos == 0 ? FirstPiece : Chunk) - 1);
-                    try
+                    var buffer = new byte[32 * 1024];
+                    while (!Cancelled && pos < Length)
                     {
-                        await using var input = await _owner._fetcher.GetAsync(source.Url, source.Headers, pos, to).ConfigureAwait(false);
-                        int n;
-                        while (!Cancelled && (n = await input.ReadAsync(buffer.AsMemory(), default).ConfigureAwait(false)) > 0)
+                        var source = Source;
+                        var to = Math.Min(Length - 1, pos + (pos == 0 ? FirstPiece : Chunk) - 1);
+                        try
                         {
-                            file.Seek(pos, SeekOrigin.Begin);
-                            await file.WriteAsync(buffer.AsMemory(0, n)).ConfigureAwait(false);
-                            pos += n;
-                            lock (_owner._gate) _have = pos;
-                            fails = 0;
-                            Pump();
-                            _owner.Raise(this);
+                            await using var input = await _owner._fetcher.GetAsync(source.Url, source.Headers, pos, to, _cts.Token).ConfigureAwait(false);
+                            int n;
+                            while (!Cancelled && (n = await input.ReadAsync(buffer.AsMemory(), _cts.Token).ConfigureAwait(false)) > 0)
+                            {
+                                file.Seek(pos, SeekOrigin.Begin);
+                                await file.WriteAsync(buffer.AsMemory(0, n), _cts.Token).ConfigureAwait(false);
+                                pos += n;
+                                lock (_owner._gate) _have = pos;
+                                fails = 0;
+                                Pump();
+                                _owner.Raise(this);
+                            }
+                            // flush the buffer to disk before telling readers the bytes are there,
+                            // so a small write can't be reported as available while it isn't
+                            await file.FlushAsync(_cts.Token).ConfigureAwait(false);
                         }
-                        file.Flush();
+                        catch (OperationCanceledException) { return; }
+                        catch (StreamExpiredException)
+                        {
+                            // ask the app for a fresh URL to the same file; a refresh for a different
+                            // length is a hard error (never mix two streams), otherwise retry/back off.
+                            var fresh = _owner._refresher is null
+                                ? null
+                                : await _owner._refresher.RefreshAsync(Key, _cts.Token).ConfigureAwait(false);
+                            if (fresh is not null && fresh.Length != Length)
+                            {
+                                SetFailure("stream expired");
+                                return;
+                            }
+                            if (fresh is not null)
+                            {
+                                Source = fresh;
+                                continue;
+                            }
+                            // no way to refresh: treat it like a transient failure and use the budget
+                            if (++fails > MaxRetries)
+                            {
+                                SetFailure("stream expired");
+                                return;
+                            }
+                            var expiredWait = TimeSpan.FromMilliseconds(Math.Min(15000, 500L << Math.Min(fails, 5)));
+                            await _owner._clock.DelayAsync(expiredWait, _cts.Token).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (ex is IOException or StreamHttpException or HttpRequestException)
+                        {
+                            // no signal / tunnel / flaky network: back off and keep trying
+                            if (++fails > MaxRetries)
+                            {
+                                SetFailure(ex.Message.Length == 0 ? "network" : ex.Message);
+                                return;
+                            }
+                            var wait = TimeSpan.FromMilliseconds(Math.Min(15000, 500L << Math.Min(fails, 5)));
+                            await _owner._clock.DelayAsync(wait, _cts.Token).ConfigureAwait(false);
+                        }
                     }
-                    catch (StreamExpiredException)
-                    {
-                        // ask the app for a fresh URL to the same file; a refresh for a different
-                        // length is a hard error (never mix two streams), otherwise retry/back off.
-                        var fresh = _owner._refresher is null
-                            ? null
-                            : await _owner._refresher.RefreshAsync(Key).ConfigureAwait(false);
-                        if (fresh is not null && fresh.Length != Length)
-                        {
-                            SetFailure("stream expired");
-                            return;
-                        }
-                        if (fresh is not null)
-                        {
-                            Source = fresh;
-                            continue;
-                        }
-                        // no way to refresh: treat it like a transient failure and use the budget
-                        if (++fails > MaxRetries)
-                        {
-                            SetFailure("stream expired");
-                            return;
-                        }
-                        var expiredWait = TimeSpan.FromMilliseconds(Math.Min(15000, 500L << Math.Min(fails, 5)));
-                        await _owner._clock.DelayAsync(expiredWait).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException) { return; }
-                    catch (Exception ex) when (ex is IOException or StreamHttpException or HttpRequestException)
-                    {
-                        // no signal / tunnel / flaky network: back off and keep trying
-                        if (++fails > MaxRetries)
-                        {
-                            SetFailure(ex.Message.Length == 0 ? "network" : ex.Message);
-                            return;
-                        }
-                        var wait = TimeSpan.FromMilliseconds(Math.Min(15000, 500L << Math.Min(fails, 5)));
-                        await _owner._clock.DelayAsync(wait).ConfigureAwait(false);
-                    }
+                    await file.FlushAsync(_cts.Token).ConfigureAwait(false);
                 }
                 lock (_owner._gate) _done = !Cancelled && pos >= Length;
             }
+            catch (OperationCanceledException) { /* cancelled while starting up */ }
             catch (Exception ex)
             {
                 SetFailure("cache: " + ex.Message);
@@ -321,7 +334,8 @@ public sealed class SongDownloader
             }
             finally
             {
-                if (Cancelled) Streaming.TryDelete(File);
+                lock (_owner._gate) _downloading = false;
+                if (Cancelled) Streaming.TryDelete(File);   // the writer is closed, so this works on Windows
                 Pump();
             }
             _owner.Raise(this);
@@ -413,6 +427,7 @@ public sealed class SongDownloader
         private long _pos;
         private Stream? _current;
         private int _failures;
+        private int _emptyReopens;
 
         internal NetworkReadStream(Song song, long start)
         {
@@ -471,16 +486,19 @@ public sealed class SongDownloader
                     await _song._owner._clock.DelayAsync(TimeSpan.FromMilliseconds(400L * _failures), cancellationToken).ConfigureAwait(false);
                     continue;
                 }
-                if (n < 0)
+                if (n <= 0)
                 {
-                    _current.Dispose();
+                    // Stream.ReadAsync returns 0 at end of stream; the Java InputStream returns -1.
+                    _current?.Dispose();
                     _current = null;
+                    if (++_emptyReopens > 4) throw new IOException("stream interrupted at byte " + _pos);
                     continue;   // next EnsureOpenAsync continues at _pos
                 }
                 if (n > 0)
                 {
                     _pos += n;
                     _failures = 0;
+                    _emptyReopens = 0;
                     return n;
                 }
             }
