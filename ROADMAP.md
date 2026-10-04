@@ -111,41 +111,40 @@ current rule: when the app isn't confident, it falls back to today's behaviour i
   like Flow today.
 - No extra CPU while simply listening: alignment work happens once per transition.
 
-## Later: move to Dart / Flutter (one codebase for Android and desktop)
+## Later: move to Uno Platform (C# / .NET): WinUI on Windows, native Android
 
-**Why.**
-- One native codebase for the phone and the PC, instead of Electron plus Capacitor.
-- No bundled Chromium: lower memory use and faster start-up on desktop.
-- A UI on Android that feels native.
+_Decided 4 Oct 2026. This replaces the earlier Dart / Flutter idea._
 
-**What it won't change.**
-- Audio speed. The heavy audio work already runs on native threads (the Chromium decoder, the
-  AudioWorklet).
-- Real-time audio code should not run in Dart either: garbage-collection pauses cause dropouts.
+**Target.** One C# codebase with XAML UI built on Uno Platform.
+- **Windows:** the WinUI 3 / Windows App SDK head. A real native Windows app: Mica, the system
+  media controls, low memory, no Chromium.
+- **Android:** the .NET for Android head. Java/Kotlin only where Android needs it: the media
+  service, Media3/ExoPlayer bindings, audio focus, the notification.
 
-**The plan: in stages, nothing switched off until its replacement is at parity.**
+**What carries over, and how.**
 
-0. **Now (cheap).** Keep the parts portable:
-   - the `window.api` surface is the contract between the UI and everything else;
-   - recorded YouTube responses (offline fixtures);
-   - reference numbers from the tests for the limiter, LUFS meter, tempo and key.
+| Today (JS) | In Uno (C#) | Notes |
+| --- | --- | --- |
+| `src/yt.mjs` (YouTube Music, InnerTube) | `Soncle.YouTube` library | Ported by hand. Metrolist's Kotlin `innertube` module is a second reference, and Kotlin reads almost line for line as C#. Tested against the same recorded fixtures. Stream URLs: prefer clients that don't need the player JS run; check what YoutubeExplode does for deciphering before writing our own. |
+| `renderer/engine.js` + worklets (limiter, LUFS, EQ, crossfade, gapless) | `Soncle.Audio` core | One DSP core used by both apps, so it sounds identical everywhere. Either allocation-free C# on the audio thread, or C/C++ called through P/Invoke from both heads. Windows output is WASAPI. Android output is AudioTrack, or Media3 with a custom AudioProcessor written in Java. Checked against today's test reference numbers (no true-peak overs, −23 LUFS reference tone, etc.). |
+| `renderer/flow/*` (tempo, key, energy, planner) | `Soncle.Flow` | Pure computation, a direct port, checked against the same synthetic-groove tests. |
+| `renderer/app.js` (UI) | XAML pages + view models (MVVM) | A rewrite. The `window.api` surface becomes the services the view models call. |
+| Settings and library (`library.json`) | Same JSON shape | A one-time carry-over from `%APPDATA%\Soncle` and the Android app, as was done for the rename. |
+| AutoEq, lyrics (LRCLIB), Spotify import | C# services | Small ports. |
 
-   Any port is checked against those same fixtures and numbers.
-1. **Audio core in Rust.** Limiter, LUFS meter, EQ and headphone correction, crossfade and
-   gapless, Flow analysis.
-   - Called from Dart through FFI (flutter_rust_bridge), with its own audio output.
-   - Usable from the current apps too, through a native module, so it can ship early.
-2. **YouTube layer in Dart.**
-   - InnerTube requests and parsing, ported from `src/yt.mjs`. Metrolist's Kotlin `innertube`
-     module is a second reference.
-   - Tested against the recorded fixtures.
-   - Watch-out: some stream clients need YouTube's player JavaScript to be run to unlock URLs. Dart
-     needs a small JS engine for that (e.g. QuickJS), or must prefer clients that don't need it.
-3. **Android app in Flutter.** Replaces `mobile/`. This is where the gain is biggest.
-4. **Desktop app in Flutter.** Replaces Electron once it matches 1.x, with a one-time carry-over of
-   `library.json`, as was done for the rename.
+**Stages. Nothing is switched off until its replacement is at parity.**
+0. **Now.** Keep the contracts portable: the `window.api` surface, recorded fixtures, and the test
+   reference numbers.
+1. **`Soncle.YouTube` + `Soncle.Flow` in C#**, with their tests, as a .NET library. A small
+   console app proves search and stream resolution.
+2. **`Soncle.Audio`.** Limiter, LUFS, EQ, crossfade, gapless, playing on Windows (WASAPI) and
+   Android.
+3. **Android app on Uno.** Replaces the Capacitor app in `mobile/`.
+4. **Windows app on Uno (WinUI).** Replaces Electron once it matches 1.x. The installer becomes
+   MSIX, or keeps a classic installer.
 
-**An alternative to weigh before stage 2.** Metrolist is moving to Kotlin Multiplatform. With
-KMP + Compose Multiplatform, their Kotlin fixes could be ported almost line for line, and
-`tools/upstream-sync.mjs` could even copy shared files. Dart means translating every upstream fix.
-That makes it the cleaner language, but more upkeep against upstream.
+**Build.** GitHub Actions builds both apps: Android on Linux runners, WinUI on Windows runners. So
+everything can still be built and installed from a phone.
+
+**Upstream watch.** Add the Uno Platform repo, and YoutubeExplode if it is used, to
+`upstream/watch.json` when the work starts.
