@@ -1,5 +1,16 @@
 # Changelog
 
+## Android 0.1.1
+
+- **Playback fixed.** The phone now gets PO tokens the same way desktop does: BotGuard runs in a
+  hidden youtube.com WebView (`SonclePlugin.java`). It uses the same stream clients as desktop,
+  in the same order. Audio requests are sent natively, so googlevideo receives the headers it
+  expects.
+- **Sign-in.** Google's sign-in page opens full screen inside the app. Once you're signed in, the
+  app keeps the YouTube session in its private storage, and it never reaches the UI's settings
+  store. Library, likes sync and Premium detection work as on desktop.
+- **Shared code.** BotGuard request handling is now `src/botguard.mjs`, used by both apps.
+
 ## Android 0.1.0 — first build (in `mobile/`)
 
 - **What it is.** Soncle on Android, sharing the desktop app's UI, audio engine and YouTube layer.

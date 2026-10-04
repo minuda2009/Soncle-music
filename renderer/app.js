@@ -1292,8 +1292,8 @@ VIEWS.history = (ctx) => {
 
 // ---- settings ----
 // Rows for things the Android app doesn't do (windows, tray, Discord, Windows audio devices,
-// sign-in and downloads for now) are left out there.
-const MOBILE_HIDDEN = new Set(['Signed in to YouTube Music', 'Sign in to YouTube Music', 'Sync likes to YouTube Music', 'Mica window backdrop', 'Output device', 'Per-device sound profiles', 'Auto-tune new devices', 'Saved device profiles', 'Smart ducking', 'Lower music to', 'Focus mode', 'Discord Rich Presence', 'Downloaded songs', 'Auto-download liked songs', 'Open downloads folder', 'Keep running in the tray', 'Keyboard shortcuts']);
+// downloads for now) are left out there.
+const MOBILE_HIDDEN = new Set(['Mica window backdrop', 'Output device', 'Per-device sound profiles', 'Auto-tune new devices', 'Saved device profiles', 'Smart ducking', 'Lower music to', 'Focus mode', 'Discord Rich Presence', 'Downloaded songs', 'Auto-download liked songs', 'Open downloads folder', 'Keep running in the tray', 'Keyboard shortcuts']);
 function settingRow({ ic, title, sub, control, onclick, disabled }) {
   if (api.mobile && MOBILE_HIDDEN.has(title)) return null;
   // A disabled row must not fire its click handler or its switch handler.

@@ -14,8 +14,9 @@ import { Browser } from '@capacitor/browser';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { MediaSession } from '@capgo/capacitor-media-session';
 import { mediaSourceUrl } from './mse.js';
+import { nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const native = Capacitor.isNativePlatform();
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
 const log = (...a) => console.log('[soncle]', ...a);
@@ -41,6 +42,8 @@ const MOBILE_SETTINGS = { mica: false, closeToTray: false, smartDuck: 'off', dis
 let store = structuredClone(defaults);
 let flowDb = {};
 let langSnap = '';
+let cookie = '';            // YouTube session cookie: kept here and in auth.json, never in the UI's store
+const saveAuth = () => files.write('auth.json', JSON.stringify({ cookie })).catch((e) => log('auth save failed', e.message));
 const save = saver('library.json', () => store);
 const flowSave = saver('flow-features.json', () => flowDb, 1500);
 
@@ -54,9 +57,16 @@ const ready = (async () => {
   flowDb = (await readJson('flow-features.json')) || {};
   yt.configure({ cache: 'yt', lang: store.settings.lang, location: store.settings.location });
   langSnap = store.settings.lang + '|' + store.settings.location;
-  // No BotGuard window here, so only stream clients that need no PO token.
-  yt.setStreamClients(['IOS', 'ANDROID_VR', 'TV', 'WEB_EMBEDDED']);
+  cookie = (await readJson('auth.json'))?.cookie || '';
+  if (cookie) yt.configure({ cookie });
   yt.setLogger((m) => log(m));
+  if (native) {
+    // Same stream clients and order as desktop: PO tokens come from BotGuard in a hidden
+    // youtube.com WebView (native.js / SonclePlugin.java).
+    yt.setPoTokenProvider((id) => mintPoToken(id, log));
+  } else {
+    yt.setStreamClients(['IOS', 'ANDROID_VR', 'TV', 'WEB_EMBEDDED']);
+  }
   autoeq.init({ read: (n) => files.read('autoeq/' + n), write: (n, t) => files.write('autoeq/' + n, t) }, (u) => fetch(u), (m) => log(m));
   if (TEST?.client) yt.__setClient(TEST.client);
   return true;
@@ -66,11 +76,13 @@ const ready = (async () => {
 const ytLufs = (db) => (db != null && isFinite(db) ? -14 + db : null);
 async function stream(id, force = false) {
   if (TEST?.stream) return TEST.stream;
-  return yt.resolveStream(id, { quality: store.settings.quality, force });
+  return yt.resolveStream(id, { quality: store.settings.quality, force, fetchImpl: gv });
 }
+// googlevideo requests go through native code so Origin/Referer/User-Agent reach the server as set
+const gv = (url, opts) => (native ? nativeFetch(url, opts) : fetch(url, opts));
 async function fetchRange(s, from, to) {
   const url = s.url + (s.url.includes('?') ? '&' : '?') + `range=${from}-${to - 1}`;
-  const r = await fetch(url, { headers: s.headers || {} });
+  const r = await gv(url, { headers: s.headers || {} });
   if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
   return new Uint8Array(await r.arrayBuffer());
 }
@@ -83,7 +95,7 @@ async function range(id, from, to) {
     if (e.status !== 403 || TEST) throw e;
     // expired or refused URL: try another client, but only if it serves the same file
     yt.invalidateStream(id);
-    const again = await yt.resolveStreamRotating(id, s.client, { quality: store.settings.quality });
+    const again = await yt.resolveStreamRotating(id, s.client, { quality: store.settings.quality, fetchImpl: gv });
     if (again.length !== s.length) throw new Error('stream changed');
     s = again;
     return { buf: await fetchRange(s, from, to), total: s.length };
@@ -211,7 +223,7 @@ const api = {
   related: withReady((id) => yt.related(id)),
   library: withReady(() => yt.library()),
   songInfo: withReady((id) => yt.songInfo(id)),
-  rate: withReady(() => false),
+  rate: withReady((id, like) => (store.settings.syncLikes && cookie ? yt.rate(id, like) : false)),
   prefetch: withReady(async (id) => { const s = await stream(id); return { client: s.client, lufs: ytLufs(s.loudnessDb), mime: s.mime, bitrate: s.bitrate }; }),
   lyrics: withReady((t) => lyrics(t)),
   // Android-only: the player's source and raw byte ranges (Flow analysis)
@@ -221,11 +233,25 @@ const api = {
   },
   range: withReady((id, from, to) => range(id, from, to)),
 
-  signIn: async () => later('Signing in'),
+  signIn: withReady(async () => {
+    if (!native) return later('Signing in');
+    const c = await nativeSignIn();
+    if (!c) return false;
+    cookie = c;
+    await saveAuth();
+    yt.configure({ cookie });
+    return true;
+  }),
   signInBrowser: async () => null,
-  signOut: async () => true,
-  authStatus: async () => false,
-  premiumStatus: async () => false,
+  signOut: withReady(async () => {
+    cookie = '';
+    await saveAuth();
+    yt.configure({ cookie: '' });
+    if (native) await nativeSignOut().catch(() => {});
+    return true;
+  }),
+  authStatus: withReady(() => !!cookie),
+  premiumStatus: withReady(() => (cookie ? yt.premiumStatus() : false)),
 
   storeGet: withReady(() => { const { cookie: _c, ...rest } = store; return structuredClone(rest); }),
   storeSet: withReady((key, value) => {
