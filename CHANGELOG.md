@@ -1,5 +1,15 @@
 # Changelog
 
+## Android 0.1.4
+
+- **Playback rebuilt the way desktop does it.**
+  - Songs now play from `https://localhost/_soncle/stream/…`. Native code answers those requests
+    (`SoncleStreams.java`), the phone's version of desktop's `mstream:` proxy.
+  - The audio element sees an ordinary seekable file. The bytes come from googlevideo in 1 MB
+    pieces, sent with the headers each stream client needs.
+  - When a URL expires mid-song, the proxy gets a fresh URL for the same file and carries on.
+  - This replaces the MediaSource player, which is kept only for the browser test harness.
+
 ## Android 0.1.3
 
 - **Google Maps support.** Soncle's own media service (`SoncleMediaService.java`, a

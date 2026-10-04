@@ -15,7 +15,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { mediaSourceUrl } from './mse.js';
 import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
 
-const VERSION = '0.1.3';
+const VERSION = '0.1.4';
 const native = Capacitor.isNativePlatform();
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
 // Recent messages for "Copy diagnostic log" (Settings). Web addresses are cut to their host, so
@@ -112,6 +112,46 @@ async function rangeOf(s, id, from, to) {
   }
 }
 async function range(id, from, to) { return rangeOf(await stream(id), id, from, to); }
+
+// On the phone songs play from https://localhost/_soncle/stream/<key>, answered natively by
+// SoncleStreams.java (the phone's version of desktop's mstream: proxy): the audio element gets a
+// normal seekable file, and the bytes come from googlevideo in 1 MB pieces. Each load gets its own
+// key; the stream behind it is registered here once resolved, and refreshed when its URL expires.
+const streamKeys = new Map();   // key → { id, s }
+let streamSeq = 0;
+function nativeStreamUrl(id, force) {
+  const key = id + '~' + (++streamSeq);
+  for (const [k, v] of streamKeys) {
+    if (v.id === id || streamKeys.size > 8) { streamKeys.delete(k); Soncle.forgetStream({ key: k }).catch(() => {}); }
+  }
+  (async () => {
+    await ready;
+    const s = await stream(id, force);
+    streamKeys.set(key, { id, s });
+    await Soncle.registerStream({ key, url: s.url, headers: s.headers || {}, length: s.length, mime: s.mime });
+  })().catch((e) => {
+    log('stream ' + id + ' failed: ' + e.message);
+    Soncle.registerStream({ key, error: e.message || 'stream failed' }).catch(() => {});
+  });
+  return location.origin + '/_soncle/stream/' + encodeURIComponent(key);
+}
+if (native) {
+  Soncle.addListener('streamExpired', async ({ key }) => {
+    const cur = streamKeys.get(key);
+    if (!cur) return Soncle.registerStream({ key, error: 'stream expired' }).catch(() => {});
+    try {
+      yt.invalidateStream(cur.id);
+      const again = await yt.resolveStreamRotating(cur.id, cur.s.client, { quality: store.settings.quality, fetchImpl: gv });
+      if (again.length !== cur.s.length) throw new Error('stream changed');
+      cur.s = again;
+      log('stream ' + cur.id + ' refreshed via ' + again.client);
+      await Soncle.registerStream({ key, url: again.url, headers: again.headers || {}, length: again.length, mime: again.mime });
+    } catch (e) {
+      log('stream ' + cur.id + ' refresh failed: ' + e.message);
+      Soncle.registerStream({ key, error: e.message }).catch(() => {});
+    }
+  });
+}
 
 // ---------- lyrics (LRCLIB, then YouTube Music) ----------
 const UA_LYRICS = { 'User-Agent': 'Soncle (https://github.com/minuda2009)' };
@@ -267,6 +307,7 @@ const api = {
   // Android-only: the player's source and raw byte ranges (Flow analysis)
   srcFor: (t, bust) => {
     if (bust) yt.invalidateStream(t.id);
+    if (native) return nativeStreamUrl(t.id, !!bust);
     return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, !!bust)), quality: store.settings.quality }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
   },
   range: withReady((id, from, to) => range(id, from, to)),

@@ -63,6 +63,34 @@ public class SonclePlugin extends Plugin {
             if (seekTime >= 0) d.put("seekTime", seekTime);
             notifyListeners("mediaAction", d, true);
         };
+        SoncleStreams.expired = (key) -> {
+            JSObject d = new JSObject();
+            d.put("key", key);
+            notifyListeners("streamExpired", d);
+        };
+    }
+
+    // ---------- song streams (SoncleStreams) ----------
+    /** { key, url, headers, length, mime } or { key, error } */
+    @PluginMethod
+    public void registerStream(PluginCall call) {
+        String key = call.getString("key");
+        if (key == null) { call.reject("key required"); return; }
+        String error = call.getString("error", null);
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        JSObject h = call.getObject("headers", new JSObject());
+        Iterator<String> keys = h.keys();
+        while (keys.hasNext()) { String k = keys.next(); headers.put(k, h.getString(k)); }
+        Double len = call.getDouble("length", 0.0);
+        SoncleStreams.register(key, new SoncleStreams.Entry(call.getString("url", ""), headers, len == null ? 0 : len.longValue(), call.getString("mime", "audio/webm"), error));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void forgetStream(PluginCall call) {
+        String key = call.getString("key");
+        if (key != null) SoncleStreams.forget(key);
+        call.resolve();
     }
 
     // ---------- media session ----------
