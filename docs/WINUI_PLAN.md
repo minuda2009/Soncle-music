@@ -282,6 +282,8 @@ Its own section markers give the split. Logic goes into view models and services
 | Unit | Status | JS changes since port |
 | --- | --- | --- |
 | `uno/` scaffold + CI (M00) | ported (PR #10) | — |
+| `Soncle.Streams` (M08) | ported (PR #11) | — |
+| `streamproxy.mjs`, `SoncleStreams.java` | replaced by `Soncle.Streams` (pending heads) | — |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks
