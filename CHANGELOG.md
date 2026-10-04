@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased: Android sound profiles that follow the output
+
+- **The phone now knows what the sound is going to** — its speaker, wired headphones, USB, a
+  Bluetooth device by name, HDMI or the car. Soncle registers Android's audio device callback and
+  listens for the "audio becoming noisy" broadcast, so it follows the output as you plug in, connect
+  or unplug.
+- **Per-device sound profiles work on the phone, like on the desktop.** Each output remembers its
+  own EQ, sound settings and volume, and switching outputs brings that profile back (within about a
+  second). "Per-device sound profiles", "Auto-tune new devices" and "Saved device profiles" are now
+  in Android's settings; "Output device" stays hidden because Android chooses the output itself.
+- **Pause when headphones disconnect** now works on the phone too, using Android's becoming-noisy
+  broadcast.
+- Bluetooth names ("Galaxy Buds2") need Android 12+'s Bluetooth permission. Soncle asks for it only
+  when you turn on "Per-device sound profiles", and works from the output type alone if you decline.
+
 ## Unreleased: crossfades that sound right
 
 Measured against the curves in `engine.js`. The plain fade was already the same as Metrolist's;

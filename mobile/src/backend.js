@@ -13,7 +13,7 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { mediaSourceUrl } from './mse.js';
-import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
+import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut, nativeAudioOutput, nativeOnAudioOutput, nativeBtDevices, nativeRequestBluetoothPermission } from './native.js';
 
 const VERSION = '0.1.6';
 const native = Capacitor.isNativePlatform();
@@ -49,7 +49,7 @@ function saver(name, get, ms = 600) {
 }
 
 // Things the phone app doesn't do (yet) are switched off rather than shown broken.
-const MOBILE_SETTINGS = { mica: false, closeToTray: false, smartDuck: 'off', discord: false, perDeviceSound: false, autoDeviceEq: false };
+const MOBILE_SETTINGS = { mica: false, closeToTray: false, smartDuck: 'off', discord: false };
 let store = structuredClone(defaults);
 let flowDb = {};
 let langSnap = '';
@@ -66,6 +66,9 @@ const ready = (async () => {
   }
   Object.assign(store.settings, MOBILE_SETTINGS);
   if (!store.settings.mobileQuality) { store.settings.quality = 'auto'; store.settings.mobileQuality = 1; }   // phones start on Auto
+  // Older Android builds forced per-device profiles off (the phone couldn't tell the output); now
+  // that it can, turn them on once for people who already had the app.
+  if (!store.settings.mobileProfiles) { store.settings.perDeviceSound = true; store.settings.autoDeviceEq = true; store.settings.mobileProfiles = 1; }
   flowDb = (await readJson('flow-features.json')) || {};
   yt.configure({ cache: 'yt', lang: store.settings.lang, location: store.settings.location });
   langSnap = store.settings.lang + '|' + store.settings.location;
@@ -375,7 +378,12 @@ const api = {
   downloads: async () => ({ done: [], active: [] }),
   downloadsSize: async () => 0,
   openDownloads: async () => false,
-  btDevices: async () => [],
+  btDevices: async () => nativeBtDevices(),
+  // The phone tells us what the sound is going to (SonclePlugin.java), so the desktop device-profile
+  // path in renderer/app.js works here too.
+  audioOutput: async () => nativeAudioOutput(),
+  onAudioOutput: (fn) => nativeOnAudioOutput(fn),
+  requestBluetoothPermission: async () => (await nativeRequestBluetoothPermission()).granted === true,
   setMini: async () => false,
   backup: withReady(backup),
   restore: withReady(restore),
