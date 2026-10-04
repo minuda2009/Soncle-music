@@ -15,7 +15,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { mediaSourceUrl } from './mse.js';
 import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
 
-const VERSION = '0.1.5';
+const VERSION = '0.1.6';
 const native = Capacitor.isNativePlatform();
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
 // Recent messages for "Copy diagnostic log" (Settings). Web addresses are cut to their host, so
@@ -65,6 +65,7 @@ const ready = (async () => {
     store = { ...defaults, ...raw, settings: { ...defaultSettings, ...(raw.settings || {}), eq: { ...defaultSettings.eq, ...(raw.settings?.eq || {}) } } };
   }
   Object.assign(store.settings, MOBILE_SETTINGS);
+  if (!store.settings.mobileQuality) { store.settings.quality = 'auto'; store.settings.mobileQuality = 1; }   // phones start on Auto
   flowDb = (await readJson('flow-features.json')) || {};
   yt.configure({ cache: 'yt', lang: store.settings.lang, location: store.settings.location });
   langSnap = store.settings.lang + '|' + store.settings.location;
@@ -85,9 +86,17 @@ const ready = (async () => {
 
 // ---------- streaming ----------
 const ytLufs = (db) => (db != null && isFinite(db) ? -14 + db : null);
+// "Auto" quality: the lighter stream on slow or metered-saving connections (2G/3G, Data Saver),
+// the best one otherwise. Checked per song, so it follows the signal as you move.
+function quality() {
+  const q = store.settings.quality;
+  if (q !== 'auto') return q;
+  const c = navigator.connection;
+  return c && (c.saveData || /2g|3g/.test(c.effectiveType || '')) ? 'low' : 'best';
+}
 async function stream(id, force = false) {
   if (TEST?.stream) return TEST.stream;
-  return yt.resolveStream(id, { quality: store.settings.quality, force, fetchImpl: gv });
+  return yt.resolveStream(id, { quality: quality(), force, fetchImpl: gv });
 }
 // googlevideo requests go through native code so Origin/Referer/User-Agent reach the server as set
 const gv = (url, opts) => (native ? nativeFetch(url, opts) : fetch(url, opts));
@@ -106,7 +115,7 @@ async function rangeOf(s, id, from, to) {
   } catch (e) {
     if (e.status !== 403 || TEST) throw e;
     yt.invalidateStream(id);
-    const again = await yt.resolveStreamRotating(id, s.client, { quality: s.quality || store.settings.quality, fetchImpl: gv });
+    const again = await yt.resolveStreamRotating(id, s.client, { quality: s.quality || quality(), fetchImpl: gv });
     if (again.length !== s.length) { yt.invalidateStream(id); throw new Error('stream changed'); }
     return { buf: await fetchRange(again, from, to), total: again.length, s: again };
   }
@@ -117,31 +126,40 @@ async function range(id, from, to) { return rangeOf(await stream(id), id, from, 
 // SoncleStreams.java (the phone's version of desktop's mstream: proxy): the audio element gets a
 // normal seekable file, and the bytes come from googlevideo in 1 MB pieces. Each load gets its own
 // key; the stream behind it is registered here once resolved, and refreshed when its URL expires.
-const streamKeys = new Map();   // key → { id, s }
+const streamKeys = new Map();   // key → { id, s }, oldest first
+const keyFor = new Map();       // video id → its current key
 let streamSeq = 0;
+function dropKey(k) { streamKeys.delete(k); Soncle.forgetStream({ key: k }).catch(() => {}); }
 function nativeStreamUrl(id, force) {
-  const key = id + '~' + (++streamSeq);
-  for (const [k, v] of streamKeys) {
-    if (v.id === id || streamKeys.size > 8) { streamKeys.delete(k); Soncle.forgetStream({ key: k }).catch(() => {}); }
+  let key = keyFor.get(id);
+  if (force || !key) {
+    if (key) dropKey(key);
+    key = id + '~' + (++streamSeq);
+    keyFor.set(id, key);
+    const k = key;
+    streamKeys.set(k, { id, s: null });
+    while (streamKeys.size > 4) { const oldest = streamKeys.keys().next().value; if (keyFor.get(streamKeys.get(oldest)?.id) === oldest) keyFor.delete(streamKeys.get(oldest).id); dropKey(oldest); }
+    (async () => {
+      await ready;
+      const s = await stream(id, force);
+      if (!streamKeys.has(k)) return;
+      streamKeys.get(k).s = s;
+      await Soncle.registerStream({ key: k, url: s.url, headers: s.headers || {}, length: s.length, mime: s.mime });
+    })().catch((e) => {
+      log('stream ' + id + ' failed: ' + e.message);
+      if (keyFor.get(id) === k) keyFor.delete(id);
+      Soncle.registerStream({ key: k, error: e.message || 'stream failed' }).catch(() => {});
+    });
   }
-  (async () => {
-    await ready;
-    const s = await stream(id, force);
-    streamKeys.set(key, { id, s });
-    await Soncle.registerStream({ key, url: s.url, headers: s.headers || {}, length: s.length, mime: s.mime });
-  })().catch((e) => {
-    log('stream ' + id + ' failed: ' + e.message);
-    Soncle.registerStream({ key, error: e.message || 'stream failed' }).catch(() => {});
-  });
   return location.origin + '/_soncle/stream/' + encodeURIComponent(key);
 }
 if (native) {
   Soncle.addListener('streamExpired', async ({ key }) => {
     const cur = streamKeys.get(key);
-    if (!cur) return Soncle.registerStream({ key, error: 'stream expired' }).catch(() => {});
+    if (!cur?.s) return Soncle.registerStream({ key, error: 'stream expired' }).catch(() => {});
     try {
       yt.invalidateStream(cur.id);
-      const again = await yt.resolveStreamRotating(cur.id, cur.s.client, { quality: store.settings.quality, fetchImpl: gv });
+      const again = await yt.resolveStreamRotating(cur.id, cur.s.client, { quality: quality(), fetchImpl: gv });
       if (again.length !== cur.s.length) throw new Error('stream changed');
       cur.s = again;
       log('stream ' + cur.id + ' refreshed via ' + again.client);
@@ -302,13 +320,19 @@ const api = {
   library: withReady(() => yt.library()),
   songInfo: withReady((id) => yt.songInfo(id)),
   rate: withReady((id, like) => (store.settings.syncLikes && cookie ? yt.rate(id, like) : false)),
-  prefetch: withReady(async (id) => { const s = await stream(id); return { client: s.client, lufs: ytLufs(s.loudnessDb), mime: s.mime, bitrate: s.bitrate }; }),
+  prefetch: withReady(async (id) => {
+    const s = await stream(id);
+    if (native && !TEST) nativeStreamUrl(id, false);   // start downloading it now (see SoncleStreams.java)
+    return { client: s.client, lufs: ytLufs(s.loudnessDb), mime: s.mime, bitrate: s.bitrate };
+  }),
   lyrics: withReady((t) => lyrics(t)),
   // Android-only: the player's source and raw byte ranges (Flow analysis)
   srcFor: (t, bust) => {
+    // On the phone a reload keeps the song's download (it retries and refreshes its own URL);
+    // only a song whose lookup failed is looked up again.
+    if (native) return nativeStreamUrl(t.id, false);
     if (bust) yt.invalidateStream(t.id);
-    if (native) return nativeStreamUrl(t.id, !!bust);
-    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, !!bust)), quality: store.settings.quality }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
+    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, !!bust)), quality: quality() }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
   },
   range: withReady((id, from, to) => range(id, from, to)),
 

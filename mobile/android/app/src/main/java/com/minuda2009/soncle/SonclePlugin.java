@@ -63,6 +63,7 @@ public class SonclePlugin extends Plugin {
             if (seekTime >= 0) d.put("seekTime", seekTime);
             notifyListeners("mediaAction", d, true);
         };
+        SoncleStreams.init(getContext().getCacheDir());
         SoncleStreams.expired = (key) -> {
             JSObject d = new JSObject();
             d.put("key", key);

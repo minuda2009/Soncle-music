@@ -5,11 +5,16 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * seeking works) by fetching the song from googlevideo in 1 MB pieces with the headers the stream
  * client needs. The JS side registers each song's stream URL first (SonclePlugin.registerStream)
  * and hands over a fresh URL when one expires.
+ *
+ * Built for listening on the move: as soon as a song is registered it is downloaded in full to the
+ * app's cache, as fast as the connection allows, and the player reads from that file. A tunnel or a
+ * dead zone then only pauses the download (it keeps retrying for ~10 minutes); what is already
+ * stored keeps playing. The next song is registered early by the app and downloads once the
+ * current one is complete. A seek far past what has arrived is served straight from the network.
  */
 final class SoncleStreams {
     static final String PREFIX = "/_soncle/stream/";
@@ -39,14 +50,150 @@ final class SoncleStreams {
     private static final Object lock = new Object();
     static Expired expired;
 
+    static File cacheDir;
+
+    static void init(File dir) {
+        cacheDir = new File(dir, "streams");
+        if (!cacheDir.isDirectory()) cacheDir.mkdirs();
+        File[] old = cacheDir.listFiles();
+        if (old != null) for (File f : old) f.delete();   // nothing survives an app restart
+    }
+
     static void register(String id, Entry e) {
         synchronized (lock) {
             entries.put(id, e);
+            if (e.error == null && e.length > 0 && cacheDir != null && !downloads.containsKey(id)) startDownload(id, e.length);
             lock.notifyAll();
         }
     }
 
-    static void forget(String id) { entries.remove(id); }
+    static void forget(String id) {
+        synchronized (lock) {
+            entries.remove(id);
+            Download d = downloads.remove(id);
+            if (d != null) d.cancel();
+            lock.notifyAll();
+        }
+    }
+
+    private static void signal() { synchronized (lock) { lock.notifyAll(); } }
+
+    // ---------- whole-song downloads to the cache ----------
+    private static final int KEEP = 4;                       // songs kept on disk (current, next, a couple back)
+    private static final long AHEAD = 1_500_000;             // a request this far past the download waits for it
+    private static final Map<String, Download> downloads = new LinkedHashMap<>();
+
+    private static void startDownload(String id, long length) {
+        // drop the oldest when there are too many (never the one just asked for)
+        List<String> ids = new ArrayList<>(downloads.keySet());
+        for (int i = 0; i < ids.size() - (KEEP - 1); i++) { Download d = downloads.remove(ids.get(i)); if (d != null) d.cancel(); }
+        Download d = new Download(id, new File(cacheDir, id.replaceAll("[^A-Za-z0-9_~-]", "_") + ".part"), length);
+        downloads.put(id, d);
+        Thread t = new Thread(d, "soncle-dl");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private static boolean otherDownloadRunning(Download me) {
+        synchronized (lock) {
+            for (Download d : downloads.values()) if (d != me && !d.finished() && d.started) return true;
+            return false;
+        }
+    }
+
+    static final class Download implements Runnable {
+        final String id;
+        final File file;
+        final long length;
+        volatile long have;
+        volatile boolean done, cancelled, wanted, started;
+        volatile String failed;
+
+        Download(String id, File file, long length) { this.id = id; this.file = file; this.length = length; }
+
+        boolean finished() { return done || cancelled || failed != null; }
+
+        void cancel() { cancelled = true; signal(); }
+
+        @Override public void run() {
+            // A song fetched ahead of time waits until the one playing is fully downloaded, so it
+            // never slows that one down on a weak connection.
+            while (!cancelled && !wanted && otherDownloadRunning(this)) {
+                synchronized (lock) { try { lock.wait(1000); } catch (InterruptedException ie) { return; } }
+            }
+            started = true;
+            long pos = 0;
+            int fails = 0;
+            try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+                byte[] b = new byte[32 * 1024];
+                while (!cancelled && pos < length) {
+                    Entry e = entries.get(id);
+                    if (e == null) break;
+                    long to = Math.min(length - 1, pos + (pos == 0 ? 256 * 1024 : CHUNK) - 1);
+                    try (InputStream in = connect(e, pos, to)) {
+                        int n;
+                        while (!cancelled && (n = in.read(b)) > 0) {
+                            raf.seek(pos);
+                            raf.write(b, 0, n);
+                            pos += n;
+                            have = pos;
+                            fails = 0;
+                            signal();
+                        }
+                    } catch (Expired403 x) {
+                        if (expired != null) expired.onExpired(id);
+                        Entry fresh = await(id, e, 20000);
+                        if (fresh == null || fresh.error != null || fresh.length != length) { failed = "stream expired"; break; }
+                    } catch (IOException x) {
+                        // no signal / tunnel / flaky network: back off and keep trying for ~10 minutes
+                        if (++fails > 45) { failed = x.getMessage() == null ? "network" : x.getMessage(); break; }
+                        long wait = Math.min(15000, 500L << Math.min(fails, 5));
+                        synchronized (lock) { try { lock.wait(wait); } catch (InterruptedException ie) { break; } }
+                    }
+                }
+                done = !cancelled && pos >= length;
+            } catch (IOException x) {
+                failed = "cache: " + x.getMessage();
+            } finally {
+                if (cancelled) file.delete();
+                signal();
+            }
+        }
+    }
+
+    /** Reads [start, end] from a download's file, waiting for bytes that haven't arrived yet. */
+    private static final class FromFile extends InputStream {
+        private final Download d;
+        private long pos;
+        private final long end;
+        private RandomAccessFile raf;
+
+        FromFile(Download d, long start, long end) { this.d = d; this.pos = start; this.end = end; }
+
+        @Override public int read(byte[] b, int off, int len) throws IOException {
+            if (pos > end) return -1;
+            synchronized (lock) {
+                while (pos >= d.have) {
+                    if (d.cancelled) throw new IOException("stopped");
+                    if (d.failed != null) throw new IOException(d.failed);
+                    if (d.done) return -1;
+                    try { lock.wait(1000); } catch (InterruptedException ie) { throw new IOException("interrupted"); }
+                }
+            }
+            if (raf == null) raf = new RandomAccessFile(d.file, "r");
+            raf.seek(pos);
+            int n = raf.read(b, off, (int) Math.min(len, Math.min(d.have, end + 1) - pos));
+            if (n > 0) pos += n;
+            return n;
+        }
+
+        @Override public int read() throws IOException {
+            byte[] one = new byte[1];
+            return read(one, 0, 1) < 0 ? -1 : one[0] & 0xff;
+        }
+
+        @Override public void close() throws IOException { if (raf != null) raf.close(); raf = null; }
+    }
 
     /** Waits up to `ms` for a registration of `id` that is different from `old`. */
     private static Entry await(String id, Entry old, long ms) {
@@ -88,7 +235,15 @@ final class SoncleStreams {
         Map<String, String> h = baseHeaders();
         h.put("Content-Length", String.valueOf(end - start + 1));
         if (partial) h.put("Content-Range", "bytes " + start + "-" + end + "/" + e.length);
-        return new WebResourceResponse(mime(e), null, partial ? 206 : 200, partial ? "Partial Content" : "OK", h, new Chunks(id, e, start, end));
+        Download d;
+        synchronized (lock) {
+            d = downloads.get(id);
+            if (d != null) { d.wanted = true; lock.notifyAll(); }
+        }
+        // Close to (or inside) what is downloaded: read the cache. A seek far beyond it: network.
+        InputStream body = d != null && !d.cancelled && d.failed == null && start <= d.have + AHEAD
+                ? new FromFile(d, start, end) : new Chunks(id, e, start, end);
+        return new WebResourceResponse(mime(e), null, partial ? 206 : 200, partial ? "Partial Content" : "OK", h, body);
     }
 
     private static Map<String, String> baseHeaders() {

@@ -1348,7 +1348,7 @@ VIEWS.settings = async (ctx) => {
     settingRow({ ic: 'sliders', title: 'Squiggly seekbar', sub: 'Wavy progress bar in the now playing screen', control: sw('squiggly') }),
     settingRow({ ic: 'gridView', title: 'List density', control: seg('density', [['comfortable', 'Comfortable'], ['compact', 'Compact']], applyAppearance) })));
 
-  const q = selectCtl('quality', [['best', 'High'], ['low', 'Low (saves data)']]);
+  const q = selectCtl('quality', [...(api.mobile ? [['auto', 'Auto (lighter on slow connections)']] : []), ['best', 'High'], ['low', 'Low (saves data)']]);
   v.append(group('Player & audio',
     settingRow({ ic: 'quality', title: 'Audio quality', sub: 'Applies to the next song', control: q }),
     settingRow({ ic: 'crossfade', title: 'Crossfade', sub: 'Blend the end of a song into the next one', control: rangeCtl('crossfade', { min: 0, max: 12, step: 1, fmt: (x) => (x ? x + ' s' : 'Off') }) }),
@@ -2675,7 +2675,8 @@ function armStallWatch(waited = 0) {
     if (bufferedEnd() > had + 0.2 && waited < 60000) return armStallWatch(waited + 12000);
     t._stalls = (t._stalls || 0) + 1;
     console.warn('stalled', t.id, 'at', engine.currentTime.toFixed(1), 'attempt', t._stalls);
-    if (t._stalls > 2) return handlePlayError(t, new Error('The stream stopped responding'), tok);
+    // phones ride out dead zones longer (the song keeps downloading in the background meanwhile)
+    if (t._stalls > (api.mobile ? 8 : 2)) return handlePlayError(t, new Error('The stream stopped responding'), tok);
     reloadAt(t, engine.currentTime);   // fresh stream URL, same position
   }, 12000);
 }

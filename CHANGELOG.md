@@ -1,5 +1,18 @@
 # Changelog
 
+## Android 0.1.6: built for listening on the move
+
+- **Each song downloads in full to the phone's cache**, as fast as the connection allows. The
+  player reads from that copy, so a tunnel or a weak spot only pauses the download, while what has
+  already arrived keeps playing. A lost connection is retried with back-off for about 10 minutes.
+  A seek far past what has arrived is fetched from the network directly.
+- **The next song is fetched ahead of time**, once the current one has finished downloading, so
+  it never competes with the song that's playing. The switch to it needs no network.
+- **Auto quality** (the new default on phones): the lighter stream on 2G/3G or with Data Saver
+  on, the best stream otherwise. It's checked for each song.
+- **Riding out dead zones:** a reload keeps the song's download rather than starting over, and the
+  phone waits longer (up to 8 stall checks) before giving up on a song.
+
 ## Android 0.1.5
 
 - **Songs start much sooner.** The stream proxy now passes audio on as it downloads. Before, it
