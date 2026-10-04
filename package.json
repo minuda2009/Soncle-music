@@ -1,0 +1,125 @@
+{
+  "name": "soncle",
+  "productName": "Soncle",
+  "version": "1.0.0",
+  "description": "A desktop YouTube Music player, built for people who care how it sounds.",
+  "type": "module",
+  "main": "src/main.mjs",
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "minuda2009",
+    "url": "https://github.com/minuda2009"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/*.test.mjs\"",
+    "lint": "eslint src renderer tools mobile/src mobile/build.mjs mobile/tools",
+    "dist": "electron-builder --x64",
+    "dist:win": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux --x64",
+    "dist:mac": "electron-builder --mac",
+    "upstream": "node tools/upstream-sync.mjs",
+    "upstream:check": "node tools/upstream-sync.mjs --check"
+  },
+  "dependencies": {
+    "music-metadata": "^11.16.1",
+    "youtubei.js": "18.1.0"
+  },
+  "build": {
+    "appId": "com.minuda2009.soncle",
+    "productName": "Soncle",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**",
+      "renderer/**",
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "Soncle-Portable-${version}.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.png"
+    },
+    "electronLanguages": [
+      "en-US"
+    ],
+    "afterPack": "build/after-pack.mjs",
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Soncle",
+      "uninstallDisplayName": "Soncle",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+      "installerHeader": "build/installerHeader.bmp",
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": false,
+      "artifactName": "Soncle-Setup-${version}.exe"
+    },
+    "copyright": "Copyright \u00a9 2026 minuda2009 \u00b7 GPL-3.0-or-later",
+    "publish": []
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.39.5",
+    "resedit": "^2.0.3"
+  },
+  "homepage": "https://github.com/minuda2009",
+  "keywords": [
+    "youtube-music",
+    "music-player",
+    "desktop",
+    "electron",
+    "audio",
+    "loudness-normalization",
+    "lufs",
+    "ebu-r128",
+    "gapless",
+    "crossfade",
+    "autoeq",
+    "headphone-eq",
+    "true-peak-limiter",
+    "windows"
+  ]
+}

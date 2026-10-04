@@ -1,0 +1,149 @@
+/* Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
+   Phone layout for the shared desktop UI: search on top, mini player and bottom navigation below,
+   full-screen sheets for Now playing and the queue. Everything is scoped to html.mobile. */
+html.mobile {
+  --titlebar-h: calc(58px + env(safe-area-inset-top));
+  --player-h: 66px;
+  --bottomnav-h: calc(64px + env(safe-area-inset-bottom));
+  --sidebar-w: 0px;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+html.mobile body { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+html.mobile input, html.mobile textarea { user-select: text; -webkit-user-select: text; font-size: 16px; }
+
+html.mobile #app {
+  grid-template-columns: 1fr;
+  grid-template-rows: var(--titlebar-h) 1fr auto var(--bottomnav-h);
+  grid-template-areas: "title" "main" "player" "side";
+  height: 100dvh;
+}
+
+/* ---- top: back + search ---- */
+html.mobile #titlebar { grid-template-columns: auto 1fr; padding: env(safe-area-inset-top) 12px 0 8px; gap: 4px; }
+html.mobile .tb-logo, html.mobile .tb-name, html.mobile #navFwd, html.mobile #palHint, html.mobile .tb-right { display: none; }
+html.mobile #navBack:disabled { display: none; }
+html.mobile .tb-search { max-width: none; }
+html.mobile #searchBox { height: 44px; border-radius: 22px; padding-left: 16px; }
+html.mobile #suggestBox { top: 44px; max-height: calc(100dvh - var(--titlebar-h) - 20px); }
+html.mobile #titlebar:has(#navBack:disabled) { padding-left: 12px; }
+
+/* ---- bottom navigation ---- */
+html.mobile #sidebar {
+  grid-area: side; flex-direction: row; padding: 0 4px env(safe-area-inset-bottom); overflow: hidden;
+  background: var(--surface-1, var(--bg)); border-top: 1px solid rgb(var(--ov) / .06); z-index: 21;
+}
+html.mobile .nav-main { display: flex; flex: 1; justify-content: space-around; align-items: center; gap: 0; }
+html.mobile .nav-item {
+  flex: 1 1 0; flex-direction: column; gap: 3px; height: 60px; padding: 6px 0 0; margin: 0; border-radius: 0;
+  background: none !important; font-size: 11.5px; justify-content: flex-start; align-items: center;
+}
+html.mobile .nav-item span:last-child { display: block !important; white-space: nowrap; }
+html.mobile .nav-item .ni-icon { display: flex; align-items: center; justify-content: center; width: 60px; height: 30px; border-radius: 15px; transition: background .2s; }
+html.mobile .nav-item.active .ni-icon { background: var(--primary-container); color: var(--on-primary-container); }
+html.mobile .nav-item[data-route="files"], html.mobile .nav-item[data-route="stats"],
+html.mobile .nav-sep, html.mobile .nav-head, html.mobile #navPlaylists { display: none; }
+
+/* ---- pages ---- */
+html.mobile #main { overflow-x: hidden; }
+html.mobile #view { padding: 8px 16px 28px; }
+html.mobile #view h1, html.mobile .page-title { font-size: 28px; }
+html.mobile .row-scroll { grid-auto-columns: 140px; gap: 12px; scroll-snap-type: x proximity; scroll-behavior: auto; }
+html.mobile .row-scroll > * { scroll-snap-align: start; }
+html.mobile .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 12px; }
+html.mobile .section-head h2 { font-size: 20px; }
+html.mobile .section-head .sh-actions .icon-btn { display: none; }   /* carousel arrows: swipe instead */
+html.mobile .card .play-over { display: none; }
+html.mobile .card .ct { font-size: 14px; }
+html.mobile .card:hover .art img { transform: none; }
+html.mobile .song { padding-left: 4px; padding-right: 4px; }
+html.mobile .song .s-album, html.mobile .song .s-dur { display: none; }
+html.mobile .song.has-album { grid-template-columns: auto minmax(0, 1fr) auto; }
+
+/* ---- mini player ---- */
+html.mobile #playerbar {
+  grid-template-columns: minmax(0, 1fr) auto; height: var(--player-h); padding: 0 6px 0 10px; gap: 4px;
+  margin: 0 8px 6px; border-radius: 16px; background: var(--surface-3); position: relative; overflow: hidden;
+}
+html.mobile #playerbar.empty { display: none; }
+html.mobile .pb-left { gap: 10px; }
+html.mobile .pb-thumb { width: 46px; height: 46px; border-radius: 10px; }
+html.mobile .pb-title { font-size: 14.5px; }
+html.mobile .pb-artist { font-size: 12.5px; }
+html.mobile #pbLike { display: none; }
+html.mobile .pb-center { flex-direction: row; gap: 0; }
+html.mobile .pb-controls { gap: 0; }
+html.mobile #pbShuffle, html.mobile #pbRepeat, html.mobile #pbPrev { display: none; }
+html.mobile .pb-controls .play-btn { width: 46px; height: 46px; }
+/* the progress becomes a thin line along the bottom edge */
+html.mobile .pb-progress { position: absolute; left: 12px; right: 12px; bottom: 0; width: auto; pointer-events: none; }
+html.mobile .pb-progress .time { display: none; }
+html.mobile .pb-progress .slider { height: 3px; }
+html.mobile .pb-progress .sl-thumb { display: none; }
+html.mobile .pb-right { display: none; }
+
+/* ---- queue: full-screen sheet ---- */
+html.mobile #queuePanel {
+  inset: 0; width: auto; border-radius: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  z-index: 45; animation: mSheetIn var(--d-med) var(--spring-m3);
+}
+@keyframes mSheetIn { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---- now playing: art and controls first, the chosen panel (lyrics / up next / related) below ---- */
+html.mobile .np-top { height: auto; padding: calc(env(safe-area-inset-top) + 6px) 8px 6px; grid-template-columns: auto 1fr; gap: 6px; }
+html.mobile .np-from { display: none; }
+html.mobile .np-tabs { justify-self: center; }
+html.mobile .np-tabs .chip { padding: 0 12px; }
+html.mobile .np-body {
+  display: block; overflow-y: auto; padding: 0 20px calc(env(safe-area-inset-bottom) + 20px); scroll-snap-type: y proximity;
+}
+html.mobile .np-left { min-height: calc(100dvh - 64px - env(safe-area-inset-top)); justify-content: center; scroll-snap-align: start; }
+html.mobile .np-art { width: min(100%, 46dvh); border-radius: 22px; }
+html.mobile .np-meta { width: 100%; margin-top: 20px; }
+html.mobile .np-title { font-size: 22px; }
+html.mobile .np-pills { height: 60px; }
+html.mobile #npFull, html.mobile #npDownload { display: none; }
+html.mobile .np-right { min-height: calc(100dvh - 64px - env(safe-area-inset-top)); overflow: visible; padding-top: 8px; scroll-snap-align: start; }
+html.mobile .np-right .panel-scroll { overflow: visible; padding-right: 0; }
+
+/* ---- dialogs, menus, toasts ---- */
+html.mobile #modal > * { max-width: calc(100vw - 24px) !important; max-height: calc(100dvh - 48px); overflow: auto; }
+html.mobile #ctxMenu { max-width: calc(100vw - 16px); }
+html.mobile #toast { bottom: calc(var(--bottomnav-h) + var(--player-h) + 16px); left: 12px; right: 12px; transform: none; }
+
+/* Desktop-only parts of shared pages */
+html.mobile .desktop-only { display: none !important; }
+
+/* touch targets */
+html.mobile .icon-btn { min-width: 44px; min-height: 44px; }
+html.mobile .icon-btn.small { min-width: 40px; min-height: 40px; }
+
+/* song rows: no hover on a phone, so the ⋮ button stays visible and the like button goes */
+html.mobile .song .s-end .icon-btn { opacity: .8; }
+html.mobile .song .s-end .icon-btn:first-child:not(:last-child) { display: none; }
+html.mobile .song .s-end .icon-btn.liked { display: inline-flex; color: var(--primary); }
+
+/* album / playlist / artist header: cover on top, then title and actions */
+html.mobile .detail-head { flex-direction: column; align-items: center; text-align: center; gap: 16px; margin-top: 0; }
+html.mobile .detail-head .cover, html.mobile .detail-head > :first-child { width: min(62vw, 260px); height: auto; aspect-ratio: 1; }
+html.mobile .detail-head .info { width: 100%; }
+html.mobile .detail-head h1 { font-size: 26px; }
+html.mobile .detail-head .info > div:last-child, html.mobile .detail-head .actions { justify-content: center; flex-wrap: wrap; }
+
+/* settings: wide controls (segmented buttons, colour swatches, sliders) wrap under the text */
+html.mobile .set-row { flex-wrap: wrap; padding: 12px 16px; gap: 10px 14px; }
+html.mobile .set-row .sr-text { flex: 1 1 150px; }
+html.mobile .set-row > :last-child:not(.sr-text):not(.ic) { margin-left: auto; max-width: 100%; }
+html.mobile .set-row .seg { flex-wrap: wrap; }
+
+/* search: top result above the songs instead of beside them */
+html.mobile .top-result { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+html.mobile .top-result > .set-card { padding: 16px !important; }
+
+/* Sound page */
+html.mobile .snd-meter { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
+html.mobile .snd-mbar { flex: 1 1 100%; }
+html.mobile .snd-meter .ab-btn { width: 100%; justify-content: center; }
+html.mobile .snd-row { flex-wrap: wrap; }
+html.mobile .snd-row > div[style*="160px"] { width: 100% !important; }
+html.mobile .eq-card { padding-left: 12px; padding-right: 12px; }

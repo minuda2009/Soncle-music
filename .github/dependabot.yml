@@ -1,0 +1,16 @@
+# Most "YouTube changed something" fixes land in youtubei.js, not here: take them weekly.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: youtubei.js
+      - dependency-name: music-metadata
+      - dependency-name: electron
+    labels: [dependencies]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

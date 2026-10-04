@@ -1,0 +1,38 @@
+# Every Monday (and on demand): pull in what the upstream Android app changed (see UPSTREAM.md).
+# Shared files and icons are updated automatically; Kotlin changes that need porting are listed.
+# Everything arrives as one pull request, so nothing reaches the app until you merge it.
+name: Upstream sync
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - id: sync
+        run: node tools/upstream-sync.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: steps.sync.outputs.changed == 'true'
+        run: npm test && npm run lint
+      - if: steps.sync.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: upstream-sync
+          commit-message: 'Sync with upstream ${{ steps.sync.outputs.upstream }}'
+          title: 'Sync with upstream ${{ steps.sync.outputs.upstream }}'
+          body-path: upstream/REPORT.md
+          labels: upstream

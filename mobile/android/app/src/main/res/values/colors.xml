@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="soncle_bg">#0E0E13</color>
+    <color name="colorPrimary">#BFC2F0</color>
+    <color name="colorPrimaryDark">#0E0E13</color>
+    <color name="colorAccent">#BFC2F0</color>
+</resources>

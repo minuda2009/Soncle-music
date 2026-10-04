@@ -1,0 +1,209 @@
+{
+ "_about": "Upstream this app was originally ported from (credited in THIRD_PARTY_NOTICES.md), and the files it still mirrors. Used only by tools/upstream-sync.mjs; nothing here ships in the app.",
+ "repo": "MetrolistGroup/Metrolist",
+ "branch": "main",
+ "synced": {
+  "ref": "v13.7.0",
+  "commit": "7c5ba3ad22cb562d337897f82163a2b7fce665f3",
+  "at": "2026-09-29"
+ },
+ "copy": [
+  {
+   "from": "app/src/main/assets/po_token.html",
+   "to": "src/po_token.html"
+  }
+ ],
+ "watch": [
+  {
+   "paths": [
+    "app/src/main/kotlin/com/metrolist/music/utils/potoken/"
+   ],
+   "ours": [
+    "src/potoken.mjs"
+   ],
+   "what": "PO tokens / BotGuard"
+  },
+  {
+   "paths": [
+    "app/src/main/kotlin/com/metrolist/music/utils/InnerTubeXPlayer.kt",
+    "app/src/main/kotlin/com/metrolist/music/playback/StreamUrlCache.kt",
+    "innertube/src/main/kotlin/com/metrolist/innertube/models/YouTubeClient.kt",
+    "innertube/src/main/kotlin/com/metrolist/innertube/InnerTube.kt",
+    "innertube/src/main/kotlin/com/metrolist/innertube/YouTubeConstants.kt"
+   ],
+   "ours": [
+    "src/yt.mjs",
+    "src/streamproxy.mjs"
+   ],
+   "what": "Stream clients, client versions, playback URLs"
+  },
+  {
+   "paths": [
+    "innertube/src/main/kotlin/com/metrolist/innertube/YouTube.kt",
+    "innertube/src/main/kotlin/com/metrolist/innertube/pages/",
+    "innertube/src/main/kotlin/com/metrolist/innertube/models/"
+   ],
+   "ours": [
+    "src/yt.mjs"
+   ],
+   "what": "YouTube Music pages and parsing"
+  },
+  {
+   "paths": [
+    "app/src/main/kotlin/com/metrolist/music/playback/MusicService.kt",
+    "app/src/main/kotlin/com/metrolist/music/playback/audio/"
+   ],
+   "ours": [
+    "renderer/engine.js",
+    "renderer/app.js"
+   ],
+   "what": "Crossfade, normalisation, silence skipping, playback behaviour"
+  },
+  {
+   "paths": [
+    "app/src/main/kotlin/com/metrolist/music/lyrics/"
+   ],
+   "ours": [
+    "src/main.mjs"
+   ],
+   "what": "Lyrics providers"
+  },
+  {
+   "paths": [
+    "app/src/main/kotlin/com/metrolist/music/ui/component/ExperimentalLyrics.kt",
+    "app/src/main/kotlin/com/metrolist/music/ui/component/LyricsLine.kt"
+   ],
+   "ours": [
+    "renderer/app.js",
+    "renderer/styles.css"
+   ],
+   "what": "Lyrics display and motion"
+  },
+  {
+   "paths": [
+    "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/"
+   ],
+   "ours": [
+    "renderer/engine.js"
+   ],
+   "what": "Equalizer"
+  }
+ ],
+ "hashes": {
+  "app/src/main/kotlin/com/metrolist/music/utils/potoken/JavaScriptUtil.kt": "051f5d6780c5e14f",
+  "app/src/main/kotlin/com/metrolist/music/utils/potoken/PoTokenException.kt": "36893db26b2822ee",
+  "app/src/main/kotlin/com/metrolist/music/utils/potoken/PoTokenGenerator.kt": "d4b377cdd7883986",
+  "app/src/main/kotlin/com/metrolist/music/utils/potoken/PoTokenResult.kt": "6896f0234d4fa315",
+  "app/src/main/kotlin/com/metrolist/music/utils/potoken/PoTokenWebView.kt": "657f03a24667ccfa",
+  "app/src/main/kotlin/com/metrolist/music/utils/InnerTubeXPlayer.kt": "3ebc136979dbdf4c",
+  "app/src/main/kotlin/com/metrolist/music/playback/StreamUrlCache.kt": "87d41109d2fb8076",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/YouTubeClient.kt": "4a1b92fe4b522a7e",
+  "innertube/src/main/kotlin/com/metrolist/innertube/InnerTube.kt": "4be94d6880396476",
+  "innertube/src/main/kotlin/com/metrolist/innertube/YouTubeConstants.kt": "25892537b7f4fbcc",
+  "innertube/src/main/kotlin/com/metrolist/innertube/YouTube.kt": "cc4e18b50fc76f41",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/AlbumPage.kt": "36e858a4c14833ca",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/ArtistItemsContinuationPage.kt": "168b6ce1173e9986",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/ArtistItemsPage.kt": "f169f78949797e16",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/ArtistPage.kt": "84478eab7c197a84",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/BrowseResult.kt": "f259f1b0734636c5",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/ChartsPage.kt": "dc1abfa1b74b3e3f",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/ExplorePage.kt": "3e4431aec7d3e53d",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/HistoryPage.kt": "2c9a9786b874f6a0",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/HomePage.kt": "69a57fab020951a3",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/LibraryContinuationPage.kt": "7b8db5f1d0d6c88b",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/LibraryPage.kt": "b6ad0df6925cb279",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/MoodAndGenres.kt": "ae9c2eeec2ef6857",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/NewReleaseAlbumPage.kt": "9b3d0b58cc7d32de",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/NextPage.kt": "cff528563565db09",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/PageHelper.kt": "7874d6cbe9a33227",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/PlaylistContinuationPage.kt": "95f4f8ca6423bc57",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/PlaylistPage.kt": "b33214b1ace0326d",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/PodcastPage.kt": "4170d9c0f28684c5",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/RelatedPage.kt": "93c763e0cea5caad",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/SearchPage.kt": "84949574c6b6fb47",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/SearchSuggestionPage.kt": "eb9bd9a78d651e9c",
+  "innertube/src/main/kotlin/com/metrolist/innertube/pages/SearchSummaryPage.kt": "c48651bd46524170",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/AccountInfo.kt": "9eba2bffc0cf5864",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/AutomixPreviewVideoRenderer.kt": "384dcc7c9418c128",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Badges.kt": "c25458d605c06ce4",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Button.kt": "598d8b013a5185cc",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Continuation.kt": "ab858404aacdae45",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/ContinuationItemRenderer.kt": "3cf1b3542e3c6bc5",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Endpoint.kt": "a66fee12ac51d05b",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/GridRenderer.kt": "5973866597e58006",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Icon.kt": "345fcbce2ac28c3b",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MediaInfo.kt": "8acc73af024ccfd7",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Menu.kt": "cb8fa496482c4674",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicCardShelfRenderer.kt": "1db96a3ae2c31e5b",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicCarouselShelfRenderer.kt": "9ca6069d2e1dc4a6",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicDescriptionShelfRenderer.kt": "c5224eaa2482392c",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicEditablePlaylistDetailHeaderRenderer.kt": "7ae78bf9091910bd",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicMultiRowListItemRenderer.kt": "a78ff004b3300352",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicNavigationButtonRenderer.kt": "876ef804c05c23db",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicPlaylistShelfRenderer.kt": "4921d22e10bcf044",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicQueueRenderer.kt": "05c70268ec067ab7",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicResponsiveHeaderRenderer.kt": "cd06bf064744648e",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicResponsiveListItemRenderer.kt": "f181db161762b605",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicShelfRenderer.kt": "065a12bdd8f62c8f",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/MusicTwoRowItemRenderer.kt": "819b9171f58496ab",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/NavigationEndpoint.kt": "8cfa97d9255e6d14",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/PlaylistPanelRenderer.kt": "98f2d7b0a429cb4c",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/PlaylistPanelVideoRenderer.kt": "dc82baab801a4988",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/ResponseContext.kt": "d2521486691d325f",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/ReturnYouTubeDislikeResponse.kt": "773ce7a92e17fa2d",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Runs.kt": "3a6db77699cdb6d5",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/SearchSuggestions.kt": "ec077f670100a116",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/SearchSuggestionsSectionRenderer.kt": "ec8cad5b609dc14b",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/SectionListRenderer.kt": "b358ab9e2a483366",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/SubscriptionButton.kt": "5911d32b1bcf006a",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Tabs.kt": "3602892216ef69f5",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/ThumbnailRenderer.kt": "3566225c7c121c43",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/Thumbnails.kt": "3d02a20cee842503",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/TwoColumnBrowseResultsRenderer.kt": "159d61e21d7f5c80",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/UrlEndpoint.kt": "95ac0c7124649e59",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/YTItem.kt": "197b43bbba43e19b",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/YouTubeAccount.kt": "51e3eb37867cc3a4",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/YouTubeDataPage.kt": "bcf34c9ea7285eb8",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/YouTubeLocale.kt": "3987aa4a5eacd565",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/AccountMenuResponse.kt": "0a2b83a540b9e716",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/BrowseResponse.kt": "06dcf556f3adc3b6",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/ContinuationResponse.kt": "78112b06f8f8a82f",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/CreatePlaylistResponse.kt": "c1179f3455e2918f",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/EditPlaylistResponse.kt": "ada5a2f28c2ff2da",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/FeedbackResponse.kt": "86554a6c21c6f11a",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/GetQueueResponse.kt": "d62e9fa930315bc4",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/GetSearchSuggestionsResponse.kt": "12f0534d2550b890",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/GetTranscriptResponse.kt": "8bdd34c67eeb4d09",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/NextResponse.kt": "a9023cbc7f0f6ff5",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/PlayerResponse.kt": "1dac10ad98ce4e94",
+  "innertube/src/main/kotlin/com/metrolist/innertube/models/response/SearchResponse.kt": "1ae8b2c9ee939822",
+  "app/src/main/kotlin/com/metrolist/music/playback/MusicService.kt": "af71079496cca593",
+  "app/src/main/kotlin/com/metrolist/music/playback/audio/SilenceDetectorAudioProcessor.kt": "069e94dc04f0831c",
+  "app/src/main/kotlin/com/metrolist/music/playback/audio/VolumeNormalizationAudioProcessor.kt": "0d3059a799f844ad",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/BetterLyricsProvider.kt": "0f35bf71bef4db77",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/KuGouLyricsProvider.kt": "f1939a5c57575e1c",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LrcLibLyricsProvider.kt": "1a74ceba5794634a",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsEntry.kt": "d0b28eb83ba4d91b",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsFormat.kt": "ae4f483c98c44f6d",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsHelper.kt": "8042a9e4fa2cc794",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsPlusProvider.kt": "fb28094744756059",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsProvider.kt": "29cd9125e3d919d0",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsProviderRegistry.kt": "38fbe44cd7cf9fa3",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsTranslationHelper.kt": "b135289068e54dc5",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/LyricsUtils.kt": "6f2c4d67249c9783",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/PaxsenixLyricsProvider.kt": "cdf97dc6da31bf1c",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/YouTubeLyricsProvider.kt": "766745598dab7ab7",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/YouTubeSubtitleLyricsProvider.kt": "70979546c17a0b7e",
+  "app/src/main/kotlin/com/metrolist/music/lyrics/ZemerLyricsProvider.kt": "2b4b2bce88234905",
+  "app/src/main/kotlin/com/metrolist/music/ui/component/ExperimentalLyrics.kt": "7f7d84dda66cce15",
+  "app/src/main/kotlin/com/metrolist/music/ui/component/LyricsLine.kt": "c6df3afb91237e34",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/EQState.kt": "9f11a9d92b0f1de1",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/EQViewModel.kt": "360a4b45505ec437",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/EqFrequencyResponseGraph.kt": "408b5b5cf2be1298",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/EqScreen.kt": "a0a8557c86f951cb",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/wizard/WizardScreen.kt": "3fa5359ea36f85df",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/wizard/WizardState.kt": "f4a5e7fd3ef064cb",
+  "app/src/main/kotlin/com/metrolist/music/ui/screens/equalizer/wizard/WizardViewModel.kt": "fde40ceff16c0a61",
+  "app/src/main/assets/po_token.html": "ac8fab74d17416a8"
+ }
+}

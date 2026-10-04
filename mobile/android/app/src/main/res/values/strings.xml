@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Soncle</string>
+    <string name="title_activity_main">Soncle</string>
+    <string name="package_name">com.minuda2009.soncle</string>
+    <string name="custom_url_scheme">com.minuda2009.soncle</string>
+</resources>

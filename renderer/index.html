@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https: mstream:; media-src 'self' mstream: blob:; connect-src 'self' mstream: https:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>Soncle</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="paused">
+  <div id="app">
+    <header id="titlebar">
+      <div class="tb-left">
+        <img src="icon.png" class="tb-logo" alt="" />
+        <span class="tb-name">Soncle</span>
+        <button class="icon-btn small nodrag" id="navBack" title="Back (Alt+Left)"></button>
+        <button class="icon-btn small nodrag" id="navFwd" title="Forward (Alt+Right)"></button>
+      </div>
+      <div class="tb-search nodrag">
+        <div id="searchBox">
+          <span class="sb-icon"></span>
+          <input id="searchInput" type="text" placeholder="Search songs, albums, artists, or paste a link" autocomplete="off" spellcheck="false" />
+          <button class="icon-btn small" id="searchClear" hidden></button>
+          <button id="palHint" title="Command bar: play, jump anywhere, change sound, find music">Ctrl K</button>
+        </div>
+        <div id="suggestBox" hidden></div>
+      </div>
+      <div class="tb-right"></div>
+    </header>
+
+    <nav id="sidebar">
+      <div class="nav-main">
+        <a class="nav-item" data-route="home"><span class="ni-icon" data-icon="home"></span><span>Home</span></a>
+        <a class="nav-item" data-route="explore"><span class="ni-icon" data-icon="explore"></span><span>Explore</span></a>
+        <a class="nav-item" data-route="library"><span class="ni-icon" data-icon="library"></span><span>Library</span></a>
+        <a class="nav-item" data-route="files"><span class="ni-icon" data-icon="musicFolder"></span><span>Local files</span></a>
+        <a class="nav-item" data-route="history"><span class="ni-icon" data-icon="history"></span><span>History</span></a>
+        <a class="nav-item" data-route="stats"><span class="ni-icon" data-icon="stats"></span><span>Stats</span></a>
+        <a class="nav-item" data-route="settings"><span class="ni-icon" data-icon="settings"></span><span>Settings</span></a>
+      </div>
+      <div class="nav-sep"></div>
+      <div class="nav-head">
+        <span>Playlists</span>
+        <button class="icon-btn small" id="importBtn" title="Import playlist (Spotify, CSV…)"></button>
+        <button class="icon-btn small" id="newPlaylistBtn" title="New playlist"></button>
+      </div>
+      <div id="navPlaylists"></div>
+    </nav>
+
+    <main id="main"><div id="view"></div></main>
+
+    <footer id="playerbar" class="empty">
+      <div class="pb-left">
+        <div class="pb-thumb" id="pbThumb" title="Now playing"></div>
+        <div class="pb-meta" id="pbMeta">
+          <div class="pb-title" id="pbTitle"></div>
+          <div class="pb-artist" id="pbArtist"></div>
+        </div>
+        <button class="icon-btn" id="pbLike" title="Like (Ctrl+L)"></button>
+      </div>
+      <div class="pb-center">
+        <div class="pb-controls">
+          <button class="icon-btn" id="pbShuffle" title="Shuffle (Ctrl+S)"></button>
+          <button class="icon-btn" id="pbPrev" title="Previous (Ctrl+Left)"></button>
+          <button class="play-btn" id="pbPlay" title="Play/Pause (Space)"></button>
+          <button class="icon-btn" id="pbNext" title="Next (Ctrl+Right)"></button>
+          <button class="icon-btn" id="pbRepeat" title="Repeat (Ctrl+R)"></button>
+        </div>
+        <div class="pb-progress">
+          <span class="time" id="pbCur">0:00</span>
+          <div class="slider" id="pbSeek"><div class="sl-track"><div class="sl-buf"></div><div class="sl-fill"></div></div><div class="sl-thumb"></div></div>
+          <span class="time" id="pbDur">0:00</span>
+        </div>
+      </div>
+      <div class="pb-right">
+        <button class="icon-btn" id="pbDevice" title="Audio output"></button>
+        <button class="icon-btn" id="pbLyrics" title="Lyrics"></button>
+        <button class="icon-btn" id="pbQueue" title="Queue (Q)"></button>
+        <button class="icon-btn" id="pbFocus" title="Focus mode (Ctrl+Shift+F)"></button>
+        <button class="icon-btn" id="pbSleep" title="Sleep timer"></button>
+        <button class="icon-btn" id="pbMute" title="Mute (M)"></button>
+        <div class="slider vol" id="pbVol"><div class="sl-track"><div class="sl-fill"></div></div><div class="sl-thumb"></div></div>
+        <button class="icon-btn" id="pbMini" title="Mini player"></button>
+        <button class="icon-btn" id="pbExpand" title="Now playing (F)"></button>
+      </div>
+    </footer>
+
+    <aside id="queuePanel" hidden>
+      <div class="qp-head">
+        <h3>Queue</h3>
+        <div class="qp-actions">
+          <button class="text-btn" id="qpSave" title="Save queue as a playlist">Save</button>
+          <button class="text-btn" id="qpClear">Clear</button>
+          <button class="icon-btn small" id="qpClose"></button>
+        </div>
+      </div>
+      <div class="qp-sub" id="qpSub"></div>
+      <div id="queueList"></div>
+    </aside>
+  </div>
+
+  <section id="nowPlaying" hidden>
+    <div class="np-bg-wrap" id="npBgWrap"></div>
+    <div class="np-top">
+      <button class="icon-btn" id="npClose" title="Close (Esc)"></button>
+      <div class="np-tabs">
+        <button class="chip" data-tab="lyrics">Lyrics</button>
+        <button class="chip" data-tab="queue">Up next</button>
+        <button class="chip" data-tab="related">Related</button>
+      </div>
+      <div class="np-from" id="npFrom"></div>
+    </div>
+    <div class="np-body">
+      <div class="np-left">
+        <div class="np-art" id="npArt" title="Double-click to play/pause"></div>
+        <div class="np-meta">
+          <div class="np-titlerow">
+            <div>
+              <div class="np-title" id="npTitle"></div>
+              <div class="np-artist" id="npArtist"></div>
+            </div>
+            <button class="icon-btn" id="npLike"></button>
+            <button class="icon-btn" id="npMore"></button>
+          </div>
+          <div class="np-progress">
+            <div class="slider big" id="npSeek"><div class="sl-track"><div class="sl-buf"></div><div class="sl-fill"></div></div><div class="sl-thumb"></div></div>
+            <div class="np-times"><span id="npCur">0:00</span><span id="npDur">0:00</span></div>
+          </div>
+          <div class="np-controls">
+            <button class="icon-btn" id="npShuffle"></button>
+            <div class="np-pills" id="npPills">
+              <button class="np-pill side" id="npPrev" title="Previous (Ctrl+Left)"></button>
+              <button class="np-pill main" id="npPlay" title="Play/Pause (Space)"></button>
+              <button class="np-pill side" id="npNext" title="Next (Ctrl+Right)"></button>
+            </div>
+            <button class="icon-btn" id="npRepeat"></button>
+          </div>
+          <div class="np-extra">
+            <button class="icon-btn" id="npSleep" title="Sleep timer"></button>
+            <button class="icon-btn" id="npTempo" title="Tempo & pitch"></button>
+            <button class="icon-btn" id="npEq" title="Sound"></button>
+            <button class="icon-btn" id="npDownload" title="Download"></button>
+            <button class="icon-btn" id="npFull" title="Full screen (F11)"></button>
+          </div>
+          <div class="np-quality" id="npQuality"></div>
+        </div>
+      </div>
+      <div class="np-right" id="npPanel"></div>
+    </div>
+  </section>
+
+  <div id="ctxMenu" hidden></div>
+  <div id="toast" hidden></div>
+  <div id="modal" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
