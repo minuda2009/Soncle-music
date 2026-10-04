@@ -2131,17 +2131,21 @@ async function loadTrack(t, tok, { startAt = 0, autoplay = true } = {}) {
   t._retried = false;
   t._started = false;
   t._autoplay = autoplay;
+  P.holdStart = false;
   P.loading = autoplay;
   updatePlayButtons();
   try {
-    const info = await api.prefetch(t.id);
+    P.looking = tok;
+    const info = await api.prefetch(t.id).finally(() => { if (P.looking === tok) P.looking = null; });
     if (tok !== P.loadToken) return;
     setStreamInfo(t, info);
-    await engine.load(t, { src: srcFor(t), lufs: lufsFor(t, info), startAt, autoplay });
+    // pause pressed while the stream was being looked up (seconds on a phone): load, but don't start
+    const auto = autoplay && !P.holdStart;
+    await engine.load(t, { src: srcFor(t), lufs: lufsFor(t, info), startAt, autoplay: auto });
     if (tok !== P.loadToken) return;
     if (!P.streamInfo?.txt.includes('kHz')) setStreamInfo(t, info);
     P.errors = 0;
-    if (!autoplay) { P.loading = false; updatePlayButtons(); }
+    if (!auto) { P.loading = false; P.holdStart = false; t._autoplay = false; updatePlayButtons(); }
   } catch (e) {
     if (tok !== P.loadToken) return;
     handlePlayError(t, e, tok);
@@ -2355,6 +2359,8 @@ function prev() {
 }
 function togglePlay() {
   if (!P.current) { if (P.queue.length) playAt(Math.max(0, P.idx)); return; }
+  // a song is still being looked up: pause/play just decides whether it starts when ready
+  if (P.looking === P.loadToken) { P.holdStart = !P.holdStart; if (!P.holdStart) P.loading = true; if (P.holdStart && !engine.paused) engine.pause(); return updatePlayButtons(); }
   if (engine.paused || engine.deck.pausing) {
     if (!engine.el.src) return playAt(P.idx, { startAt: P.resumeAt || 0 });
     engine.play().catch(() => playAt(P.idx));
@@ -2448,7 +2454,7 @@ function updatePlayButtons() {
   kickFrame();
   for (const id of ['#pbPlay', '#npPlay']) {
     const b = $(id);
-    const want = P.loading ? 'loading' : P.playing ? 'pause' : 'play';
+    const want = P.holdStart ? 'play' : P.loading ? 'loading' : P.playing ? 'pause' : 'play';
     if (b.dataset.state !== want) {
       b.dataset.state = want;
       if (id === '#npPlay') b.replaceChildren(want === 'loading' ? h('div', { class: 'spinner' }) : icon(want), h('span', null, want === 'pause' ? 'Pause' : 'Play'));
@@ -2802,8 +2808,8 @@ if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
   // play and pause do only what they say: a stray "play" from the system (Android sends one when
   // the media notification starts) must not pause a song that is already starting
-  ms.setActionHandler('play', () => { if (engine.paused || engine.deck.pausing || !P.current) togglePlay(); });
-  ms.setActionHandler('pause', () => { if (P.playing) togglePlay(); });
+  ms.setActionHandler('play', () => { if (P.holdStart || (P.looking !== P.loadToken && (engine.paused || engine.deck.pausing)) || !P.current) togglePlay(); });
+  ms.setActionHandler('pause', () => { if (P.playing || (P.looking === P.loadToken && !P.holdStart)) togglePlay(); });
   ms.setActionHandler('previoustrack', () => prev());
   ms.setActionHandler('nexttrack', () => next());
   ms.setActionHandler('seekto', (d) => engine.seek(d.seekTime));

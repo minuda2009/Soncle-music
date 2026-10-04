@@ -3,6 +3,11 @@ package com.minuda2009.soncle;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -21,6 +26,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Iterator;
+import androidx.core.content.ContextCompat;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +39,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *    the same approach as the desktop app's hidden window;
  *  - byte-range requests to googlevideo with headers a web page may not set (Origin, Referer,
  *    User-Agent);
- *  - Google sign-in in a full-screen WebView, then reading the YouTube cookies.
+ *  - Google sign-in in a full-screen WebView, then reading the YouTube cookies;
+ *  - the media session and playback notification (SoncleMediaService), which is also what
+ *    Google Maps, the lock screen, headsets and cars talk to.
  */
 @CapacitorPlugin(name = "Soncle")
 public class SonclePlugin extends Plugin {
@@ -43,6 +51,66 @@ public class SonclePlugin extends Plugin {
     private final Map<String, PluginCall> pending = new ConcurrentHashMap<>();
     private final AtomicInteger seq = new AtomicInteger();
     private final ExecutorService io = Executors.newFixedThreadPool(4);
+
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private String artUrl = "";
+
+    @Override
+    public void load() {
+        SoncleMediaService.listener = (action, seekTime) -> {
+            JSObject d = new JSObject();
+            d.put("action", action);
+            if (seekTime >= 0) d.put("seekTime", seekTime);
+            notifyListeners("mediaAction", d, true);
+        };
+    }
+
+    // ---------- media session ----------
+    /** { title, artist, album, artwork (https URL), playing, position (s), duration (s), rate } */
+    @PluginMethod
+    public void mediaUpdate(PluginCall call) {
+        final SoncleMediaService.State s = SoncleMediaService.state;
+        final String url = call.getString("artwork", "");
+        final boolean playing = Boolean.TRUE.equals(call.getBoolean("playing", false));
+        final String title = call.getString("title", ""), artist = call.getString("artist", ""), album = call.getString("album", "");
+        final long pos = Math.round(call.getDouble("position", 0.0) * 1000), dur = Math.round(call.getDouble("duration", 0.0) * 1000);
+        final float rate = call.getFloat("rate", 1f);
+        main.post(() -> {
+            if (!title.equals(s.title)) s.art = null;
+            s.title = title; s.artist = artist; s.album = album;
+            s.playing = playing; s.positionMs = pos; s.durationMs = dur; s.rate = rate;
+            SoncleMediaService svc = SoncleMediaService.instance;
+            if (svc != null) svc.apply();
+            else if (playing) ContextCompat.startForegroundService(getContext(), new Intent(getContext(), SoncleMediaService.class));
+            if (url != null && !url.isEmpty() && (!url.equals(artUrl) || s.art == null)) loadArt(url);
+            call.resolve();
+        });
+    }
+
+    private void loadArt(final String url) {
+        artUrl = url;
+        io.execute(() -> {
+            Bitmap bmp = null;
+            try (InputStream in = new URL(url).openStream()) { bmp = BitmapFactory.decodeStream(in); } catch (Exception ignored) { }
+            final Bitmap art = bmp;
+            main.post(() -> {
+                if (art == null || !url.equals(artUrl)) return;
+                SoncleMediaService.state.art = art;
+                SoncleMediaService svc = SoncleMediaService.instance;
+                if (svc != null) svc.apply();
+            });
+        });
+    }
+
+    @PluginMethod
+    public void mediaStop(PluginCall call) {
+        main.post(() -> {
+            SoncleMediaService.state.playing = false;
+            SoncleMediaService svc = SoncleMediaService.instance;
+            if (svc != null) svc.shutDown();
+            call.resolve();
+        });
+    }
 
     // ---------- BotGuard ----------
     public class Bridge {

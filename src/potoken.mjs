@@ -92,7 +92,7 @@ export async function mint(identifier) {
     out = await st.exec(`obtainPoToken(new Uint8Array(${JSON.stringify(bytes)})).then(function (u) { return Array.from(u); })`);
   } catch (e) {
     try { st.win.destroy(); } catch {}
-    state = null;
+    if (state === st) state = null;
     throw e;
   }
   const tok = tokenFromBytes(out);

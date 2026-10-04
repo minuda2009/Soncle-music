@@ -17,7 +17,9 @@ function append(ms, sb, buf) {
 
 /**
  * @param {string} id  video id
- * @param {{ stream: (id: string) => Promise<{mime: string, length: number}>, range: (id: string, from: number, to: number) => Promise<{buf: Uint8Array}>, log?: Function }} io
+ * @param {{ stream: (id: string) => Promise<{mime: string, length: number}>, range: (s: object, from: number, to: number) => Promise<{buf: Uint8Array, s?: object}>, log?: Function }} io
+ *   `range` always gets the stream this MediaSource was opened for (same file, same length), and may
+ *   hand back a refreshed URL for that same file.
  * @returns {string} a blob: URL for the media element
  */
 export function mediaSourceUrl(id, io) {
@@ -25,9 +27,10 @@ export function mediaSourceUrl(id, io) {
   const url = URL.createObjectURL(ms);
   const log = io.log || (() => {});
   ms.addEventListener('sourceopen', async () => {
+    URL.revokeObjectURL(url);   // the element holds on to the MediaSource itself now
     const open = () => ms.readyState === 'open';
     try {
-      const s = await io.stream(id);
+      let s = await io.stream(id);
       if (!open()) return;
       const mime = MediaSource.isTypeSupported(s.mime) ? s.mime : /webm/.test(s.mime) ? 'audio/webm; codecs="opus"' : 'audio/mp4; codecs="mp4a.40.2"';
       const sb = ms.addSourceBuffer(mime);
@@ -36,7 +39,7 @@ export function mediaSourceUrl(id, io) {
         const end = Math.min(s.length, pos + CHUNK);
         let got = null;
         for (let attempt = 0; !got && attempt < 4 && open(); attempt++) {
-          try { got = (await io.range(id, pos, end)).buf; } catch (e) { log(`mse ${id} @${pos} ${e.message}`); await sleep(600 * (attempt + 1)); }
+          try { const r = await io.range(s, pos, end); got = r.buf; if (r.s) s = r.s; } catch (e) { log(`mse ${id} @${pos} ${e.message}`); await sleep(600 * (attempt + 1)); }
         }
         if (!got) throw new Error('network');
         // The browser evicts already-played audio when its buffer quota is full; wait for room.

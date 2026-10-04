@@ -52,7 +52,7 @@ html.mobile .row-scroll { grid-auto-columns: 140px; gap: 12px; scroll-snap-type:
 html.mobile .row-scroll > * { scroll-snap-align: start; }
 html.mobile .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 12px; }
 html.mobile .section-head h2 { font-size: 20px; }
-html.mobile .section-head .sh-actions .icon-btn { display: none; }   /* carousel arrows: swipe instead */
+html.mobile .section-head .scroll-btn { display: none; }   /* carousel arrows: swipe instead */
 html.mobile .card .play-over { display: none; }
 html.mobile .card .ct { font-size: 14px; }
 html.mobile .card:hover .art img { transform: none; }

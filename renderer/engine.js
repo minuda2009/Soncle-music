@@ -455,13 +455,14 @@ export class Engine extends EventTarget {
 
   async play() {
     this.ensureGraph();
+    this.deck.wantPause = false;
+    const want = this.deck.token;
     if (this.limiter === 'none') await Promise.race([this.ready, new Promise((r) => setTimeout(r, 1500))]);
     await this.#wake();
     const d = this.deck;
-    if (!d.el.src) return;
+    if (!d.el.src || d.token !== want || d.wantPause) return;   // paused or replaced while waking up
     const g = d.fade.gain, t = this.ctx.currentTime;
     d.pausing = false;
-    d.wantPause = false;
     g.cancelScheduledValues(t);
     g.setValueAtTime(g.value, t);
     g.linearRampToValueAtTime(1, t + FADE);

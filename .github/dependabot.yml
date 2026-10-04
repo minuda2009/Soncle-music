@@ -17,7 +17,6 @@ updates:
     allow:
       - dependency-name: youtubei.js
       - dependency-name: "@capacitor/*"
-      - dependency-name: "@capgo/capacitor-media-session"
     labels: [dependencies, android]
   - package-ecosystem: github-actions
     directory: /

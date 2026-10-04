@@ -7,8 +7,8 @@ android {
         applicationId "com.minuda2009.soncle"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "0.1.2"
+        versionCode 4
+        versionName "0.1.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +16,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Test builds (the android-latest release) are signed with this fixed key, committed to this
+    // private repo, so each new APK installs over the previous one and keeps the user's data.
+    // A Play Store release would use a separate key kept outside the repo.
+    signingConfigs {
+        soncleTest {
+            storeFile file('soncle-test.keystore')
+            storePassword 'soncle-test'
+            keyAlias 'soncle'
+            keyPassword 'soncle-test'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.soncleTest
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -35,6 +49,7 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.media:media:1.7.0"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

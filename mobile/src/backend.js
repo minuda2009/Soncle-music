@@ -12,11 +12,10 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { MediaSession } from '@capgo/capacitor-media-session';
 import { mediaSourceUrl } from './mse.js';
-import { nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
+import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
 
-const VERSION = '0.1.2';
+const VERSION = '0.1.3';
 const native = Capacitor.isNativePlatform();
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
 // Recent messages for "Copy diagnostic log" (Settings). Web addresses are cut to their host, so
@@ -29,8 +28,8 @@ function remember(kind, args) {
   if (LOG.length > 300) LOG.shift();
 }
 for (const k of ['warn', 'error']) { const orig = console[k].bind(console); console[k] = (...a) => { remember(k, a); orig(...a); }; }
-addEventListener('error', (e) => remember('uncaught', [e.message]));
-addEventListener('unhandledrejection', (e) => remember('unhandled', [e.reason?.message || e.reason]));
+window.addEventListener('error', (e) => remember('uncaught', [e.message]));
+window.addEventListener('unhandledrejection', (e) => remember('unhandled', [e.reason?.message || e.reason]));
 const log = (...a) => { remember('log', a); console.log('[soncle]', ...a); };
 
 // ---------- files in the app's private storage ----------
@@ -98,21 +97,21 @@ async function fetchRange(s, from, to) {
   if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
   return new Uint8Array(await r.arrayBuffer());
 }
-async function range(id, from, to) {
-  let s = await stream(id);
+// Bytes from one particular stream (the file a player or analysis started on). On a 403 the URL
+// is refreshed, but only a refresh that serves the same file (same length) is used.
+async function rangeOf(s, id, from, to) {
   to = Math.min(to, s.length || to);
   try {
-    return { buf: await fetchRange(s, from, to), total: s.length };
+    return { buf: await fetchRange(s, from, to), total: s.length, s };
   } catch (e) {
     if (e.status !== 403 || TEST) throw e;
-    // expired or refused URL: try another client, but only if it serves the same file
     yt.invalidateStream(id);
-    const again = await yt.resolveStreamRotating(id, s.client, { quality: store.settings.quality, fetchImpl: gv });
-    if (again.length !== s.length) throw new Error('stream changed');
-    s = again;
-    return { buf: await fetchRange(s, from, to), total: s.length };
+    const again = await yt.resolveStreamRotating(id, s.client, { quality: s.quality || store.settings.quality, fetchImpl: gv });
+    if (again.length !== s.length) { yt.invalidateStream(id); throw new Error('stream changed'); }
+    return { buf: await fetchRange(again, from, to), total: again.length, s: again };
   }
 }
+async function range(id, from, to) { return rangeOf(await stream(id), id, from, to); }
 
 // ---------- lyrics (LRCLIB, then YouTube Music) ----------
 const UA_LYRICS = { 'User-Agent': 'Soncle (https://github.com/minuda2009)' };
@@ -159,6 +158,7 @@ function pickFile(accept) {
   return new Promise((resolve) => {
     const inp = Object.assign(document.createElement('input'), { type: 'file', accept });
     inp.onchange = () => resolve(inp.files[0] || null);
+    inp.addEventListener('cancel', () => resolve(null));   // closing the picker must not leave this hanging
     inp.click();
   });
 }
@@ -180,19 +180,45 @@ async function restore() {
 // The shared UI already drives navigator.mediaSession; Android's WebView doesn't surface that to
 // the system, so on the phone it is forwarded to a native MediaSession (foreground service).
 if (native) {
-  const plugin = MediaSession;
-  let meta = null, state = 'none';
-  const shim = {
-    get metadata() { return meta; },
-    set metadata(m) {
-      meta = m;
-      if (m) plugin.setMetadata({ title: m.title, artist: m.artist, album: m.album, artwork: [...(m.artwork || [])].map((a) => ({ src: a.src, sizes: a.sizes, type: a.type })) }).catch(() => {});
-    },
-    get playbackState() { return state; },
-    set playbackState(s) { state = s; plugin.setPlaybackState({ playbackState: s }).catch(() => {}); },
-    setActionHandler(action, fn) { plugin.setActionHandler({ action }, fn ? (d) => fn(d) : null).catch(() => {}); },
-    setPositionState(p) { if (p) plugin.setPositionState(p).catch(() => {}); }
+  // Everything the system shows (notification, lock screen, Google Maps, car, watch) comes from
+  // one native state; the shared UI keeps using the standard navigator.mediaSession API.
+  const now = { title: '', artist: '', album: '', artwork: '', state: 'none', position: 0, duration: 0, rate: 1 };
+  const handlers = new Map();
+  let sent = null, timer = null;
+  const push = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const playing = now.state === 'playing';
+      sent = { pos: now.position, at: Date.now(), rate: now.rate, playing };
+      Soncle.mediaUpdate({ title: now.title, artist: now.artist, album: now.album, artwork: now.artwork, playing, position: now.position, duration: now.duration, rate: now.rate }).catch((e) => log('media update failed', e.message));
+    }, 40);
   };
+  const shim = {
+    get metadata() { return now.meta || null; },
+    set metadata(m) {
+      now.meta = m;
+      if (!m) return;
+      const art = [...(m.artwork || [])].filter((a) => /^https:/.test(a.src || ''));
+      Object.assign(now, { title: m.title || '', artist: m.artist || '', album: m.album || '', artwork: art.length ? art[0].src : '' });
+      push();
+    },
+    get playbackState() { return now.state; },
+    set playbackState(s) { if (s !== now.state) { now.state = s; push(); } },
+    setActionHandler(action, fn) { if (fn) handlers.set(action, fn); else handlers.delete(action); },
+    setPositionState(p) {
+      if (!p) return;
+      now.position = p.position || 0;
+      now.duration = p.duration || 0;
+      now.rate = p.playbackRate || 1;
+      // the system extrapolates the position itself; only resend after a seek or a drift
+      const expected = sent ? sent.pos + (sent.playing ? ((Date.now() - sent.at) / 1000) * sent.rate : 0) : -99;
+      if (!sent || Math.abs(expected - now.position) > 1.5 || sent.rate !== now.rate) push();
+    }
+  };
+  Soncle.addListener('mediaAction', (d) => {
+    const fn = handlers.get(d.action);
+    if (fn) fn({ action: d.action, seekTime: d.seekTime });
+  });
   try { Object.defineProperty(navigator, 'mediaSession', { value: shim, configurable: true }); } catch (e) { log('media session shim failed', e.message); }
   globalThis.MediaMetadata = globalThis.MediaMetadata || class { constructor(o) { Object.assign(this, o); } };
   StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
@@ -241,7 +267,7 @@ const api = {
   // Android-only: the player's source and raw byte ranges (Flow analysis)
   srcFor: (t, bust) => {
     if (bust) yt.invalidateStream(t.id);
-    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return stream(id, !!bust); }, range: async (id, a, b) => { await ready; return range(id, a, b); }, log });
+    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, !!bust)), quality: store.settings.quality }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
   },
   range: withReady((id, from, to) => range(id, from, to)),
 

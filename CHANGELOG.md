@@ -1,5 +1,32 @@
 # Changelog
 
+## Android 0.1.3
+
+- **Google Maps support.** Soncle's own media service (`SoncleMediaService.java`, a
+  MediaBrowserService) replaces the third-party media-session plugin. Google Maps can now show
+  Soncle's song and its play/pause/skip controls during navigation. Lock screen, notification,
+  headset and car controls go through the same service, with album art in the notification.
+- **Updates install over the previous version.** Test builds are now signed with one fixed key, so
+  each new APK installs over the last and keeps your library. Before this, every build had a new
+  random key. This one time, uninstall 0.1.2 first.
+- **Fixes from a full code review:**
+  - **Pause works while a song is still loading** (lookup can take a few seconds on a phone).
+    Before, the song started anyway. Desktop too.
+  - **A song can't get mixed into another file.** Each song keeps downloading from the same
+    file, even if the quality setting changes or the stream URL has to be refreshed mid-song.
+  - **PO tokens:**
+    - a failed token no longer breaks a second request running at the same time;
+    - a failed start gives up after 25 s instead of 45 s;
+    - desktop no longer leaves an orphaned hidden window behind.
+  - **Closing the file picker** without choosing a file no longer leaves restore or import
+    hanging.
+  - **Carousel arrows** are hidden on the phone (swipe instead), as intended.
+  - **Lint passes again, so CI is green.** The weekly upstream pull request was being skipped
+    because of it.
+  - **GitHub builds:**
+    - only one build runs at a time, so an older build can't replace a newer APK;
+    - the upstream watch copes with upstream history being rewritten.
+
 ## Android 0.1.2
 
 - **Fixed "The play() request was interrupted by a call to pause()".** The system's media-session

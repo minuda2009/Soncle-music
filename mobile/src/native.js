@@ -61,25 +61,25 @@ export async function mintPoToken(identifier, log = () => {}) {
   if (!state || Date.now() > state.expires) {
     if (Date.now() - failedAt < 120000) throw new Error('PO token provider unavailable');
     if (!starting) {
-      starting = withTimeout(init(log), 45000, 'PO token init')
+      starting = withTimeout(init(log), 25000, 'PO token init')
         .then((s) => { state = s; return s; })
         .catch((e) => { failedAt = Date.now(); state = null; log('PO token init failed: ' + e.message); Soncle.botguardReset().catch(() => {}); throw e; })
         .finally(() => { starting = null; });
     }
-    await starting;
   }
+  const st = state && Date.now() <= state.expires ? state : await starting;
   const key = String(identifier);
-  if (state.cache.has(key)) return state.cache.get(key);
+  if (st.cache.has(key)) return st.cache.get(key);
   const bytes = [...new TextEncoder().encode(key)];
   let out;
   try {
     out = await exec(`obtainPoToken(new Uint8Array(${JSON.stringify(bytes)})).then(function (u) { return Array.from(u); })`);
   } catch (e) {
-    state = null;
-    throw e;
+    if (state === st) state = null;
+    throw new Error('PO token: ' + e.message);
   }
   const tok = tokenFromBytes(out);
-  state.cache.set(key, tok);
+  st.cache.set(key, tok);
   return tok;
 }
 

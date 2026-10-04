@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# one build at a time; a newer push replaces a build still running, so an older APK never wins
+concurrency:
+  group: project-knowledge
+  cancel-in-progress: true
+
 jobs:
   bundle:
     runs-on: ubuntu-latest

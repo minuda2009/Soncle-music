@@ -42,7 +42,13 @@ async function watch(src, seen) {
   out.releases = rels.filter((r) => !r.draft && (!r.prerelease || src.prereleases) && (!seen?.at || r.published_at > seen.at)).map((r) => ({ tag: r.tag_name, at: r.published_at.slice(0, 10), url: r.html_url, pre: r.prerelease }));
   if (!seen?.commit) { out.releases = out.releases.slice(0, 1); return out; }        // first run: baseline only
   if (seen.commit === out.head) return out;
-  const cmp = await gh(`repos/${repo.full_name}/compare/${seen.commit}...${out.head}`);
+  let cmp;
+  try { cmp = await gh(`repos/${repo.full_name}/compare/${seen.commit}...${out.head}`); }
+  catch (e) {
+    // history was rewritten upstream (the commit we saw is gone): start again from today
+    if (/HTTP 404/.test(e.message)) { out.rebased = true; return out; }
+    throw e;
+  }
   const files = (cmp.files || []).map((f) => f.filename);
   out.scanned = cmp.total_commits;
   for (const c of (cmp.commits || []).reverse()) {
@@ -70,7 +76,8 @@ async function main() {
   for (const r of results) {
     L.push(`## ${r.src.id} (${r.src.repo})`, `_${r.src.why}_`, '');
     if (r.error) { L.push(`- Couldn't check: ${r.error}`, ''); continue; }
-    if (r.renamed) { L.push(`- **Moved to ${r.renamed}.** Update \`upstream/watch.json\`.`); relevant = true; }
+    if (r.rebased) L.push('- Upstream history was rewritten; watching again from its latest commit.');
+  if (r.renamed) { L.push(`- **Moved to ${r.renamed}.** Update \`upstream/watch.json\`.`); relevant = true; }
     for (const x of r.releases) { L.push(`- Release **${x.tag}**${x.pre ? ' (pre-release)' : ''}, ${x.at}: ${x.url}`); relevant = true; }
     if (r.commits.length) {
       relevant = true;
