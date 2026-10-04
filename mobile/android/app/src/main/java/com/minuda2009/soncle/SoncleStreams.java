@@ -5,7 +5,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -110,28 +109,31 @@ final class SoncleStreams {
         return new WebResourceResponse("text/plain", "utf-8", status, msg.length() > 60 ? msg.substring(0, 60) : msg, baseHeaders(), new ByteArrayInputStream(msg.getBytes()));
     }
 
-    /** Streams [start, end] of the song, fetching 1 MB at a time. */
+    /**
+     * Streams [start, end] of the song as the bytes arrive: googlevideo is asked for at most 1 MB
+     * per request (some stream clients refuse more), but each piece is passed on while it
+     * downloads, so playback starts after the first few KB instead of after a whole megabyte. The
+     * first piece is small so the player has something to decode almost at once. Connections are
+     * kept alive between pieces.
+     */
     private static final class Chunks extends InputStream {
+        private static final int FIRST = 256 * 1024;
         private final String id;
         private Entry e;
         private long pos;
-        private final long end;
-        private byte[] buf = new byte[0];
-        private int bi;
+        private final long start, end;
+        private InputStream cur;
+        private int failures;
 
-        Chunks(String id, Entry e, long start, long end) { this.id = id; this.e = e; this.pos = start; this.end = end; }
+        Chunks(String id, Entry e, long start, long end) { this.id = id; this.e = e; this.start = start; this.pos = start; this.end = end; }
 
-        private boolean fill() throws IOException {
-            if (bi < buf.length) return true;
+        private boolean open() throws IOException {
+            if (cur != null) return true;
             if (pos > end) return false;
-            long to = Math.min(end, pos + CHUNK - 1);
-            IOException last = null;
-            for (int attempt = 0; attempt < 4; attempt++) {
+            long to = Math.min(end, pos + (pos == start ? FIRST : CHUNK) - 1);
+            while (true) {
                 try {
-                    buf = fetch(e, pos, to);
-                    if (buf.length == 0) throw new IOException("empty response");
-                    bi = 0;
-                    pos += buf.length;
+                    cur = connect(e, pos, to);
                     return true;
                 } catch (Expired403 x) {
                     // ask the app for a fresh URL to the same file, then carry on where we were
@@ -141,46 +143,59 @@ final class SoncleStreams {
                     if (fresh == null || fresh.error != null || fresh.length != old.length) throw new IOException("stream expired");
                     e = fresh;
                 } catch (IOException x) {
-                    last = x;
-                    try { Thread.sleep(500L * (attempt + 1)); } catch (InterruptedException ie) { throw new IOException("interrupted"); }
+                    if (++failures > 4) throw x;
+                    pause(failures);
                 }
             }
-            throw last != null ? last : new IOException("stream failed");
         }
 
-        @Override public int read() throws IOException { return fill() ? (buf[bi++] & 0xff) : -1; }
+        private void close(InputStream in) { try { in.close(); } catch (IOException ignored) { } }
+
+        private void pause(int n) throws IOException {
+            try { Thread.sleep(400L * n); } catch (InterruptedException ie) { throw new IOException("interrupted"); }
+        }
 
         @Override public int read(byte[] b, int off, int len) throws IOException {
-            if (!fill()) return -1;
-            int n = Math.min(len, buf.length - bi);
-            System.arraycopy(buf, bi, b, off, n);
-            bi += n;
-            return n;
+            while (true) {
+                if (!open()) return -1;
+                int n;
+                try {
+                    n = cur.read(b, off, (int) Math.min(len, end - pos + 1));
+                } catch (IOException x) {
+                    close(cur);
+                    cur = null;
+                    if (++failures > 4) throw x;
+                    pause(failures);
+                    continue;          // reopen from the current position
+                }
+                if (n < 0) {           // this piece is done; the next open() continues at pos
+                    close(cur);
+                    cur = null;
+                    continue;
+                }
+                if (n > 0) { pos += n; failures = 0; return n; }
+            }
         }
 
-        @Override public int available() { return buf.length - bi; }
+        @Override public int read() throws IOException {
+            byte[] one = new byte[1];
+            return read(one, 0, 1) < 0 ? -1 : one[0] & 0xff;
+        }
+
+        @Override public void close() { if (cur != null) close(cur); cur = null; }
     }
 
     private static final class Expired403 extends IOException { Expired403() { super("HTTP 403"); } }
 
-    private static byte[] fetch(Entry e, long from, long to) throws IOException {
+    /** Opens [from, to] of the stream; the caller reads (and closes) the body. */
+    private static InputStream connect(Entry e, long from, long to) throws IOException {
         HttpURLConnection c = (HttpURLConnection) new URL(e.url + (e.url.contains("?") ? "&" : "?") + "range=" + from + "-" + to).openConnection();
-        try {
-            c.setConnectTimeout(15000);
-            c.setReadTimeout(20000);
-            for (Map.Entry<String, String> h : e.headers.entrySet()) c.setRequestProperty(h.getKey(), h.getValue());
-            int status = c.getResponseCode();
-            if (status == 403) throw new Expired403();
-            if (status >= 400) throw new IOException("HTTP " + status);
-            try (InputStream in = c.getInputStream()) {
-                ByteArrayOutputStream out = new ByteArrayOutputStream((int) (to - from + 1));
-                byte[] b = new byte[1 << 16];
-                int n;
-                while ((n = in.read(b)) > 0) out.write(b, 0, n);
-                return out.toByteArray();
-            }
-        } finally {
-            c.disconnect();
-        }
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(20000);
+        for (Map.Entry<String, String> h : e.headers.entrySet()) c.setRequestProperty(h.getKey(), h.getValue());
+        int status = c.getResponseCode();
+        if (status == 403) { c.disconnect(); throw new Expired403(); }
+        if (status >= 400) { c.disconnect(); throw new IOException("HTTP " + status); }
+        return c.getInputStream();
     }
 }

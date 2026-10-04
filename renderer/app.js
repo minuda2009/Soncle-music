@@ -2657,12 +2657,22 @@ engine.addEventListener('pause', () => { if (engine.xfading && !engine.deck.paus
 engine.addEventListener('waiting', () => { if (!engine.paused) { P.loading = true; updatePlayButtons(); armStallWatch(); } });
 // ---- never stay stuck: stalls, dropped connections and dead streams recover on their own ----
 let stallTimer = null;
-function armStallWatch() {
+// How far the player has downloaded, in seconds (0 when nothing has arrived yet).
+function bufferedEnd() {
+  const b = engine.buffered;
+  let end = 0;
+  try { for (let i = 0; i < (b?.length || 0); i++) end = Math.max(end, b.end(i)); } catch {}
+  return end;
+}
+function armStallWatch(waited = 0) {
   clearTimeout(stallTimer);
-  const t = P.current, tok = P.loadToken;
+  const t = P.current, tok = P.loadToken, had = bufferedEnd();
   stallTimer = setTimeout(() => {
     if (tok !== P.loadToken || !P.loading || engine.paused || P.current !== t) return;
     if (!navigator.onLine) return waitForNetwork(t);
+    // Still downloading, just slowly: keep waiting (up to a minute) rather than starting over,
+    // which would throw away what has arrived and look the stream up again.
+    if (bufferedEnd() > had + 0.2 && waited < 60000) return armStallWatch(waited + 12000);
     t._stalls = (t._stalls || 0) + 1;
     console.warn('stalled', t.id, 'at', engine.currentTime.toFixed(1), 'attempt', t._stalls);
     if (t._stalls > 2) return handlePlayError(t, new Error('The stream stopped responding'), tok);

@@ -15,7 +15,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { mediaSourceUrl } from './mse.js';
 import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
 
-const VERSION = '0.1.4';
+const VERSION = '0.1.5';
 const native = Capacitor.isNativePlatform();
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
 // Recent messages for "Copy diagnostic log" (Settings). Web addresses are cut to their host, so

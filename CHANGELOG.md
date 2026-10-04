@@ -1,5 +1,14 @@
 # Changelog
 
+## Android 0.1.5
+
+- **Songs start much sooner.** The stream proxy now passes audio on as it downloads. Before, it
+  waited for each whole 1 MB piece. The first piece is also small (256 KB), and connections are
+  reused between pieces.
+- **A slow start is no longer treated as a stall** (desktop too). Before, the app restarted the
+  song after 12 s with nothing playable, throwing away what had already arrived. Now, while data
+  is still arriving, it keeps waiting (up to a minute).
+
 ## Android 0.1.4
 
 - **Playback rebuilt the way desktop does it.**
