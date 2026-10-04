@@ -97,6 +97,11 @@ export async function nativeBtDevices() {
   const r = await Soncle.getBluetoothDevices().catch(() => null);
   return Array.isArray(r?.names) ? r.names : [];
 }
+/** Whether BLUETOOTH_CONNECT is granted (or not needed on this Android version). */
+export async function nativeBluetoothPermission() {
+  const r = await Soncle.getBluetoothPermission().catch(() => null);
+  return r?.granted === true;
+}
 /** Asks for BLUETOOTH_CONNECT (Android 12+); only when the user opens the device profiles setting. */
 export async function nativeRequestBluetoothPermission() {
   return Soncle.requestBluetoothPermission().catch(() => ({ granted: false }));

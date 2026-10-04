@@ -57,7 +57,7 @@ export function androidOutputLabel({ type, name, bluetooth } = {}) {
   switch (type) {
     case 'speaker': return 'Speakers (Phone speaker)';
     case 'wired': return 'Headphones (Wired headphones)';
-    case 'usb': return 'USB Audio (USB Audio)';
+    case 'usb': return product ? `USB Audio (${product})` : 'USB Audio (USB Audio)';
     case 'hdmi': return 'HDMI (TV)';
     case 'car': return product ? `Car audio (${product})` : 'Car audio';
     case 'bluetooth': return product ? `Bluetooth audio (${product})` : 'Bluetooth audio (Bluetooth)';

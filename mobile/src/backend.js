@@ -13,7 +13,7 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { mediaSourceUrl } from './mse.js';
-import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut, nativeAudioOutput, nativeOnAudioOutput, nativeBtDevices, nativeRequestBluetoothPermission } from './native.js';
+import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut, nativeAudioOutput, nativeOnAudioOutput, nativeBtDevices, nativeBluetoothPermission, nativeRequestBluetoothPermission } from './native.js';
 
 const VERSION = '0.1.6';
 const native = Capacitor.isNativePlatform();
@@ -383,6 +383,7 @@ const api = {
   // path in renderer/app.js works here too.
   audioOutput: async () => nativeAudioOutput(),
   onAudioOutput: (fn) => nativeOnAudioOutput(fn),
+  bluetoothPermission: async () => nativeBluetoothPermission(),
   requestBluetoothPermission: async () => (await nativeRequestBluetoothPermission()).granted === true,
   setMini: async () => false,
   backup: withReady(backup),

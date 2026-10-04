@@ -5,15 +5,23 @@
 - **The phone now knows what the sound is going to** — its speaker, wired headphones, USB, a
   Bluetooth device by name, HDMI or the car. Soncle registers Android's audio device callback and
   listens for the "audio becoming noisy" broadcast, so it follows the output as you plug in, connect
-  or unplug.
+  or unplug. On Android 13+ it asks Android directly which device the music is routed to, so with
+  both Bluetooth and wired connected it picks the right one instead of guessing.
 - **Per-device sound profiles work on the phone, like on the desktop.** Each output remembers its
   own EQ, sound settings and volume, and switching outputs brings that profile back (within about a
   second). "Per-device sound profiles", "Auto-tune new devices" and "Saved device profiles" are now
   in Android's settings; "Output device" stays hidden because Android chooses the output itself.
+- **LE Audio earbuds** (newer Galaxy and Pixel phones) are recognised as Bluetooth, so they get
+  their own profile instead of the phone speaker's, and unplugging them pauses.
+- **Cars are recognised by their Bluetooth class**, not just a brand name, so a car that reports
+  itself as "Uconnect" or a model number still gets the car profile.
+- **Each USB DAC keeps its own profile** (they are told apart by product name), and a car's profile
+  is kept apart from a phone speaker's.
 - **Pause when headphones disconnect** now works on the phone too, using Android's becoming-noisy
-  broadcast.
-- Bluetooth names ("Galaxy Buds2") need Android 12+'s Bluetooth permission. Soncle asks for it only
-  when you turn on "Per-device sound profiles", and works from the output type alone if you decline.
+  broadcast; it no longer pauses twice when the broadcast and the device change both arrive.
+- Bluetooth names ("Galaxy Buds2") need Android 12+'s Bluetooth permission. Soncle asks for it when
+  you touch "Per-device sound profiles" (whether you switch it on or off), and works from the output
+  type alone if you decline.
 
 ## Unreleased: crossfades that sound right
 

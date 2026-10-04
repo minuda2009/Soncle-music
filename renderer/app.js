@@ -1828,7 +1828,7 @@ async function refreshDevices(announce = false) {
 async function refreshPhoneOutput(announce = false) {
   let out = null;
   try { out = await api.audioOutput(); } catch {}
-  if (out?.noisy) { onAudioNoisy(announce); return; }
+  const noisy = !!out?.noisy;
   OUT.bt = await api.btDevices().catch(() => []);
   const info = classifyOutput(out ? androidOutputLabel(out) : '', OUT.bt);
   const key = info.label ? info.model : '';
@@ -1837,18 +1837,26 @@ async function refreshPhoneOutput(announce = false) {
   OUT.info = info;
   OUT.key = key;
   updateDeviceButton();
-  if (changed) onDeviceChanged(prev, announce);
+  if (changed) onDeviceChanged(prev, announce, noisy);
+  else if (noisy) onAudioNoisy(announce);
 }
 // Android's "audio becoming noisy" broadcast: headphones were unplugged. Pause instead of blasting
-// the speaker, the same promise as the desktop disconnect check below.
+// the speaker, the same promise as the desktop disconnect check below. A second event within a
+// moment (the broadcast and the device change) must not pause or toast twice.
+let lastNoisyPause = 0;
 function onAudioNoisy(announce) {
-  if (announce && S().pauseOnDisconnect !== false && P.playing) { engine.pause(); toast('Headphones disconnected — paused'); }
+  if (!announce || S().pauseOnDisconnect === false || !P.playing) return;
+  if (Date.now() - lastNoisyPause < 1500) return;
+  lastNoisyPause = Date.now();
+  engine.pause();
+  toast('Headphones disconnected — paused');
 }
-function onDeviceChanged(prev, announce) {
+function onDeviceChanged(prev, announce, fromNoisy = false) {
   const info = OUT.info, meta = DEVICE_INFO[info.type];
-  // pause when personal audio disconnects and output falls back to speakers
+  // pause when personal audio disconnects and output falls back to speakers; a becoming-noisy
+  // event already paused, so don't pause again here
   const personal = (i) => i && (i.bluetooth || ['earbuds', 'headphones', 'wired'].includes(i.type));
-  if (announce && S().pauseOnDisconnect !== false && personal(prev) && !personal(info) && P.playing) { engine.pause(); toast(`${prev.model} disconnected — paused`); }
+  if (!fromNoisy && announce && S().pauseOnDisconnect !== false && personal(prev) && !personal(info) && P.playing) { engine.pause(); toast(`${prev.model} disconnected — paused`); }
   let applied = '';
   if (S().perDeviceSound && OUT.key) {
     DB.deviceProfiles = DB.deviceProfiles || {};
@@ -1889,12 +1897,13 @@ function saveDeviceProfile() {
   DB.deviceProfiles[OUT.key] = { eq: structuredClone(S().eq), sound: Object.fromEntries(SOUND_KEYS.map((k) => [k, S()[k]])), volume: S().volume, type: OUT.info.type, bluetooth: OUT.info.bluetooth, model: OUT.info.model, updated: Date.now() };
   persist('deviceProfiles');
 }
-// Ticking "Per-device sound profiles" on the phone is when Android 12+ is asked for the Bluetooth
-// permission, so its device names can be shown. It works from the output type without it.
+// Touching "Per-device sound profiles" on the phone is when Android 12+ is asked for the Bluetooth
+// permission (needed for device names). It asks whether the switch is being turned on or off, so a
+// user whose profile is already on still gets prompted. Profiles work from the type without it.
 async function onPerDeviceSound() {
-  if (api.mobile && S().perDeviceSound && api.requestBluetoothPermission) {
-    const granted = await api.requestBluetoothPermission().catch(() => false);
-    if (granted) { await refreshDevices(false); return; }
+  if (api.mobile && api.bluetoothPermission && api.requestBluetoothPermission) {
+    const granted = await api.bluetoothPermission().catch(() => true);
+    if (!granted) await api.requestBluetoothPermission().catch(() => false);
   }
   refreshDevices(false);
 }
@@ -3306,8 +3315,9 @@ function wire() {
   setIcon($('#pbFocus'), 'focus');
   $('#pbFocus').onclick = focusButtonClick;
   api.onDuck(onDuck);
-  // The phone reports its output changing (and headphones being pulled) natively.
-  api.onAudioOutput?.((o) => { if (o?.noisy) onAudioNoisy(true); else refreshDevices(true); });
+  // The phone reports its output changing (and headphones being pulled) natively; re-reading picks
+  // up the new output and, on a becoming-noisy event, pauses.
+  api.onAudioOutput?.(() => refreshDevices(true));
   $('#pbMini').onclick = () => toggleMini();
   $('#pbThumb').addEventListener('dblclick', () => { if (MINI) toggleMini(false); });
   $('#npTempo').onclick = tempoDialog;

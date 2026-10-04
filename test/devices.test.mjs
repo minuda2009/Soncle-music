@@ -104,5 +104,32 @@ test('maps Android car audio', () => {
   const bare = classifyOutput(androidOutputLabel({ type: 'car', name: '' }), []);
   assert.equal(bare.type, 'car');
   assert.equal(DEVICE_INFO[bare.type].preset, 'Car');
+  // a car whose Bluetooth class says "car audio" but whose name is not a car brand still lands here
+  const uconnect = classifyOutput(androidOutputLabel({ type: 'car', name: 'Uconnect' }), []);
+  assert.equal(uconnect.type, 'car');
+  assert.equal(uconnect.model, 'Uconnect');
+});
+
+test('LE Audio earbuds are Bluetooth, not the phone speaker', () => {
+  // Android reports LE Audio devices with type "bluetooth"; androidOutputLabel must not fall back
+  // to the speaker label, so the earbuds' profile is used and unplugging pauses.
+  const buds = classifyOutput(androidOutputLabel({ type: 'bluetooth', name: 'Galaxy Buds3 Pro' }), []);
+  assert.equal(buds.type, 'earbuds');
+  assert.equal(buds.bluetooth, true);
+  assert.notEqual(buds.type, 'speaker');
+  // no name yet (permission not granted): still Bluetooth, so the speaker profile isn't applied
+  const unnamed = classifyOutput(androidOutputLabel({ type: 'bluetooth', name: '' }), []);
+  assert.equal(unnamed.bluetooth, true);
+});
+
+test('keeps USB audio devices apart by product name', () => {
+  const a = classifyOutput(androidOutputLabel({ type: 'usb', name: 'FiiO K7' }), []);
+  const b = classifyOutput(androidOutputLabel({ type: 'usb', name: 'Focusrite Scarlett' }), []);
+  assert.equal(a.type, 'usb');
+  assert.equal(b.type, 'usb');
+  assert.equal(a.model, 'FiiO K7');
+  assert.notEqual(a.model, b.model);   // different DACs get different profiles
+  const bare = classifyOutput(androidOutputLabel({ type: 'usb', name: '' }), []);
+  assert.equal(bare.type, 'usb');
 });
 
