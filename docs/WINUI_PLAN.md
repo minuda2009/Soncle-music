@@ -281,7 +281,8 @@ Its own section markers give the split. Logic goes into view models and services
 
 | Unit | Status | JS changes since port |
 | --- | --- | --- |
-| everything in 12.2 | not started | — |
+| `uno/` scaffold + CI (M00) | ported (PR #10) | — |
+| everything else in 12.2 | not started | — |
 
 ## 13. Risks
 

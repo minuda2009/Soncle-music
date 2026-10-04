@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SoncleIsLibrary>false</SoncleIsLibrary>
+  </PropertyGroup>
+
+  <!-- Libraries are platform-free and must build on Linux; InvariantGlobalization keeps them
+       independent of the ICU version on the build machine. -->
+  <PropertyGroup Condition="'$(SoncleIsLibrary)' == 'true'">
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>
