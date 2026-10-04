@@ -1,5 +1,16 @@
 # Changelog
 
+## Android 0.1.2
+
+- **Fixed "The play() request was interrupted by a call to pause()".** The system's media-session
+  "play" signal arrives when the playback notification starts. It was being treated as a
+  play/pause toggle, so it paused the song that was just starting. The notification and headset
+  Play and Pause buttons now only play or only pause (desktop too).
+- **A pause the app didn't ask for** while a song is starting is retried once, instead of being
+  reported as an error.
+- **New: Settings → Copy diagnostic log** (Android). It copies recent app messages for a bug
+  report. Web addresses are cut to their host name, and cookie values are removed.
+
 ## Android 0.1.1
 
 - **Playback fixed.** The phone now gets PO tokens the same way desktop does: BotGuard runs in a

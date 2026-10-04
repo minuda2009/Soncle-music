@@ -1430,6 +1430,7 @@ VIEWS.settings = async (ctx) => {
 
   v.append(group('About',
     settingRow({ ic: 'info', title: `Soncle ${INFO.version || ''}`, sub: 'An independent YouTube Music player for your desktop. Not affiliated with Google or YouTube.' }),
+    api.diagnostics ? settingRow({ ic: 'info', title: 'Copy diagnostic log', sub: 'Recent app messages (no passwords or cookies), to paste into a bug report', onclick: async () => { try { await navigator.clipboard.writeText(await api.diagnostics()); toast('Diagnostic log copied'); } catch (e) { toast(shortErr(e.message)); } } }) : null,
     settingRow({ ic: 'info', title: 'Open-source licences', sub: 'GPL-3.0-or-later, and the notices for the code, icons and data it includes', onclick: () => licencesDialog() }),
     settingRow({ ic: 'keyboard', title: 'Keyboard shortcuts', sub: 'Ctrl+K command bar • [ / ] lyrics earlier/later (Shift = 0.5 s) • N mini player • Space play/pause • Ctrl+←/→ previous/next • ←/→ seek 5 s • ↑/↓ volume • Ctrl+L like • Ctrl+S shuffle • Ctrl+R repeat • Ctrl+F search • F now playing • Q queue • M mute • F11 full screen' })));
 };
@@ -2799,8 +2800,10 @@ setInterval(() => {
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
-  ms.setActionHandler('play', () => togglePlay());
-  ms.setActionHandler('pause', () => togglePlay());
+  // play and pause do only what they say: a stray "play" from the system (Android sends one when
+  // the media notification starts) must not pause a song that is already starting
+  ms.setActionHandler('play', () => { if (engine.paused || engine.deck.pausing || !P.current) togglePlay(); });
+  ms.setActionHandler('pause', () => { if (P.playing) togglePlay(); });
   ms.setActionHandler('previoustrack', () => prev());
   ms.setActionHandler('nexttrack', () => next());
   ms.setActionHandler('seekto', (d) => engine.seek(d.seekTime));

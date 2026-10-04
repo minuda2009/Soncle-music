@@ -1,6 +1,6 @@
 {
   "name": "soncle-mobile",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Soncle for Android. Shares the UI, audio engine and YouTube layer with the desktop app.",
   "license": "GPL-3.0-or-later",

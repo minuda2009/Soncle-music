@@ -461,14 +461,29 @@ export class Engine extends EventTarget {
     if (!d.el.src) return;
     const g = d.fade.gain, t = this.ctx.currentTime;
     d.pausing = false;
+    d.wantPause = false;
     g.cancelScheduledValues(t);
     g.setValueAtTime(g.value, t);
     g.linearRampToValueAtTime(1, t + FADE);
-    await d.el.play();
+    const tok = d.token;
+    try {
+      await d.el.play();
+    } catch (e) {
+      // AbortError: something paused the element before play() settled. If that was us (the
+      // user paused, or another track was loaded), it isn't an error. If it wasn't (Android's
+      // WebView pauses media on its own, e.g. on an audio-focus change while a slow stream is
+      // still starting), try once more.
+      if (e?.name !== 'AbortError') throw e;
+      if (d.token !== tok || d.wantPause) return;
+      await new Promise((r) => setTimeout(r, 300));
+      if (d.token !== tok || d.wantPause || !d.el.paused) return;
+      await d.el.play();
+    }
   }
 
   pause({ fade = FADE } = {}) {
     const d = this.deck;
+    d.wantPause = true;
     this.#sleepSoon();
     if (!this.ctx || d.el.paused) return d.el.pause();
     const g = d.fade.gain, t = this.ctx.currentTime;

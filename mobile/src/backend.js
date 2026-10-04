@@ -16,10 +16,22 @@ import { MediaSession } from '@capgo/capacitor-media-session';
 import { mediaSourceUrl } from './mse.js';
 import { nativeFetch, mintPoToken, nativeSignIn, nativeSignOut } from './native.js';
 
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 const native = Capacitor.isNativePlatform();
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
-const log = (...a) => console.log('[soncle]', ...a);
+// Recent messages for "Copy diagnostic log" (Settings). Web addresses are cut to their host, so
+// no tokens, signatures or cookies end up in a bug report.
+const LOG = [];
+const clean = (x) => String(x instanceof Error ? x.message : typeof x === 'object' ? JSON.stringify(x) : x)
+  .replace(/https?:\/\/([^/\s?#]+)[^\s]*/g, 'https://$1/…').replace(/(SAPISID|SID|HSID|SSID|APISID|cookie)[^\s;]*/gi, '$1=…').slice(0, 500);
+function remember(kind, args) {
+  LOG.push(new Date().toISOString().slice(11, 23) + ' ' + kind + ' ' + args.map(clean).join(' '));
+  if (LOG.length > 300) LOG.shift();
+}
+for (const k of ['warn', 'error']) { const orig = console[k].bind(console); console[k] = (...a) => { remember(k, a); orig(...a); }; }
+addEventListener('error', (e) => remember('uncaught', [e.message]));
+addEventListener('unhandledrejection', (e) => remember('unhandled', [e.reason?.message || e.reason]));
+const log = (...a) => { remember('log', a); console.log('[soncle]', ...a); };
 
 // ---------- files in the app's private storage ----------
 const files = {
@@ -319,6 +331,7 @@ const api = {
   importCancel: async () => { importCancelled = true; return true; },
   onImportProgress: (fn) => importListeners.push(fn),
 
+  diagnostics: async () => [`Soncle ${VERSION} (Android) · ${navigator.userAgent.replace(/\s*\(KHTML.*$/, '')}`, ...LOG].join('\n'),
   sendState: noop,
   saveSession: (s) => { store.session = s; save(); },
   titlebarColor: noop,
