@@ -39,7 +39,7 @@ async function watch(src, seen) {
   const branch = src.branch || repo.default_branch;
   out.head = (await gh(`repos/${repo.full_name}/commits/${branch}`)).sha;
   const rels = await gh(`repos/${repo.full_name}/releases?per_page=10`);
-  out.releases = rels.filter((r) => !r.draft && (!seen?.at || r.published_at > seen.at)).map((r) => ({ tag: r.tag_name, at: r.published_at.slice(0, 10), url: r.html_url, pre: r.prerelease }));
+  out.releases = rels.filter((r) => !r.draft && (!r.prerelease || src.prereleases) && (!seen?.at || r.published_at > seen.at)).map((r) => ({ tag: r.tag_name, at: r.published_at.slice(0, 10), url: r.html_url, pre: r.prerelease }));
   if (!seen?.commit) { out.releases = out.releases.slice(0, 1); return out; }        // first run: baseline only
   if (seen.commit === out.head) return out;
   const cmp = await gh(`repos/${repo.full_name}/compare/${seen.commit}...${out.head}`);
