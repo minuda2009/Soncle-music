@@ -19,7 +19,8 @@
     "dist:linux": "electron-builder --linux --x64",
     "dist:mac": "electron-builder --mac",
     "upstream": "node tools/upstream-sync.mjs",
-    "upstream:check": "node tools/upstream-sync.mjs --check"
+    "upstream:check": "node tools/upstream-sync.mjs --check",
+    "upstream:watch": "node tools/watch-upstreams.mjs --check"
   },
   "dependencies": {
     "music-metadata": "^11.16.1",

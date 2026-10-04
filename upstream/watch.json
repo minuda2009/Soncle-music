@@ -1,0 +1,39 @@
+{
+ "_about": "Other projects whose fixes matter to Soncle. Watch only: nothing is copied. tools/watch-upstreams.mjs lists their new releases and relevant commits each week in a GitHub issue. 'seen' is updated by the tool.",
+ "sources": [
+  {
+   "id": "pear-desktop",
+   "repo": "pear-devs/pear-desktop",
+   "why": "YouTube Music desktop app (Electron; formerly th-ch/youtube-music). Same platform as Soncle: sign-in, playback, plugins such as crossfade, equalizer, lyrics, skip silences.",
+   "paths": ["src/plugins/crossfade", "src/plugins/equalizer", "src/plugins/audio-compressor", "src/plugins/skip-silences", "src/plugins/synced-lyrics", "src/plugins/downloader", "src/providers/", "src/loader/", "src/index.ts"],
+   "keywords": ["fix", "crash", "playback", "stream", "login", "sign in", "sign-in", "cookie", "crossfade", "equalizer", "lyrics", "audio", "memory", "cpu", "performance"],
+   "ours": ["src/main.mjs", "renderer/app.js", "renderer/engine.js"]
+  },
+  {
+   "id": "youtubei.js",
+   "repo": "LuanRT/YouTube.js",
+   "why": "The library Soncle uses for every YouTube request. Most 'YouTube changed something' fixes land here first (Dependabot also opens the version bump).",
+   "paths": ["src/core/Player", "src/core/clients/", "src/core/managers/", "src/utils/Constants", "src/platform/", "src/parser/ytmusic/"],
+   "keywords": ["fix", "player", "decipher", "signature", "n param", "nsig", "po token", "client", "music", "ytmusic", "breaking"],
+   "ours": ["src/yt.mjs"]
+  },
+  {
+   "id": "yt-dlp",
+   "repo": "yt-dlp/yt-dlp",
+   "why": "Early warning: yt-dlp usually reacts within hours when YouTube changes stream clients, client versions or PO token rules.",
+   "paths": [],
+   "require": "youtube",
+   "keywords": ["fix", "client", "po token", "pot", "player", "nsig", "n-challenge", "signature", "sabr"],
+   "ours": ["src/yt.mjs", "src/potoken.mjs"]
+  },
+  {
+   "id": "metrolist",
+   "repo": "MetrolistGroup/Metrolist",
+   "why": "Releases and fix commits of the upstream Android app (file-level porting is handled by tools/upstream-sync.mjs).",
+   "paths": [],
+   "keywords": ["fix", "crash", "playback", "stream", "po token", "potoken", "client", "login", "crossfade", "normaliz", "lyrics", "kmp", "desktop"],
+   "ours": []
+  }
+ ],
+ "seen": {}
+}

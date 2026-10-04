@@ -110,3 +110,42 @@ current rule: when the app isn't confident, it falls back to today's behaviour i
 - Extra analysis only for songs about to be mixed (the next 1–2 in the queue), paused on battery,
   like Flow today.
 - No extra CPU while simply listening: alignment work happens once per transition.
+
+## Later: move to Dart / Flutter (one codebase for Android and desktop)
+
+**Why.**
+- One native codebase for the phone and the PC, instead of Electron plus Capacitor.
+- No bundled Chromium: lower memory use and faster start-up on desktop.
+- A UI on Android that feels native.
+
+**What it won't change.**
+- Audio speed. The heavy audio work already runs on native threads (the Chromium decoder, the
+  AudioWorklet).
+- Real-time audio code should not run in Dart either: garbage-collection pauses cause dropouts.
+
+**The plan: in stages, nothing switched off until its replacement is at parity.**
+
+0. **Now (cheap).** Keep the parts portable:
+   - the `window.api` surface is the contract between the UI and everything else;
+   - recorded YouTube responses (offline fixtures);
+   - reference numbers from the tests for the limiter, LUFS meter, tempo and key.
+
+   Any port is checked against those same fixtures and numbers.
+1. **Audio core in Rust.** Limiter, LUFS meter, EQ and headphone correction, crossfade and
+   gapless, Flow analysis.
+   - Called from Dart through FFI (flutter_rust_bridge), with its own audio output.
+   - Usable from the current apps too, through a native module, so it can ship early.
+2. **YouTube layer in Dart.**
+   - InnerTube requests and parsing, ported from `src/yt.mjs`. Metrolist's Kotlin `innertube`
+     module is a second reference.
+   - Tested against the recorded fixtures.
+   - Watch-out: some stream clients need YouTube's player JavaScript to be run to unlock URLs. Dart
+     needs a small JS engine for that (e.g. QuickJS), or must prefer clients that don't need it.
+3. **Android app in Flutter.** Replaces `mobile/`. This is where the gain is biggest.
+4. **Desktop app in Flutter.** Replaces Electron once it matches 1.x, with a one-time carry-over of
+   `library.json`, as was done for the rename.
+
+**An alternative to weigh before stage 2.** Metrolist is moving to Kotlin Multiplatform. With
+KMP + Compose Multiplatform, their Kotlin fixes could be ported almost line for line, and
+`tools/upstream-sync.mjs` could even copy shared files. Dart means translating every upstream fix.
+That makes it the cleaner language, but more upkeep against upstream.

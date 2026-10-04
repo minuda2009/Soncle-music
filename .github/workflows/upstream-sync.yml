@@ -1,4 +1,7 @@
-# Every Monday (and on demand): pull in what the upstream Android app changed (see UPSTREAM.md).
+# Every Monday (and on demand), see UPSTREAM.md:
+#  - sync: pull in what the upstream Android app changed (one pull request);
+#  - watch: list fixes and releases in the YouTube Music desktop app, youtubei.js, yt-dlp and the
+#    upstream app (one issue).
 # Shared files and icons are updated automatically; Kotlin changes that need porting are listed.
 # Everything arrives as one pull request, so nothing reaches the app until you merge it.
 name: Upstream sync
@@ -11,13 +14,14 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -36,3 +40,29 @@ jobs:
           title: 'Sync with upstream ${{ steps.sync.outputs.upstream }}'
           body-path: upstream/REPORT.md
           labels: upstream
+
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - id: watch
+        run: node tools/watch-upstreams.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Remember what was seen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add upstream/watch.json upstream/WATCH.md
+          git diff --cached --quiet || (git commit -m "Upstream watch $(date -u +%F)" && git pull --rebase && git push)
+      - name: Open this week's issue
+        if: steps.watch.outputs.relevant == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create upstream-watch --color 6E56FF --description "Weekly upstream watch" 2>/dev/null || true
+          for n in $(gh issue list --label upstream-watch --state open --json number --jq '.[].number'); do gh issue close "$n" --comment "Superseded by this week's watch."; done
+          gh issue create --title "Upstream watch · $(date -u +%F)" --label upstream-watch --body-file upstream/WATCH.md
