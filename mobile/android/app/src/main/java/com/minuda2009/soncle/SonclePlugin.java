@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.AudioAttributes;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
@@ -161,13 +160,9 @@ public class SonclePlugin extends Plugin {
     }
 
     private AudioDeviceInfo pickOutput(AudioManager am) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            AudioAttributes attrs = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build();
-            AudioDeviceInfo[] forMedia = am.getDevicesForAttributes(attrs);
-            if (forMedia.length > 0) return forMedia[0];
-        }
-        // Android 12 and below: Android keeps no per-app routing for music, so prefer a connected
-        // personal output over the built-in speaker, the way Android's own routing would.
+        // Android exposes no public per-app media route (getDevicesForAttributes is a system API),
+        // so prefer a connected personal output over the built-in speaker, the way Android's own
+        // routing behaves: Bluetooth, then USB, then wired, else the built-in speaker.
         AudioDeviceInfo bt = null, usb = null, wired = null, speaker = null;
         for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
             switch (d.getType()) {
