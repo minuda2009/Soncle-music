@@ -1,0 +1,144 @@
+{
+ "liked": [
+  {
+   "id": "vid1",
+   "title": "A Song",
+   "artists": [
+    {
+     "name": "An Artist"
+    }
+   ],
+   "duration": 200
+  }
+ ],
+ "playlists": [
+  {
+   "id": "pl1",
+   "name": "Chill",
+   "tracks": []
+  }
+ ],
+ "history": [
+  {
+   "id": "vid1",
+   "at": 1700000000000
+  }
+ ],
+ "settings": {
+  "volume": 0.6,
+  "dynamicColor": true,
+  "accent": "#bfc2f0",
+  "theme": "black",
+  "mica": true,
+  "quality": "best",
+  "autoplay": true,
+  "normalize": true,
+  "lang": "en",
+  "location": "US",
+  "crossfade": 0,
+  "crossfadeGapless": true,
+  "crossfadeOnSkip": false,
+  "skipSilence": false,
+  "silenceInstant": false,
+  "tempo": 1,
+  "varispeed": false,
+  "persistentQueue": true,
+  "rememberShuffleRepeat": true,
+  "noDuplicates": false,
+  "autoSkipOnError": true,
+  "sleepFadeOut": true,
+  "sleepDefault": 30,
+  "closeToTray": false,
+  "discord": false,
+  "syncLikes": true,
+  "autoDownloadLiked": false,
+  "perDeviceSound": true,
+  "autoDeviceEq": true,
+  "pauseOnDisconnect": true,
+  "btLyricsDelay": 200,
+  "outputDevice": "default",
+  "mono": false,
+  "balance": 0,
+  "flowRadio": true,
+  "flowLearn": true,
+  "flowXf": true,
+  "motionStyle": "classic",
+  "noticeSeen": false,
+  "welcomed": false,
+  "smartDuck": "duck",
+  "duckLevel": 0.25,
+  "focusMinutes": 50,
+  "focusPauseAtEnd": false,
+  "focusBackup": null,
+  "xfCurve": "smooth",
+  "xfStyle": "smart",
+  "gapless": true,
+  "normTarget": -14,
+  "headphone": null,
+  "headphoneOn": true,
+  "smartCrossfade": true,
+  "autoHeadroom": true,
+  "loudnessComp": false,
+  "stereoWidth": 1,
+  "crossfeed": "off",
+  "lyricsSize": 30,
+  "lyricsAlign": "left",
+  "lyricsAutoScroll": true,
+  "lyricsGlow": true,
+  "squiggly": true,
+  "density": "comfortable",
+  "eq": {
+   "enabled": true,
+   "preset": "Rock",
+   "preamp": 0,
+   "gains": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ },
+ "deviceProfiles": {
+  "WH-1000XM4": {
+   "eq": {
+    "enabled": true,
+    "preset": "Headphones"
+   },
+   "volume": 0.5,
+   "type": "headphones",
+   "bluetooth": true,
+   "model": "WH-1000XM4",
+   "updated": 1700000000000
+  }
+ },
+ "lyricsOffsets": {
+  "vid1": 0.3
+ },
+ "eqPresets": [
+  {
+   "name": "Mine",
+   "gains": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+   ]
+  }
+ ],
+ "skips": {
+  "vid2": 2
+ }
+}

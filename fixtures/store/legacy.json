@@ -1,0 +1,11 @@
+{
+ "backupMarker": "soncle",
+ "accepts": [
+  "soncle",
+  "metrolist-desktop"
+ ],
+ "rejects": [
+  "other",
+  null
+ ]
+}
