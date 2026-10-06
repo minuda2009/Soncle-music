@@ -1,0 +1,198 @@
+{
+ "transitionPlan": [
+  {
+   "name": "same-album",
+   "S": {
+    "crossfade": 5,
+    "crossfadeGapless": true,
+    "gapless": true,
+    "xfStyle": "smart",
+    "flowXf": true
+   },
+   "cur": {
+    "id": "a",
+    "title": "a",
+    "album": {
+     "id": "alb1",
+     "name": "alb1"
+    },
+    "artists": []
+   },
+   "nt": {
+    "id": "b",
+    "title": "b",
+    "album": {
+     "id": "alb1",
+     "name": "alb1"
+    },
+    "artists": []
+   },
+   "feat": {},
+   "expected": {
+    "kind": "gapless"
+   }
+  },
+  {
+   "name": "crossfade-off",
+   "S": {
+    "crossfade": 0,
+    "crossfadeGapless": true,
+    "gapless": true,
+    "xfStyle": "smart",
+    "flowXf": true
+   },
+   "cur": {
+    "id": "a",
+    "title": "a",
+    "album": {
+     "id": "alb1",
+     "name": "alb1"
+    },
+    "artists": []
+   },
+   "nt": {
+    "id": "b",
+    "title": "b",
+    "album": {
+     "id": "alb2",
+     "name": "alb2"
+    },
+    "artists": []
+   },
+   "feat": {},
+   "expected": {
+    "kind": "gapless"
+   }
+  },
+  {
+   "name": "fade-no-features",
+   "S": {
+    "crossfade": 6,
+    "crossfadeGapless": true,
+    "gapless": true,
+    "xfStyle": "smart",
+    "flowXf": true
+   },
+   "cur": {
+    "id": "a",
+    "title": "a",
+    "album": {
+     "id": "alb1",
+     "name": "alb1"
+    },
+    "artists": []
+   },
+   "nt": {
+    "id": "b",
+    "title": "b",
+    "album": {
+     "id": "alb2",
+     "name": "alb2"
+    },
+    "artists": []
+   },
+   "feat": {},
+   "expected": {
+    "kind": "fade",
+    "dur": 6
+   }
+  },
+  {
+   "name": "mix-good-match",
+   "S": {
+    "crossfade": 6,
+    "crossfadeGapless": true,
+    "gapless": true,
+    "xfStyle": "smart",
+    "flowXf": true
+   },
+   "cur": {
+    "id": "a",
+    "title": "a",
+    "album": {
+     "id": "alb1",
+     "name": "alb1"
+    },
+    "artists": []
+   },
+   "nt": {
+    "id": "b",
+    "title": "b",
+    "album": {
+     "id": "alb2",
+     "name": "alb2"
+    },
+    "artists": []
+   },
+   "feat": {
+    "a": {
+     "bpm": 124,
+     "bpmConf": 0.9,
+     "camelot": "8A",
+     "keyConf": 0.8,
+     "energy": 0.6
+    },
+    "b": {
+     "bpm": 126,
+     "bpmConf": 0.9,
+     "camelot": "9A",
+     "keyConf": 0.8,
+     "energy": 0.62
+    }
+   },
+   "expected": {
+    "kind": "mix",
+    "dur": 6,
+    "bpm": 124
+   }
+  },
+  {
+   "name": "clash-shorter",
+   "S": {
+    "crossfade": 10,
+    "crossfadeGapless": true,
+    "gapless": true,
+    "xfStyle": "smart",
+    "flowXf": true
+   },
+   "cur": {
+    "id": "a",
+    "title": "a",
+    "album": {
+     "id": "alb1",
+     "name": "alb1"
+    },
+    "artists": []
+   },
+   "nt": {
+    "id": "b",
+    "title": "b",
+    "album": {
+     "id": "alb2",
+     "name": "alb2"
+    },
+    "artists": []
+   },
+   "feat": {
+    "a": {
+     "bpm": 124,
+     "bpmConf": 0.9,
+     "camelot": "8A",
+     "keyConf": 0.8,
+     "energy": 0.6
+    },
+    "b": {
+     "bpm": 174,
+     "bpmConf": 0.9,
+     "camelot": "3B",
+     "keyConf": 0.8,
+     "energy": 0.95
+    }
+   },
+   "expected": {
+    "kind": "fade",
+    "dur": 6
+   }
+  }
+ ]
+}
