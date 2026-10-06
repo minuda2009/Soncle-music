@@ -295,7 +295,8 @@ Its own section markers give the split. Logic goes into view models and services
 | `renderer/app.js` player section (M11) | ported (`uno-migration`) | — |
 | `src/preload.cjs` → contracts (M02) | ported (`uno-migration`) | — |
 | `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
-| `src/yt.mjs` streams / `botguard.mjs` (M07) | not started | needs a head's WebView (bot-gated from CI) |
+| `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
+| `src/yt.mjs` streams / resolver (M07) | not started | needs a head's WebView (bot-gated from CI) |
 | `uno/tools/Soncle.Cli` (M12) | not started | needs M06–M08 |
 | everything else in 12.2 | not started | — |
 
