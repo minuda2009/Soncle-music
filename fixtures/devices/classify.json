@@ -1,0 +1,226 @@
+{
+ "cases": [
+  {
+   "label": "Headphones (WH-1000XM4 Stereo)",
+   "bt": [],
+   "result": {
+    "label": "Headphones (WH-1000XM4 Stereo)",
+    "model": "WH-1000XM4",
+    "endpoint": "Headphones",
+    "type": "headphones",
+    "bluetooth": true,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Speakers (Realtek(R) Audio)",
+   "bt": [],
+   "result": {
+    "label": "Speakers (Realtek(R) Audio)",
+    "model": "Realtek(R) Audio",
+    "endpoint": "Speakers",
+    "type": "laptop",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Headset (AirPods)",
+   "bt": [],
+   "result": {
+    "label": "Headset (AirPods)",
+    "model": "AirPods",
+    "endpoint": "Headset",
+    "type": "earbuds",
+    "bluetooth": true,
+    "handsFree": true
+   }
+  },
+  {
+   "label": "Car Hands-Free (Toyota)",
+   "bt": [],
+   "result": {
+    "label": "Car Hands-Free (Toyota)",
+    "model": "Toyota",
+    "endpoint": "Car Hands-Free",
+    "type": "car",
+    "bluetooth": true,
+    "handsFree": true
+   }
+  },
+  {
+   "label": "SAMSUNG (TV)",
+   "bt": [],
+   "result": {
+    "label": "SAMSUNG (TV)",
+    "model": "TV",
+    "endpoint": "SAMSUNG",
+    "type": "tv",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "USB DAC (FiiO)",
+   "bt": [],
+   "result": {
+    "label": "USB DAC (FiiO)",
+    "model": "FiiO",
+    "endpoint": "USB DAC",
+    "type": "usb",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Unknown Device",
+   "bt": [],
+   "result": {
+    "label": "Unknown Device",
+    "model": "Unknown Device",
+    "endpoint": "",
+    "type": "unknown",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Some Output (Model X)",
+   "bt": [
+    "Model X"
+   ],
+   "result": {
+    "label": "Some Output (Model X)",
+    "model": "Model X",
+    "endpoint": "Some Output",
+    "type": "headphones",
+    "bluetooth": true,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Default - Headphones (LP-V53) (Bluetooth)",
+   "bt": [],
+   "result": {
+    "label": "Headphones (LP-V53) (Bluetooth)",
+    "model": "LP-V53",
+    "endpoint": "Headphones",
+    "type": "headphones",
+    "bluetooth": true,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Speakers (USB Audio) (0d8c:0014)",
+   "bt": [],
+   "result": {
+    "label": "Speakers (USB Audio) (0d8c:0014)",
+    "model": "USB Audio",
+    "endpoint": "Speakers",
+    "type": "speaker",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Headphones (Realtek(R) Audio)",
+   "bt": [],
+   "result": {
+    "label": "Headphones (Realtek(R) Audio)",
+    "model": "Realtek(R) Audio",
+    "endpoint": "Headphones",
+    "type": "wired",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Bluetooth audio (Galaxy Buds2 Stereo)",
+   "bt": [],
+   "result": {
+    "label": "Bluetooth audio (Galaxy Buds2 Stereo)",
+    "model": "Galaxy Buds2",
+    "endpoint": "Bluetooth audio",
+    "type": "earbuds",
+    "bluetooth": true,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Car audio (Uconnect)",
+   "bt": [],
+   "result": {
+    "label": "Car audio (Uconnect)",
+    "model": "Uconnect",
+    "endpoint": "Car audio",
+    "type": "car",
+    "bluetooth": false,
+    "handsFree": false
+   }
+  },
+  {
+   "label": "Bluetooth audio (Nothing Ear (a) Stereo)",
+   "bt": [],
+   "result": {
+    "label": "Bluetooth audio (Nothing Ear (a) Stereo)",
+    "model": "Nothing Ear (a)",
+    "endpoint": "Bluetooth audio",
+    "type": "earbuds",
+    "bluetooth": true,
+    "handsFree": false
+   }
+  }
+ ],
+ "deviceInfo": {
+  "earbuds": {
+   "name": "Earbuds",
+   "icon": "earbuds",
+   "preset": "Earbuds"
+  },
+  "headphones": {
+   "name": "Headphones",
+   "icon": "headphones",
+   "preset": "Headphones"
+  },
+  "wired": {
+   "name": "Wired headphones",
+   "icon": "headphones",
+   "preset": "Headphones"
+  },
+  "btspeaker": {
+   "name": "Bluetooth speaker",
+   "icon": "speaker",
+   "preset": "Bluetooth speaker"
+  },
+  "speaker": {
+   "name": "Speakers",
+   "icon": "speaker",
+   "preset": "Flat"
+  },
+  "laptop": {
+   "name": "Built-in speakers",
+   "icon": "laptop",
+   "preset": "Laptop speakers"
+  },
+  "car": {
+   "name": "Car audio",
+   "icon": "car",
+   "preset": "Car"
+  },
+  "tv": {
+   "name": "TV / monitor",
+   "icon": "tv",
+   "preset": "TV / HDMI"
+  },
+  "usb": {
+   "name": "USB audio / DAC",
+   "icon": "usb",
+   "preset": "Flat"
+  },
+  "unknown": {
+   "name": "Audio output",
+   "icon": "speaker",
+   "preset": "Flat"
+  }
+ }
+}
