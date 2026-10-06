@@ -294,6 +294,9 @@ Its own section markers give the split. Logic goes into view models and services
 | `renderer/engine.js` offline + app.js policy (M10) | ported (`uno-migration`) | — |
 | `renderer/app.js` player section (M11) | ported (`uno-migration`) | — |
 | `src/preload.cjs` → contracts (M02) | ported (`uno-migration`) | — |
+| `src/yt.mjs` parse side (M06) | in progress (`uno-migration`) | golden test skipped: some raw shapes still differ |
+| `src/yt.mjs` streams / `botguard.mjs` (M07) | not started | needs a head's WebView (bot-gated from CI) |
+| `uno/tools/Soncle.Cli` (M12) | not started | needs M06–M08 |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks
