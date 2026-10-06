@@ -1,5 +1,6 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 using System.Text.Json;
+using Soncle.Core.Models;
 using Soncle.Flow;
 using Soncle.TestKit;
 
@@ -114,6 +115,6 @@ public class FlowTests
     private static FlowFeatures Feature(JsonElement e)
     {
         double? D(string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : null;
-        return new FlowFeatures(D("bpm"), D("bpmConf") ?? 0, e.TryGetProperty("camelot", out var c) ? c.GetString() : null, D("keyConf") ?? 0, D("energy"));
+        return new FlowFeatures { Bpm = D("bpm"), BpmConf = D("bpmConf") ?? 0, Camelot = e.TryGetProperty("camelot", out var c) ? c.GetString() : null, KeyConf = D("keyConf") ?? 0, Energy = D("energy") };
     }
 }

@@ -1,13 +1,12 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 using System.Text.RegularExpressions;
+using Soncle.Core.Models;
 
 namespace Soncle.Flow;
 
 /// <summary>A candidate track for Flow radio (the fields the planner uses).</summary>
 public sealed record FlowTrack(string Id, string Title = "", double Duration = 0, string? AlbumName = null, string? ArtistName = null);
 
-/// <summary>Analysed features of a track, as <c>analyze()</c> returns them.</summary>
-public sealed record FlowFeatures(double? Bpm = null, double BpmConf = 0, string? Camelot = null, double KeyConf = 0, double? Energy = null);
 
 /// <summary>Listening context, like Spotify's time-of-day moods (see <c>contextFor</c>).</summary>
 public readonly record struct FlowContext(double Hour, bool Weekend, double Energy, string Label, int? MaxBpm);

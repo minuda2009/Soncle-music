@@ -1,0 +1,370 @@
+{
+ "platform": "android|win32|darwin|linux",
+ "members": [
+  {
+   "name": "platform",
+   "kind": "property",
+   "returns": null
+  },
+  {
+   "name": "home",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "homeMore",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "explore",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "browse",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "suggestions",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "search",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "searchMore",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "album",
+   "kind": "method",
+   "returns": "Album"
+  },
+  {
+   "name": "artist",
+   "kind": "method",
+   "returns": "Artist"
+  },
+  {
+   "name": "playlist",
+   "kind": "method",
+   "returns": "Playlist"
+  },
+  {
+   "name": "upNext",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "radio",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "related",
+   "kind": "method",
+   "returns": "Page"
+  },
+  {
+   "name": "library",
+   "kind": "method",
+   "returns": "Library"
+  },
+  {
+   "name": "songInfo",
+   "kind": "method",
+   "returns": "SongInfo"
+  },
+  {
+   "name": "rate",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "prefetch",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "lyrics",
+   "kind": "method",
+   "returns": "LyricsResult"
+  },
+  {
+   "name": "signIn",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "signInBrowser",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "signOut",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "authStatus",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "premiumStatus",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "storeGet",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "storeSet",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "download",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "removeDownload",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "downloads",
+   "kind": "method",
+   "returns": "Downloads"
+  },
+  {
+   "name": "downloadsSize",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "openDownloads",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "btDevices",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "setMini",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "backup",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "restore",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "clearCache",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "openExternal",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "info",
+   "kind": "method",
+   "returns": "AppInfo"
+  },
+  {
+   "name": "licences",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "hpSearch",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "hpMatch",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "hpProfile",
+   "kind": "method",
+   "returns": "HeadphoneProfile"
+  },
+  {
+   "name": "flowGet",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "flowPut",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "flowCount",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "flowClear",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "power",
+   "kind": "method",
+   "returns": "PowerState"
+  },
+  {
+   "name": "localFolders",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localAddFolder",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localRemoveFolder",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localScan",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localTracks",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localOpen",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localPending",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "localReveal",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "pathForFile",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "onLocalProgress",
+   "kind": "event",
+   "returns": null
+  },
+  {
+   "name": "onLocalPlay",
+   "kind": "event",
+   "returns": null
+  },
+  {
+   "name": "importSpotify",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "importParse",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "importFile",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "importMatch",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "importCancel",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "onImportProgress",
+   "kind": "event",
+   "returns": null
+  },
+  {
+   "name": "sendState",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "saveSession",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "titlebarColor",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "toggleFullscreen",
+   "kind": "method",
+   "returns": null
+  },
+  {
+   "name": "onMediaAction",
+   "kind": "event",
+   "returns": null
+  },
+  {
+   "name": "onDownload",
+   "kind": "event",
+   "returns": null
+  },
+  {
+   "name": "onWinState",
+   "kind": "event",
+   "returns": null
+  },
+  {
+   "name": "onDuck",
+   "kind": "event",
+   "returns": null
+  }
+ ],
+ "counts": {
+  "methods": 64,
+  "events": 7,
+  "properties": 1
+ }
+}
