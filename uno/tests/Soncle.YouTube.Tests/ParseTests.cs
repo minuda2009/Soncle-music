@@ -17,9 +17,7 @@ public class ParseTests
     private static JsonElement Cases() =>
         JsonDocument.Parse(File.ReadAllText(Fixtures.Path("yt/expected/cases.json"))).RootElement;
 
-    [Fact(Skip = "M06 in progress: the raw-renderer normaliser matches most cases but a handful of " +
-        "shapes (carousel 'more', a few artist/subtitle runs, mood params) still differ from yt.mjs; " +
-        "run this without the skip to see the list. Not claimed as done until it is green.")]
+    [Fact]
     public void ItemsMatchTheJs()
     {
         var items = Cases().GetProperty("items");
@@ -40,7 +38,7 @@ public class ParseTests
         Assert.True(failures.Count == 0, string.Join("\n", failures.Take(15)));
     }
 
-    [Fact(Skip = "M06 in progress: see ItemsMatchTheJs.")]
+    [Fact]
     public void ShelvesMatchTheJs()
     {
         var shelves = Cases().GetProperty("shelves");
@@ -61,49 +59,35 @@ public class ParseTests
         Assert.True(failures.Count == 0, string.Join("\n", failures.Take(15)));
     }
 
-    // Mirror the exact object literals src/yt.mjs returns for each type.
+    // Emit only the fields the JS object literal for this branch contains (its `Fields` set).
     private static string Serialize(YtItem it)
     {
         var d = new Dictionary<string, object?>();
-        switch (it.Type)
-        {
-            case "song":
-                d["type"] = it.Type;
-                d["id"] = it.Id;
-                d["title"] = it.Title;
-                if (it.Subtitle is not null) d["subtitle"] = it.Subtitle;
-                if (it.Thumb is not null) d["thumb"] = it.Thumb;
-                d["artists"] = Artists(it.Artists ?? new());
-                if (it.Album is not null) d["album"] = new Dictionary<string, object?> { ["name"] = it.Album.Name, ["id"] = it.Album.Id };
-                d["duration"] = it.Duration;
-                if (it.Explicit) d["explicit"] = true; else d["explicit"] = false;
-                if (it.IsVideo) d["isVideo"] = true; else d["isVideo"] = false;
-                if (it.Plays is not null) d["plays"] = it.Plays;
-                break;
-            case "album":
-                d["type"] = it.Type; d["id"] = it.Id; d["title"] = it.Title; d["subtitle"] = it.Subtitle;
-                d["thumb"] = it.Thumb; d["artists"] = Artists(it.Artists ?? new());
-                if (it.Year is not null) d["year"] = it.Year;
-                d["explicit"] = it.Explicit;
-                break;
-            case "artist":
-                d["type"] = it.Type; d["id"] = it.Id; d["title"] = it.Title; d["subtitle"] = it.Subtitle; d["thumb"] = it.Thumb;
-                break;
-            case "playlist":
-                d["type"] = it.Type; d["id"] = it.Id; d["title"] = it.Title; d["subtitle"] = it.Subtitle; d["thumb"] = it.Thumb;
-                break;
-            case "mood":
-                d["type"] = it.Type; d["id"] = it.Id; d["params"] = it.Params; d["title"] = it.Title; d["color"] = it.Color;
-                break;
-            default: // radio, browse
-                d["type"] = it.Type; d["id"] = it.Id; d["params"] = it.Params; d["title"] = it.Title; d["subtitle"] = it.Subtitle; d["thumb"] = it.Thumb;
-                break;
-        }
+        void Put(string k, object? v) { if (it.Fields.Contains(k)) d[k] = v; }
+        Put("type", it.Type);
+        Put("id", it.Id);
+        Put("title", it.Title);
+        Put("subtitle", it.Subtitle);
+        Put("thumb", it.Thumb);
+        if (it.Fields.Contains("artists")) d["artists"] = Artists(it.Artists ?? new());
+        if (it.Fields.Contains("album")) d["album"] = it.Album is null ? null : new Dictionary<string, object?> { ["name"] = it.Album.Name, ["id"] = it.Album.Id };
+        Put("duration", it.Duration);
+        Put("year", it.Year);
+        Put("explicit", it.Explicit);
+        Put("isVideo", it.IsVideo);
+        Put("params", it.Params);
+        Put("color", it.Color);
+        Put("plays", it.Plays);
         return JsonSerializer.Serialize(d, Opts);
     }
 
     private static List<Dictionary<string, object?>> Artists(List<ArtistRef> artists) =>
-        artists.Select(a => new Dictionary<string, object?> { ["name"] = a.Name, ["id"] = a.Id }).ToList();
+        artists.Select(a =>
+        {
+            var d = new Dictionary<string, object?> { ["name"] = a.Name };
+            if (a.Id is not null) d["id"] = a.Id;
+            return d;
+        }).ToList();
 
     private static string Serialize(YtShelf s)
     {
@@ -112,7 +96,7 @@ public class ParseTests
             d["items"] = s.Items.Select(i => JsonSerializer.Deserialize<Dictionary<string, object?>>(Serialize(i), Opts)).ToList();
         if (s.Strapline is not null) d["strapline"] = s.Strapline;
         if (s.Thumb is not null) d["thumb"] = s.Thumb;
-        if (s.More is not null) d["more"] = s.More;
+        if (s.MoreField) d["more"] = s.More;
         if (s.Text is not null) d["text"] = s.Text;
         return JsonSerializer.Serialize(d, Opts);
     }

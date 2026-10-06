@@ -39,6 +39,8 @@ public sealed class YtShelf
     public string Layout { get; init; } = "list";
     public List<YtItem> Items { get; init; } = new();
     public Dictionary<string, string>? More { get; init; }
+    /// <summary>Whether the JS shelf literal carries a <c>more</c> key at all (carousel and list do).</summary>
+    public bool MoreField { get; init; }
     public string? Text { get; init; }
 }
 
@@ -230,13 +232,15 @@ public static partial class Normalize
         var pk = KindFromPage(PageType(ep));
         if (pk.Length > 0)
         {
+            var fields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb", "artists", "explicit" };
+            if (Str(Prop(n, "year")) is not null) fields.Add("year");
             return new YtItem
             {
                 Type = pk,
                 Id = browseId ?? playlistId,
                 Title = title, Subtitle = subtitle, Thumb = thumb,
                 Artists = ArtistsFromRuns(Prop(Prop(n, "subtitle"), "runs")),
-                Year = Str(Prop(n, "year")), Explicit = IsExplicit(n),
+                Year = Str(Prop(n, "year")), Explicit = IsExplicit(n), Fields = fields,
             };
         }
         if (videoId is not null)
@@ -264,10 +268,13 @@ public static partial class Normalize
                 Type = "song", Id = videoId, Title = title, Subtitle = subtitle, Thumb = thumb, Artists = artists,
                 // youtubei.js gives a MusicTwoRowItem the item_type "video" (it is a video card)
                 Duration = duration, Explicit = IsExplicit(n), IsVideo = itemType != "song",
+                Fields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb", "artists", "duration", "explicit", "isVideo" },
             };
         }
-        if (playlistId is not null) return new YtItem { Type = "radio", Id = playlistId, Params = eparams, Title = title, Subtitle = subtitle, Thumb = thumb };
-        if (browseId is not null) return new YtItem { Type = "browse", Id = browseId, Params = eparams, Title = title, Subtitle = subtitle, Thumb = thumb };
+        var bfields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb" };
+        if (eparams is not null) bfields.Add("params");
+        if (playlistId is not null) return new YtItem { Type = "radio", Id = playlistId, Params = eparams, Title = title, Subtitle = subtitle, Thumb = thumb, Fields = bfields };
+        if (browseId is not null) return new YtItem { Type = "browse", Id = browseId, Params = eparams, Title = title, Subtitle = subtitle, Thumb = thumb, Fields = bfields };
         return null;
     }
 
@@ -289,17 +296,25 @@ public static partial class Normalize
         {
             if (cols is null || cols.Value.ValueKind != JsonValueKind.Array) return null;
             var arr = cols.Value.EnumerateArray().ToList();
-            return i < arr.Count ? Prop(arr[i], "title") : null;
+            if (i >= arr.Count) return null;
+            // raw: musicResponsiveListItemFlexColumnRenderer.text ; youtubei.js flattens it to title
+            return Prop(arr[i], "title") ?? Prop(Prop(arr[i], "musicResponsiveListItemFlexColumnRenderer"), "text");
         }
         var title = Txt(Prop(n, "title"));
         if (title.Length == 0) title = Txt(Col(0));
         var thumb = PickThumb(Prop(Prop(n, "thumbnail"), "contents") ?? Prop(n, "thumbnail"));
         var parts = new List<string>();
-        for (var i = 1; i <= 3; i++) { var t = Txt(Col(i)); if (t.Length > 0) parts.Add(t); }
+        for (var i = 1; i <= 3; i++)
+        {
+            var c = Col(i);
+            if (c is null) continue;
+            var t = c.Value.ValueKind == JsonValueKind.Object && !c.Value.EnumerateObject().Any() ? "N/A" : Txt(c);
+            if (t.Length > 0) parts.Add(t);
+        }
         var subtitle = string.Join(" • ", parts);
         var ep = Prop(n, "navigationEndpoint") ?? Prop(n, "endpoint");
         var pk = KindFromPage(PageType(ep));
-        var type = Str(Prop(n, "item_type"));
+        var type = ResponsiveItemType(n, cols);
 
         if (type is "artist" or "library_artist" || pk == "artist")
         {
@@ -310,17 +325,18 @@ public static partial class Normalize
                 var s = subs.Value.ValueKind == JsonValueKind.String ? subs.Value.GetString() : subs.Value.ToString();
                 sub = Regex.IsMatch(s ?? "", "subscriber", RegexOptions.IgnoreCase) ? s! : $"{s} subscribers";
             }
-            return new YtItem { Type = "artist", Id = Str(Prop(n, "id")) ?? Endpoint(ep).BrowseId, Title = title, Subtitle = sub, Thumb = thumb };
+            return new YtItem { Type = "artist", Id = Str(Prop(n, "id")) ?? Endpoint(ep).BrowseId, Title = title, Subtitle = sub, Thumb = thumb, Fields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb" } };
         }
         if (type is "album" || pk == "album")
-            return new YtItem { Type = "album", Id = Str(Prop(n, "id")) ?? Endpoint(ep).BrowseId, Title = title, Subtitle = subtitle, Thumb = thumb, Year = Str(Prop(n, "year")), Artists = ArtistsOf(n), Explicit = IsExplicit(n) };
+            return new YtItem { Type = "album", Id = Str(Prop(n, "id")) ?? Endpoint(ep).BrowseId, Title = title, Subtitle = subtitle, Thumb = thumb, Year = Str(Prop(n, "year")), Artists = ArtistsOf(n), Explicit = IsExplicit(n), Fields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb", "year", "artists", "explicit" } };
         if (type is "playlist" or "podcast_show" || pk == "playlist")
-            return new YtItem { Type = "playlist", Id = Str(Prop(n, "id")) ?? Endpoint(ep).BrowseId, Title = title, Subtitle = subtitle, Thumb = thumb };
-
-        // songs / videos / episodes
-        string? id = Str(Prop(n, "id"))
-            ?? Str(Prop(Prop(Prop(Prop(n, "overlay"), "content"), "endpoint"), "payload") is { } ovp ? Prop(ovp, "videoId") : null)
-            ?? Endpoint(ep).VideoId;
+            return new YtItem { Type = "playlist", Id = Str(Prop(n, "id")) ?? Endpoint(ep).BrowseId, Title = title, Subtitle = subtitle, Thumb = thumb, Fields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb" } };
+        // songs / videos / episodes — mirror youtubei.js: #parseSong/#parseVideo take the id from
+        // playlistItemData; the others fall back to the overlay/endpoint, then a flex-column run.
+        var overlayVideoId = Prop(Prop(Prop(Prop(n, "overlay"), "content"), "endpoint"), "payload") is { } ovp ? Str(Prop(ovp, "videoId")) : null;
+        string? id = type is "song" or "video" or "non_music_track" ? Str(Prop(Prop(n, "playlistItemData"), "videoId")) : null;
+        id ??= overlayVideoId;
+        id ??= Endpoint(ep).VideoId;
         if (id is null && cols is not null && cols.Value.ValueKind == JsonValueKind.Array)
         {
             foreach (var c in cols.Value.EnumerateArray())
@@ -375,8 +391,71 @@ public static partial class Normalize
         {
             Type = "song", Id = id, Title = title, Thumb = thumb, Artists = artists, Album = album,
             Duration = duration, Subtitle = subtitle, Explicit = IsExplicit(n),
-            IsVideo = type is "video" or "non_music_track", Plays = Str(Prop(n, "views")) ?? "",
+            IsVideo = type is "video" or "non_music_track", Plays = ResponsiveViews(cols) ?? "",
+            Fields = new HashSet<string> { "type", "id", "title", "thumb", "artists", "album", "duration", "subtitle", "explicit", "isVideo", "plays" },
         };
+    }
+
+    /// <summary>
+    /// The item type youtubei.js assigns a MusicResponsiveListItem: the pageType (from the
+    /// navigation endpoint, or any flex column run) decides album/playlist/artist/non-music-track/
+    /// podcast; otherwise the first flex column's watchEndpoint musicVideoType decides video vs song.
+    /// </summary>
+    private static string? ResponsiveItemType(JsonElement n, JsonElement? cols)
+    {
+        var pt = PageType(Prop(n, "navigationEndpoint") ?? Prop(n, "endpoint"));
+        if (pt.Length == 0 && cols is not null && cols.Value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var col in cols.Value.EnumerateArray())
+            {
+                var runs = Prop(Prop(Prop(col, "musicResponsiveListItemFlexColumnRenderer"), "text"), "runs")
+                    ?? Prop(Prop(col, "title"), "runs");
+                if (runs is null || runs.Value.ValueKind != JsonValueKind.Array) continue;
+                foreach (var run in runs.Value.EnumerateArray())
+                    if (PageType(RunEndpoint(run)) == "MUSIC_PAGE_TYPE_NON_MUSIC_AUDIO_TRACK_PAGE")
+                    { pt = "MUSIC_PAGE_TYPE_NON_MUSIC_AUDIO_TRACK_PAGE"; break; }
+                if (pt.Length > 0) break;
+            }
+        }
+        switch (pt)
+        {
+            case "MUSIC_PAGE_TYPE_ALBUM": return "album";
+            case "MUSIC_PAGE_TYPE_PLAYLIST": return "playlist";
+            case "MUSIC_PAGE_TYPE_ARTIST" or "MUSIC_PAGE_TYPE_USER_CHANNEL": return "artist";
+            case "MUSIC_PAGE_TYPE_LIBRARY_ARTIST": return "library_artist";
+            case "MUSIC_PAGE_TYPE_NON_MUSIC_AUDIO_TRACK_PAGE": return "non_music_track";
+            case "MUSIC_PAGE_TYPE_PODCAST_SHOW_DETAIL_PAGE": return "podcast_show";
+        }
+        if (cols is null || cols.Value.ValueKind != JsonValueKind.Array) return null;
+        if (cols.Value.GetArrayLength() < 2) return null;   // no second column → endpoint/unknown
+        var first = cols.Value.EnumerateArray().First();
+        var runs0 = Prop(Prop(Prop(first, "musicResponsiveListItemFlexColumnRenderer"), "text"), "runs")
+            ?? Prop(Prop(first, "title"), "runs");
+        var run0 = runs0 is null || runs0.Value.ValueKind != JsonValueKind.Array ? default : runs0.Value.EnumerateArray().FirstOrDefault();
+        var mvt = Prop(Prop(Prop(Prop(Prop(run0, "navigationEndpoint"), "watchEndpoint"), "watchEndpointMusicSupportedConfigs"), "watchEndpointMusicConfig"), "musicVideoType");
+        return mvt is null ? null : mvt.Value.GetString() switch
+        {
+            "MUSIC_VIDEO_TYPE_UGC" or "MUSIC_VIDEO_TYPE_OMV" => "video",
+            "MUSIC_VIDEO_TYPE_ATV" => "song",
+            _ => null,
+        };
+    }
+
+    /// <summary>youtubei.js's <c>views</c>: the second flex column run whose text matches "... views".</summary>
+    private static string? ResponsiveViews(JsonElement? cols)
+    {
+        if (cols is null || cols.Value.ValueKind != JsonValueKind.Array) return null;
+        var arr = cols.Value.EnumerateArray().ToList();
+        if (arr.Count < 2) return null;
+        var runs = Prop(Prop(Prop(arr[1], "musicResponsiveListItemFlexColumnRenderer"), "text"), "runs")
+            ?? Prop(Prop(arr[1], "title"), "runs");
+        if (runs is null || runs.Value.ValueKind != JsonValueKind.Array) return null;
+        foreach (var run in runs.Value.EnumerateArray())
+        {
+            var t = Txt(run);
+            if (Regex.IsMatch(t, "views")) return t;
+        }
+        return null;
     }
 
     private static List<ArtistRef> ArtistsOf(JsonElement n)
@@ -401,7 +480,7 @@ public static partial class Normalize
     {
         var (videoId, _, _, _) = Endpoint(Prop(n, "onTap") ?? Prop(n, "on_tap"));
         if (videoId is null) return null;
-        return new YtItem { Type = "song", Id = videoId, Title = Txt(Prop(n, "title")), Subtitle = Txt(Prop(n, "subtitle")), Thumb = PickThumb(Prop(n, "thumbnailRenderer") ?? Prop(Prop(n, "thumbnail"), "contents")), Artists = new List<ArtistRef> { new() { Name = Txt(Prop(n, "subtitle")) } }, Duration = 0, IsVideo = true };
+        return new YtItem { Type = "song", Id = videoId, Title = Txt(Prop(n, "title")), Subtitle = Txt(Prop(n, "subtitle")), Thumb = PickThumb(Prop(n, "thumbnail")), Artists = new List<ArtistRef> { new() { Name = Txt(Prop(n, "subtitle")) } }, Duration = 0, IsVideo = true, Fields = new HashSet<string> { "type", "id", "title", "subtitle", "thumb", "artists", "duration", "isVideo" } };
     }
 
     private static YtItem NormNavButton(JsonElement n)
@@ -413,7 +492,9 @@ public static partial class Normalize
         string? hex = null;
         if (color is not null && color.Value.ValueKind == JsonValueKind.Number)
             hex = "#" + (color.Value.GetUInt32() & 0xFFFFFF).ToString("x6");
-        return new YtItem { Type = "mood", Id = browseId, Params = eparams, Title = Txt(Prop(n, "buttonText") ?? Prop(n, "button_text")), Color = hex };
+        var nfields = new HashSet<string> { "type", "id", "title", "color" };
+        if (eparams is not null) nfields.Add("params");
+        return new YtItem { Type = "mood", Id = browseId, Params = eparams, Title = Txt(Prop(n, "buttonText") ?? Prop(n, "button_text")), Color = hex, Fields = nfields };
     }
 
     private static YtItem? NormPanel(JsonElement n)
@@ -428,6 +509,7 @@ public static partial class Normalize
             Type = "song", Id = vid, Title = Txt(Prop(n, "title")), Thumb = PickThumb(Prop(n, "thumbnail")), Artists = artists,
             Album = Prop(n, "album") is { } a ? new AlbumRef { Name = Txt(Prop(a, "name")), Id = Str(Prop(a, "id")) ?? "" } : null,
             Duration = DurationSeconds(Prop(n, "duration")), Explicit = IsExplicit(n),
+            Fields = new HashSet<string> { "type", "id", "title", "thumb", "artists", "album", "duration", "explicit" },
         };
     }
 
@@ -445,11 +527,15 @@ public static partial class Normalize
                     var h = Unwrap(Prop(s, "header"), "musicCarouselShelfBasicHeaderRenderer", "musicHeaderRenderer");
                     var list = Items(s);
                     if (list.Count == 0) return null;
-                    var more = Prop(Prop(Prop(h, "moreContent") ?? Prop(h, "more_content"), "endpoint"), "payload");
+                    var moreBtn = Prop(Prop(h, "moreContentButton"), "buttonRenderer");
                     var layout = list.All(i => i.Type == "song") && FirstChildType(s) != "musicTwoRowItemRenderer" ? "grid-songs"
                         : list.All(i => i.Type == "mood") ? "moods" : "carousel";
-                    var moreId = Str(Prop(more, "browseId"));
-                    return new YtShelf { Title = Txt(Prop(h, "title")), Strapline = Txt(Prop(h, "strapline")), Thumb = PickThumb(Prop(Prop(h, "thumbnail"), "contents") ?? Prop(h, "thumbnail")), Layout = layout, Items = list, More = moreId is null ? null : new Dictionary<string, string> { ["id"] = moreId, ["params"] = Str(Prop(more, "params")) ?? "" } };
+                    var moreEp = Prop(moreBtn, "navigationEndpoint") ?? Prop(Prop(Prop(h, "moreContent") ?? Prop(h, "more_content"), "endpoint"), "payload");
+                    var (_, moreBrowse, morePlaylist, moreParams) = Endpoint(moreEp);
+                    var moreId = moreBrowse ?? morePlaylist;
+                    var more = moreId is null ? null : new Dictionary<string, string> { ["id"] = moreId };
+                    if (more is not null && moreParams is not null) more["params"] = moreParams;
+                    return new YtShelf { Title = Txt(Prop(h, "title")), Strapline = Txt(Prop(h, "strapline")), Thumb = PickThumb(Prop(Prop(h, "thumbnail"), "contents") ?? Prop(h, "thumbnail")), Layout = layout, Items = list, More = more, MoreField = true };
                 }
                 case "musicShelfRenderer":
                 {
@@ -458,7 +544,7 @@ public static partial class Normalize
                     var more = Prop(Prop(Prop(s, "bottomButton") ?? Prop(s, "bottom_button"), "endpoint"), "payload") ?? Prop(Prop(s, "endpoint"), "payload");
                     var bid = Str(Prop(more, "browseId"));
                     var q = Str(Prop(more, "query"));
-                    return new YtShelf { Title = Txt(Prop(s, "title")), Layout = "list", Items = list, More = bid is not null ? new Dictionary<string, string> { ["id"] = bid, ["params"] = Str(Prop(more, "params")) ?? "" } : q is not null ? new Dictionary<string, string> { ["query"] = q, ["params"] = Str(Prop(more, "params")) ?? "" } : null };
+                    return new YtShelf { Title = Txt(Prop(s, "title")), Layout = "list", Items = list, MoreField = true, More = bid is not null ? new Dictionary<string, string> { ["id"] = bid, ["params"] = Str(Prop(more, "params")) ?? "" } : q is not null ? new Dictionary<string, string> { ["query"] = q, ["params"] = Str(Prop(more, "params")) ?? "" } : null };
                 }
                 case "musicImmersiveCarouselShelfRenderer":
                 {
