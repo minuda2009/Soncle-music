@@ -287,6 +287,10 @@ Its own section markers give the split. Logic goes into view models and services
 | `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
 | `renderer/devices.js` (M09c) | ported (`uno-migration`) | — |
+| `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
+| `src/spotify.mjs` (M09b) | ported (`uno-migration`) | — |
+| `src/main.mjs` lyrics + `parseLrc` (M09d) | ported (`uno-migration`) | — |
+| `src/legacy.mjs` carry-over + backups (M09e) | ported (`uno-migration`) | — |
 | `src/preload.cjs` → contracts (M02) | ported (`uno-migration`) | — |
 | everything else in 12.2 | not started | — |
 
