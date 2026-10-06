@@ -214,7 +214,6 @@ public sealed class PlaybackController
         CancelStallWatch();
         var cts = new CancellationTokenSource();
         _stallCts = cts;
-        var t = Current;
         var token = _loadToken;
         var had = _player.BufferedEnd;
         _ = Task.Run(async () =>
@@ -222,25 +221,35 @@ public sealed class PlaybackController
             try
             {
                 await _clock.DelayAsync(TimeSpan.FromSeconds(_options.StallReloadSeconds), cts.Token);
-                if (token != _loadToken || !_loading || _player.State == PlaybackState.Playing || Current != t) return;
-                // still downloading, just slowly: keep waiting (up to the cap) rather than restarting
-                if (_player.BufferedEnd > had + 0.2 && waitedSeconds < _options.StallWaitCapSeconds)
-                {
-                    ArmStallWatch(waitedSeconds + _options.StallReloadSeconds);
-                    return;
-                }
-                _stalls++;
-                // phones ride out dead zones longer
-                if (_stalls > _options.StallChecks)
-                {
-                    await HandlePlayErrorAsync(t!, "The stream stopped responding", token, CancellationToken.None);
-                    return;
-                }
-                // fresh stream URL, same position
-                await ReloadAtAsync(t!, _player.Position, token, CancellationToken.None);
+                if (token != _loadToken) return;
+                await StallCheckAsync(waitedSeconds, had, token);
             }
             catch (OperationCanceledException) { }
         });
+    }
+
+    /// <summary>
+    /// One stall check: if the buffer grew since the watch armed, keep waiting; otherwise reload a
+    /// few times and then give up with "The stream stopped responding".
+    /// </summary>
+    internal async Task<bool> StallCheckAsync(double waitedSeconds, double had, long token)
+    {
+        var t = Current;
+        if (token != _loadToken || !_loading || _player.State == PlaybackState.Playing || t is null) return false;
+        if (_player.BufferedEnd > had + 0.2 && waitedSeconds < _options.StallWaitCapSeconds)
+        {
+            ArmStallWatch(waitedSeconds + _options.StallReloadSeconds);
+            return true;
+        }
+        _stalls++;
+        // phones ride out dead zones longer
+        if (_stalls > _options.StallChecks)
+        {
+            await HandlePlayErrorAsync(t, "The stream stopped responding", token, CancellationToken.None);
+            return false;
+        }
+        await ReloadAtAsync(t, _player.Position, token, CancellationToken.None);
+        return true;
     }
 
     private async Task ReloadAtAsync(QueueTrack t, double pos, long token, CancellationToken ct)

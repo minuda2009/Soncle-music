@@ -177,13 +177,15 @@ public class PlaybackControllerTests
         Assert.Equal(1, p.Loads);
         p.State = PlaybackState.Paused;
         p.BufferedEnd = 5;
-        c.SimulateWaiting();
-        // data keeps arriving, so the watch keeps waiting rather than giving up
-        p.BufferedEnd = 20;
-        await Task.Delay(150);
-        // eventually the growth stops and it reloads (rather than erroring)
-        Assert.True(p.Loads >= 2, p.Loads.ToString());
-        Assert.Empty(new List<string>());   // no Failed raised
+        c.SimulateWaiting();   // the engine reports it is waiting: loading becomes true
+        // the buffer grew since the watch armed: keep waiting, no reload
+        var wait = await c.StallCheckAsync(0, had: 0, token: 1);
+        Assert.True(wait);
+        Assert.Equal(1, p.Loads);
+        // the buffer stopped growing: it reloads rather than erroring
+        var cont = await c.StallCheckAsync(0, had: 100, token: 1);
+        Assert.True(cont);
+        Assert.Equal(2, p.Loads);
     }
 
     [Fact]
@@ -195,11 +197,13 @@ public class PlaybackControllerTests
         c.SetQueue(Q("a"));
         await c.PlayAtAsync(0);
         p.State = PlaybackState.Paused;
-        p.BufferedEnd = 5;               // never grows
-        p.FailLoads = true;              // the reload also fails, so it gives up
+        p.BufferedEnd = 5;               // never grows past `had`
+        p.FailLoads = true;              // the reload also fails
         c.SimulateWaiting();
-        await Task.Delay(200);
-        // with a flat buffer it reloads a few times, then gives up with the stall message
+        // three checks with a flat buffer: the first two reload, the third gives up
+        await c.StallCheckAsync(0, had: 5, token: 1);
+        await c.StallCheckAsync(0, had: 5, token: 1);
+        await c.StallCheckAsync(0, had: 5, token: 1);
         Assert.Contains(failures, m => m.Contains("stopped responding"));
     }
 
