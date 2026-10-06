@@ -1,0 +1,92 @@
+{
+ "cases": [
+  {
+   "name": "simple.lrc",
+   "lrc": "[00:12.50]First line\n[00:15.00]Second line\n[00:18.25]Third line\n",
+   "lines": [
+    {
+     "t": 12.5,
+     "text": "First line",
+     "words": null,
+     "end": 15
+    },
+    {
+     "t": 15,
+     "text": "Second line",
+     "words": null,
+     "end": 18.25
+    },
+    {
+     "t": 18.25,
+     "text": "Third line",
+     "words": null,
+     "end": 24.25
+    }
+   ]
+  },
+  {
+   "name": "multi-tag.lrc",
+   "lrc": "[00:01.00][00:31.00]Chorus\n[00:05.00]Verse\n",
+   "lines": [
+    {
+     "t": 1,
+     "text": "Chorus",
+     "words": null,
+     "end": 5
+    },
+    {
+     "t": 5,
+     "text": "Verse",
+     "words": null,
+     "end": 31
+    },
+    {
+     "t": 31,
+     "text": "Chorus",
+     "words": null,
+     "end": 37
+    }
+   ]
+  },
+  {
+   "name": "enhanced.lrc",
+   "lrc": "[00:10.00]<00:10.00>Hello <00:10.80>world <00:11.50>\n[00:12.00]Plain\n",
+   "lines": [
+    {
+     "t": 10,
+     "text": "Hello world",
+     "words": [
+      {
+       "t": 10,
+       "text": "Hello "
+      },
+      {
+       "t": 10.8,
+       "text": "world ",
+       "end": 11.5
+      }
+     ],
+     "end": 12
+    },
+    {
+     "t": 12,
+     "text": "Plain",
+     "words": null,
+     "end": 18
+    }
+   ]
+  },
+  {
+   "name": "no-tags.lrc",
+   "lrc": "just text\n[00:03.00]Real line\n",
+   "lines": [
+    {
+     "t": 3,
+     "text": "Real line",
+     "words": null,
+     "end": 9
+    }
+   ]
+  }
+ ]
+}
