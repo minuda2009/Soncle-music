@@ -1,5 +1,103 @@
 # Changelog
 
+## Unreleased: crossfades that sound right
+
+Measured against the curves in `engine.js`. The plain fade was already the same as Metrolist's;
+the problems were in what Soncle adds on top. Desktop and Android both get this.
+- **"Smart mix" no longer piles two songs up.** It held both songs near full volume for a third of
+  the blend (+3 dB louder, +6 dB on coinciding kicks), with beats that weren't aligned, so kicks
+  flammed and the limiter squashed it. It now uses your crossfade curve, plus the bass swap in the
+  middle. Beat-aligned mixes come with the roadmap's beat-phase work.
+- **A mix lasts as long as your crossfade setting.** It used to stretch to 16 beats: 9.6 s when you
+  chose 5 s, up to 14 s.
+- **Songs that would clash get a shorter fade, not a cut.** 60 % of your setting (at least 3 s),
+  instead of 2.5 s whatever you chose.
+- **Smart crossfade no longer cuts off a last chorus.** It started the blend on any quiet moment in
+  the last 12 s plus the crossfade; now only a real tail counts (the last few seconds, quiet for
+  over a second).
+- New tests: no crossfade curve may make the overlap louder than either song.
+
+## Android 0.1.6: built for listening on the move
+
+- **Each song downloads in full to the phone's cache**, as fast as the connection allows. The
+  player reads from that copy, so a tunnel or a weak spot only pauses the download, while what has
+  already arrived keeps playing. A lost connection is retried with back-off for about 10 minutes.
+  A seek far past what has arrived is fetched from the network directly.
+- **The next song is fetched ahead of time**, once the current one has finished downloading, so
+  it never competes with the song that's playing. The switch to it needs no network.
+- **Auto quality** (the new default on phones): the lighter stream on 2G/3G or with Data Saver
+  on, the best stream otherwise. It's checked for each song.
+- **Riding out dead zones:** a reload keeps the song's download rather than starting over, and the
+  phone waits longer (up to 8 stall checks) before giving up on a song.
+
+## Android 0.1.5
+
+- **Songs start much sooner.** The stream proxy now passes audio on as it downloads. Before, it
+  waited for each whole 1 MB piece. The first piece is also small (256 KB), and connections are
+  reused between pieces.
+- **A slow start is no longer treated as a stall** (desktop too). Before, the app restarted the
+  song after 12 s with nothing playable, throwing away what had already arrived. Now, while data
+  is still arriving, it keeps waiting (up to a minute).
+
+## Android 0.1.4
+
+- **Playback rebuilt the way desktop does it.**
+  - Songs now play from `https://localhost/_soncle/stream/…`. Native code answers those requests
+    (`SoncleStreams.java`), the phone's version of desktop's `mstream:` proxy.
+  - The audio element sees an ordinary seekable file. The bytes come from googlevideo in 1 MB
+    pieces, sent with the headers each stream client needs.
+  - When a URL expires mid-song, the proxy gets a fresh URL for the same file and carries on.
+  - This replaces the MediaSource player, which is kept only for the browser test harness.
+
+## Android 0.1.3
+
+- **Google Maps support.** Soncle's own media service (`SoncleMediaService.java`, a
+  MediaBrowserService) replaces the third-party media-session plugin. Google Maps can now show
+  Soncle's song and its play/pause/skip controls during navigation. Lock screen, notification,
+  headset and car controls go through the same service, with album art in the notification.
+- **Updates install over the previous version.** Test builds are now signed with one fixed key, so
+  each new APK installs over the last and keeps your library. Before this, every build had a new
+  random key. This one time, uninstall 0.1.2 first.
+- **Fixes from a full code review:**
+  - **Pause works while a song is still loading** (lookup can take a few seconds on a phone).
+    Before, the song started anyway. Desktop too.
+  - **A song can't get mixed into another file.** Each song keeps downloading from the same
+    file, even if the quality setting changes or the stream URL has to be refreshed mid-song.
+  - **PO tokens:**
+    - a failed token no longer breaks a second request running at the same time;
+    - a failed start gives up after 25 s instead of 45 s;
+    - desktop no longer leaves an orphaned hidden window behind.
+  - **Closing the file picker** without choosing a file no longer leaves restore or import
+    hanging.
+  - **Carousel arrows** are hidden on the phone (swipe instead), as intended.
+  - **Lint passes again, so CI is green.** The weekly upstream pull request was being skipped
+    because of it.
+  - **GitHub builds:**
+    - only one build runs at a time, so an older build can't replace a newer APK;
+    - the upstream watch copes with upstream history being rewritten.
+
+## Android 0.1.2
+
+- **Fixed "The play() request was interrupted by a call to pause()".** The system's media-session
+  "play" signal arrives when the playback notification starts. It was being treated as a
+  play/pause toggle, so it paused the song that was just starting. The notification and headset
+  Play and Pause buttons now only play or only pause (desktop too).
+- **A pause the app didn't ask for** while a song is starting is retried once, instead of being
+  reported as an error.
+- **New: Settings → Copy diagnostic log** (Android). It copies recent app messages for a bug
+  report. Web addresses are cut to their host name, and cookie values are removed.
+
+## Android 0.1.1
+
+- **Playback fixed.** The phone now gets PO tokens the same way desktop does: BotGuard runs in a
+  hidden youtube.com WebView (`SonclePlugin.java`). It uses the same stream clients as desktop,
+  in the same order. Audio requests are sent natively, so googlevideo receives the headers it
+  expects.
+- **Sign-in.** Google's sign-in page opens full screen inside the app. Once you're signed in, the
+  app keeps the YouTube session in its private storage, and it never reaches the UI's settings
+  store. Library, likes sync and Premium detection work as on desktop.
+- **Shared code.** BotGuard request handling is now `src/botguard.mjs`, used by both apps.
+
 ## Android 0.1.0 — first build (in `mobile/`)
 
 - **What it is.** Soncle on Android, sharing the desktop app's UI, audio engine and YouTube layer.

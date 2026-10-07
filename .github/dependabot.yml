@@ -10,6 +10,14 @@ updates:
       - dependency-name: music-metadata
       - dependency-name: electron
     labels: [dependencies]
+  - package-ecosystem: npm
+    directory: /mobile
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: youtubei.js
+      - dependency-name: "@capacitor/*"
+    labels: [dependencies, android]
   - package-ecosystem: github-actions
     directory: /
     schedule:

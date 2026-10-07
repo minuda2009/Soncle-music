@@ -34,7 +34,7 @@ const backend = path.join(here, 'src', 'backend.js');
 const entry = test
   ? { stdin: { contents: `import ${JSON.stringify(process.env.SONCLE_HARNESS)};\nimport ${JSON.stringify(backend)};`, resolveDir: here, loader: 'js' } }
   : { entryPoints: [backend] };
-await esbuild.build({ ...common, ...entry, outfile: path.join(www, 'backend.js'), minify: !test, loader: { '.json': 'json' } });
+await esbuild.build({ ...common, ...entry, outfile: path.join(www, 'backend.js'), minify: !test, loader: { '.json': 'json', '.html': 'text' } });
 
 let html = fs.readFileSync(path.join(www, 'index.html'), 'utf8');
 html = html

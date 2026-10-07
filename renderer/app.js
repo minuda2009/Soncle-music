@@ -1292,8 +1292,8 @@ VIEWS.history = (ctx) => {
 
 // ---- settings ----
 // Rows for things the Android app doesn't do (windows, tray, Discord, Windows audio devices,
-// sign-in and downloads for now) are left out there.
-const MOBILE_HIDDEN = new Set(['Signed in to YouTube Music', 'Sign in to YouTube Music', 'Sync likes to YouTube Music', 'Mica window backdrop', 'Output device', 'Per-device sound profiles', 'Auto-tune new devices', 'Saved device profiles', 'Smart ducking', 'Lower music to', 'Focus mode', 'Discord Rich Presence', 'Downloaded songs', 'Auto-download liked songs', 'Open downloads folder', 'Keep running in the tray', 'Keyboard shortcuts']);
+// downloads for now) are left out there.
+const MOBILE_HIDDEN = new Set(['Mica window backdrop', 'Output device', 'Per-device sound profiles', 'Auto-tune new devices', 'Saved device profiles', 'Smart ducking', 'Lower music to', 'Focus mode', 'Discord Rich Presence', 'Downloaded songs', 'Auto-download liked songs', 'Open downloads folder', 'Keep running in the tray', 'Keyboard shortcuts']);
 function settingRow({ ic, title, sub, control, onclick, disabled }) {
   if (api.mobile && MOBILE_HIDDEN.has(title)) return null;
   // A disabled row must not fire its click handler or its switch handler.
@@ -1348,7 +1348,7 @@ VIEWS.settings = async (ctx) => {
     settingRow({ ic: 'sliders', title: 'Squiggly seekbar', sub: 'Wavy progress bar in the now playing screen', control: sw('squiggly') }),
     settingRow({ ic: 'gridView', title: 'List density', control: seg('density', [['comfortable', 'Comfortable'], ['compact', 'Compact']], applyAppearance) })));
 
-  const q = selectCtl('quality', [['best', 'High'], ['low', 'Low (saves data)']]);
+  const q = selectCtl('quality', [...(api.mobile ? [['auto', 'Auto (lighter on slow connections)']] : []), ['best', 'High'], ['low', 'Low (saves data)']]);
   v.append(group('Player & audio',
     settingRow({ ic: 'quality', title: 'Audio quality', sub: 'Applies to the next song', control: q }),
     settingRow({ ic: 'crossfade', title: 'Crossfade', sub: 'Blend the end of a song into the next one', control: rangeCtl('crossfade', { min: 0, max: 12, step: 1, fmt: (x) => (x ? x + ' s' : 'Off') }) }),
@@ -1430,6 +1430,7 @@ VIEWS.settings = async (ctx) => {
 
   v.append(group('About',
     settingRow({ ic: 'info', title: `Soncle ${INFO.version || ''}`, sub: 'An independent YouTube Music player for your desktop. Not affiliated with Google or YouTube.' }),
+    api.diagnostics ? settingRow({ ic: 'info', title: 'Copy diagnostic log', sub: 'Recent app messages (no passwords or cookies), to paste into a bug report', onclick: async () => { try { await navigator.clipboard.writeText(await api.diagnostics()); toast('Diagnostic log copied'); } catch (e) { toast(shortErr(e.message)); } } }) : null,
     settingRow({ ic: 'info', title: 'Open-source licences', sub: 'GPL-3.0-or-later, and the notices for the code, icons and data it includes', onclick: () => licencesDialog() }),
     settingRow({ ic: 'keyboard', title: 'Keyboard shortcuts', sub: 'Ctrl+K command bar • [ / ] lyrics earlier/later (Shift = 0.5 s) • N mini player • Space play/pause • Ctrl+←/→ previous/next • ←/→ seek 5 s • ↑/↓ volume • Ctrl+L like • Ctrl+S shuffle • Ctrl+R repeat • Ctrl+F search • F now playing • Q queue • M mute • F11 full screen' })));
 };
@@ -1753,7 +1754,7 @@ function soundPage(view, redraw) {
       h('div', { class: 'snd-row' }, h('div', { style: { width: '160px' } }, 'Crossfade', h('div', { class: 'muted', style: { fontSize: '13px' } }, 'Off = gapless')), slider, out),
       h('div', { class: 'seg' + (xf ? '' : ' disabled') }, [['smart', 'Smart mix'], ['classic', 'Classic fade']].map(([k, l]) => h('button', { class: style === k ? 'on' : '', onclick: () => { setSetting('xfStyle', k); drawTr(); } }, l))),
       h('div', { class: 'muted', style: { fontSize: '13px', margin: '10px 0 4px' } }, style === 'smart'
-        ? 'When two songs go well together (tempo and key, learned on this PC) they’re blended like a DJ would: 16 beats long, bass lines swapped in the middle so they never clash. Songs that would clash get a short fade instead.'
+        ? 'When two songs go well together (tempo and key, learned on this PC) they’re blended with a bass swap: the bass lines trade places in the middle so they never pile up. Songs that would clash get a shorter fade.'
         : 'A plain crossfade of the length you set, using the curve chosen in Settings.'),
       h('div', { class: 'snd-row' }, h('div', { style: { flex: 1 } }, 'Gapless albums', h('div', { class: 'muted', style: { fontSize: '13px' } }, 'Songs from the same album run straight into each other, with no gap and no fade (live and concept albums).')),
         h('div', { class: 'switch' + (S().crossfadeGapless !== false ? ' on' : ''), onclick: () => { setSetting('crossfadeGapless', S().crossfadeGapless === false); drawTr(); } })));
@@ -2130,17 +2131,21 @@ async function loadTrack(t, tok, { startAt = 0, autoplay = true } = {}) {
   t._retried = false;
   t._started = false;
   t._autoplay = autoplay;
+  P.holdStart = false;
   P.loading = autoplay;
   updatePlayButtons();
   try {
-    const info = await api.prefetch(t.id);
+    P.looking = tok;
+    const info = await api.prefetch(t.id).finally(() => { if (P.looking === tok) P.looking = null; });
     if (tok !== P.loadToken) return;
     setStreamInfo(t, info);
-    await engine.load(t, { src: srcFor(t), lufs: lufsFor(t, info), startAt, autoplay });
+    // pause pressed while the stream was being looked up (seconds on a phone): load, but don't start
+    const auto = autoplay && !P.holdStart;
+    await engine.load(t, { src: srcFor(t), lufs: lufsFor(t, info), startAt, autoplay: auto });
     if (tok !== P.loadToken) return;
     if (!P.streamInfo?.txt.includes('kHz')) setStreamInfo(t, info);
     P.errors = 0;
-    if (!autoplay) { P.loading = false; updatePlayButtons(); }
+    if (!auto) { P.loading = false; P.holdStart = false; t._autoplay = false; updatePlayButtons(); }
   } catch (e) {
     if (tok !== P.loadToken) return;
     handlePlayError(t, e, tok);
@@ -2249,8 +2254,8 @@ engine.addEventListener('loudness', (e) => {
 
 // How to go from the playing song to the next one:
 //   gapless — albums (and crossfade off): the next song starts on the last one's final sample
-//   mix     — both songs' tempo/key are known and they go well together: a beat-timed DJ blend
-//             (16 beats, bass swap in the middle)
+//   mix     — both songs' tempo/key are known and they go well together: your crossfade length
+//             and curve, plus a bass swap in the middle
 //   fade    — the classic crossfade; shortened when two songs would clash
 const albumOf = (x) => x?.album?.id || (x?.album?.name ? x.album.name + '|' + (x.albumArtist || artistNames(x)) : null);
 function transitionPlan(cur, nt) {
@@ -2265,12 +2270,13 @@ function transitionPlan(cur, nt) {
     const fa = featRanked(cur.id), fb = featRanked(nt.id);
     if (fa && fb && S().flowXf !== false) {
       const tr = transition(cur, fa, nt, fb);
-      if (tr.sure > 0.5 && tr.score < 0.45) v.dur = Math.min(xf, 2.5);   // clash: keep it short
+      // clash: a shorter blend, but never a jarring cut (it used to drop to 2.5 s whatever you chose)
+      if (tr.sure > 0.5 && tr.score < 0.45) v.dur = Math.min(xf, Math.max(3, xf * 0.6));
+      // good match: same length as your setting, plus a bass swap so the basslines don't pile up.
+      // (A mix used to stretch to 16 beats — up to 14 s when you chose 5 s — with both songs at
+      // full volume and unaligned beats. Beat-aligned mixes come with the roadmap's beat-phase work.)
       else if (S().xfStyle !== 'classic' && tr.sure > 0.5 && tr.score >= 0.6 && fa.bpm > 60) {
-        const beat = 60 / fa.bpm;
-        let secs = 16 * beat;
-        if (secs > Math.max(xf, 4) * 2) secs = 8 * beat;
-        v = { kind: 'mix', dur: Math.max(4, Math.min(14, secs)), bpm: fa.bpm };
+        v = { kind: 'mix', dur: xf, bpm: fa.bpm };
       }
     }
   }
@@ -2354,6 +2360,8 @@ function prev() {
 }
 function togglePlay() {
   if (!P.current) { if (P.queue.length) playAt(Math.max(0, P.idx)); return; }
+  // a song is still being looked up: pause/play just decides whether it starts when ready
+  if (P.looking === P.loadToken) { P.holdStart = !P.holdStart; if (!P.holdStart) P.loading = true; if (P.holdStart && !engine.paused) engine.pause(); return updatePlayButtons(); }
   if (engine.paused || engine.deck.pausing) {
     if (!engine.el.src) return playAt(P.idx, { startAt: P.resumeAt || 0 });
     engine.play().catch(() => playAt(P.idx));
@@ -2447,7 +2455,7 @@ function updatePlayButtons() {
   kickFrame();
   for (const id of ['#pbPlay', '#npPlay']) {
     const b = $(id);
-    const want = P.loading ? 'loading' : P.playing ? 'pause' : 'play';
+    const want = P.holdStart ? 'play' : P.loading ? 'loading' : P.playing ? 'pause' : 'play';
     if (b.dataset.state !== want) {
       b.dataset.state = want;
       if (id === '#npPlay') b.replaceChildren(want === 'loading' ? h('div', { class: 'spinner' }) : icon(want), h('span', null, want === 'pause' ? 'Pause' : 'Play'));
@@ -2650,15 +2658,26 @@ engine.addEventListener('pause', () => { if (engine.xfading && !engine.deck.paus
 engine.addEventListener('waiting', () => { if (!engine.paused) { P.loading = true; updatePlayButtons(); armStallWatch(); } });
 // ---- never stay stuck: stalls, dropped connections and dead streams recover on their own ----
 let stallTimer = null;
-function armStallWatch() {
+// How far the player has downloaded, in seconds (0 when nothing has arrived yet).
+function bufferedEnd() {
+  const b = engine.buffered;
+  let end = 0;
+  try { for (let i = 0; i < (b?.length || 0); i++) end = Math.max(end, b.end(i)); } catch {}
+  return end;
+}
+function armStallWatch(waited = 0) {
   clearTimeout(stallTimer);
-  const t = P.current, tok = P.loadToken;
+  const t = P.current, tok = P.loadToken, had = bufferedEnd();
   stallTimer = setTimeout(() => {
     if (tok !== P.loadToken || !P.loading || engine.paused || P.current !== t) return;
     if (!navigator.onLine) return waitForNetwork(t);
+    // Still downloading, just slowly: keep waiting (up to a minute) rather than starting over,
+    // which would throw away what has arrived and look the stream up again.
+    if (bufferedEnd() > had + 0.2 && waited < 60000) return armStallWatch(waited + 12000);
     t._stalls = (t._stalls || 0) + 1;
     console.warn('stalled', t.id, 'at', engine.currentTime.toFixed(1), 'attempt', t._stalls);
-    if (t._stalls > 2) return handlePlayError(t, new Error('The stream stopped responding'), tok);
+    // phones ride out dead zones longer (the song keeps downloading in the background meanwhile)
+    if (t._stalls > (api.mobile ? 8 : 2)) return handlePlayError(t, new Error('The stream stopped responding'), tok);
     reloadAt(t, engine.currentTime);   // fresh stream URL, same position
   }, 12000);
 }
@@ -2770,7 +2789,7 @@ setInterval(() => {
     const xf = plan && plan.kind !== 'gapless' ? plan.dur : 0;
     if (xf > 0 && smart) {
       lvl = engine.levelDb();
-      if (lvl > -60 && t > 5 && d - t > xf + 12) P.lvlAvg = P.lvlAvg == null ? lvl : P.lvlAvg * 0.99 + lvl * 0.01;
+      if (lvl > -60 && t > 5 && d - t > xf + 4) P.lvlAvg = P.lvlAvg == null ? lvl : P.lvlAvg * 0.99 + lvl * 0.01;
     }
     if (plan?.kind === 'gapless') {
       if (!P.xfPending && !P.current._noGapless && d - t <= 3 && d - t > 0.05 && d > 5) {
@@ -2779,8 +2798,10 @@ setInterval(() => {
       }
     } else if (plan) {
       let start = d - t <= xf, early = false;
-      if (!start && lvl != null && P.lvlAvg != null && t > 30 && d - t <= xf + 12) {
-        if (lvl < P.lvlAvg - 22) { P.quietMs = (P.quietMs || 0) + 100; if (P.quietMs >= 700) start = early = true; } else P.quietMs = 0;
+      // Only a real tail counts: the last few seconds, quiet for over a second. (It used to look
+      // 12 s ahead, so a quiet break before a song's last chorus started the blend and cut it off.)
+      if (!start && lvl != null && P.lvlAvg != null && t > 30 && d - t <= xf + 4) {
+        if (lvl < P.lvlAvg - 22) { P.quietMs = (P.quietMs || 0) + 100; if (P.quietMs >= 1200) start = early = true; } else P.quietMs = 0;
       }
       if (start && d > xf * 2.5 && d - t > 0.4 && !P.xfPending) {
         P.xfPending = true;
@@ -2799,8 +2820,10 @@ setInterval(() => {
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
-  ms.setActionHandler('play', () => togglePlay());
-  ms.setActionHandler('pause', () => togglePlay());
+  // play and pause do only what they say: a stray "play" from the system (Android sends one when
+  // the media notification starts) must not pause a song that is already starting
+  ms.setActionHandler('play', () => { if (P.holdStart || (P.looking !== P.loadToken && (engine.paused || engine.deck.pausing)) || !P.current) togglePlay(); });
+  ms.setActionHandler('pause', () => { if (P.playing || (P.looking === P.loadToken && !P.holdStart)) togglePlay(); });
   ms.setActionHandler('previoustrack', () => prev());
   ms.setActionHandler('nexttrack', () => next());
   ms.setActionHandler('seekto', (d) => engine.seek(d.seekTime));

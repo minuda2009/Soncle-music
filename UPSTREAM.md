@@ -29,6 +29,29 @@ Most "YouTube changed something and playback broke" fixes land in
 [youtubei.js](https://github.com/LuanRT/YouTube.js). Dependabot (`.github/dependabot.yml`) opens a
 PR whenever youtubei.js, Electron or music-metadata release an update.
 
+## 4. Watched for fixes (other projects)
+
+`tools/watch-upstreams.mjs` checks the projects in `upstream/watch.json` every week. Nothing is
+copied from them. Each week it lists:
+- their new releases;
+- commits that mention a fix or touch the parts Soncle also has.
+
+| Project | Why it's watched |
+| --- | --- |
+| [pear-devs/pear-desktop](https://github.com/pear-devs/pear-desktop) (formerly th-ch/youtube-music) | The YouTube Music desktop app. It runs on Electron like Soncle, so its sign-in, playback, crossfade, equalizer and lyrics fixes often apply here too. |
+| [LuanRT/YouTube.js](https://github.com/LuanRT/YouTube.js) | The library behind every YouTube request in Soncle. |
+| [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) (YouTube commits only) | An early warning when YouTube changes stream clients, client versions or PO-token rules. |
+| [MetrolistGroup/Metrolist](https://github.com/MetrolistGroup/Metrolist) | Releases and fix commits. Porting individual files is section 2. |
+
+- **When something is relevant:** it opens an **"Upstream watch · date"** issue and closes last
+  week's. The issue links each release and commit, and names the Soncle file to compare with.
+- **What it remembers:** the last commit it saw for each project, in `watch.json → seen`.
+- **On its own:** run it from the Actions tab, or locally with `npm run upstream:watch` (reports
+  only, changes nothing).
+- **Adding a project:** add an entry with `repo`, `paths` (folders that matter), `keywords`
+  (words in commit titles), optionally `require` (a word every relevant commit must contain), and
+  `ours` (the Soncle files to compare with).
+
 ## How it runs
 
 - **On GitHub.** `.github/workflows/upstream-sync.yml` runs every Monday, and on demand from the

@@ -1,0 +1,33 @@
+name: Project knowledge
+# Rebuilds Soncle-core-source.md (core source in one file, for a Claude Project's knowledge) and
+# attaches it to the "project-knowledge" release, so it can be downloaded from a phone.
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'renderer/engine.js', 'renderer/audio/**', 'renderer/flow/**', 'mobile/src/**', 'mobile/android/app/src/main/java/**', 'ROADMAP.md', 'tools/project-knowledge.mjs']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# one build at a time; a newer push replaces a build still running, so an older APK never wins
+concurrency:
+  group: project-knowledge
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node tools/project-knowledge.mjs Soncle-core-source.md
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete project-knowledge --yes --cleanup-tag || true
+          gh release create project-knowledge Soncle-core-source.md --prerelease --target "$GITHUB_SHA" \
+            --title "Project knowledge (core source)" \
+            --notes "Core source in one file, built from ${GITHUB_SHA::7}. Upload it to the Claude Project's knowledge, replacing the old copy."

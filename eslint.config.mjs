@@ -16,7 +16,7 @@ export default [
         Headers: 'readonly', AbortController: 'readonly', CustomEvent: 'readonly', Event: 'readonly',
         MouseEvent: 'readonly', crypto: 'readonly', structuredClone: 'readonly', Float32Array: 'readonly',
         getComputedStyle: 'readonly', Element: 'readonly', EventTarget: 'readonly', Intl: 'readonly',
-        Worker: 'readonly', self: 'readonly', OfflineAudioContext: 'readonly', performance: 'readonly', PointerEvent: 'readonly', WheelEvent: 'readonly', ReadableStream: 'readonly', AudioWorkletNode: 'readonly', MediaSource: 'readonly', KeyboardEvent: 'readonly', location: 'readonly', Uint8Array: 'readonly'
+        Worker: 'readonly', self: 'readonly', OfflineAudioContext: 'readonly', performance: 'readonly', PointerEvent: 'readonly', WheelEvent: 'readonly', ReadableStream: 'readonly', AudioWorkletNode: 'readonly', MediaSource: 'readonly', KeyboardEvent: 'readonly', location: 'readonly', Uint8Array: 'readonly', atob: 'readonly', btoa: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly'
       }
     },
     rules: {
