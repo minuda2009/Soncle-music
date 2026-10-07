@@ -33,7 +33,7 @@ jobs:
       - if: steps.sync.outputs.changed == 'true'
         run: npm test && npm run lint
       - if: steps.sync.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: upstream-sync
           commit-message: 'Sync with upstream ${{ steps.sync.outputs.upstream }}'
