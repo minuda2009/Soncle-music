@@ -56,6 +56,16 @@ and others).
 | [music-metadata](https://github.com/Borewit/music-metadata) 11.x | MIT |
 | [Electron](https://github.com/electron/electron) 44.x (includes Chromium; its notices ship as `LICENSES.chromium.html` in the build) | MIT |
 
+## C# / .NET test dependencies (`uno/`)
+
+The C# port under `uno/` is not shipped yet; these are used only to build and test it.
+
+| Package | Licence |
+| --- | --- |
+| [xUnit.net](https://xunit.net/) (xunit, xunit.runner.visualstudio) | Apache-2.0 |
+| [Microsoft.NET.Test.Sdk](https://github.com/microsoft/vstest) | MIT |
+| [coverlet.collector](https://github.com/coverlet-coverage/coverlet) | MIT |
+
 ## Algorithms and data
 
 - Loudness measurement follows ITU-R BS.1770 / EBU R128 (K-weighting, 400 ms gated blocks). The

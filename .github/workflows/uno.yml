@@ -1,0 +1,28 @@
+name: Uno / C#
+# Builds and tests the C# / .NET port under uno/ on GitHub's servers. The Electron and Capacitor
+# apps keep shipping until the port passes the parity checklist (docs/WINUI_PLAN.md §4).
+on:
+  push:
+    paths: ['uno/**', 'fixtures/**', '.github/workflows/uno.yml']
+  pull_request:
+    paths: ['uno/**', 'fixtures/**', '.github/workflows/uno.yml']
+  workflow_dispatch:
+
+# one build at a time; a newer push replaces a build still running
+concurrency:
+  group: uno-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # The version comes from uno/global.json.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: uno/global.json
+      - name: Build
+        run: dotnet build uno/Soncle.sln -warnaserror
+      - name: Test
+        run: dotnet test uno/Soncle.sln
