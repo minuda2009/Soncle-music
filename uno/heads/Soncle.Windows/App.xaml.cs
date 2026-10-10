@@ -10,12 +10,18 @@ public partial class App : Application
         InitializeComponent();
     }
 
+    /// <summary>The name the preview runs under (docs/WINUI_PLAN.md §10), shown by Windows.</summary>
+    private const string WindowTitle = "Soncle Preview";
+
     /// <summary>The shell window. Exposed so the shell page can set its custom title bar.</summary>
     public Window? MainWindow { get; private set; }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        MainWindow = new Window();
+        // The window title is what the taskbar, Alt+Tab and Task Manager show; the custom title bar
+        // in MainPage draws the same string. Unpackaged, it otherwise comes from the exe, so set it
+        // to the name the preview installs/runs under (docs/WINUI_PLAN.md §10).
+        MainWindow = new Window { Title = WindowTitle };
         WindowChrome.UseMica(MainWindow);
         WindowChrome.UseMediaSession(MainWindow);
 
