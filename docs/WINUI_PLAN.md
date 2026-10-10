@@ -2,7 +2,11 @@
 
 _Drafted 4 Oct 2026; current as of `main` @ b8b0a91 (desktop 1.0.0, Android 0.1.6, plus the crossfade fix in 2f60b95). Extends the "Later: move to Uno Platform" section of ROADMAP.md; where they differ, this file is the detailed plan._
 
-> **Decision needed before stage 1: which head comes first, Windows or Android?** ROADMAP.md says Android first. Stages 0–3 (shared libraries, audio core, design system) are the same either way; the choice decides whether stage 4 builds the WinUI shell or the Android shell first, and which platform services (§7 or the Android Java bindings) are written first. Record the answer here: **Order: _undecided_**.
+> **Head order — decided 10 Oct 2026 by minuda2009: Order: Windows first.** Stage 4 builds the WinUI shell and the §7 Windows services first. Because the point of the migration is **one codebase for Windows and Android**, the Android viability gate (`docs/DESIGN.md` §7.2, budget in §9) runs **now, before any page work**, and every page is designed adaptive (rail on desktop, bottom bar on phone) from the start.
+>
+> **UI, UX and app-structure decisions are in [`docs/DESIGN.md`](DESIGN.md)** (detail levels, merged Home, four destinations, `Soncle.App` architecture, UX rules). Read it before stage 3+ work; where it and §3 below differ, `DESIGN.md` wins.
+
+**Why.** One C# codebase for both apps, so Windows and Android are maintained once (today's JS apps already share `renderer/` and `src/`; the C# app keeps that and goes native).
 
 **Goal.** Replace the Electron app with a native WinUI 3 app (Uno Platform, C#) that **looks like Soncle does today** — Material 3, tonal surfaces, dynamic colour from the artwork, Material Symbols at weight 600, the spring motion — keeps **every 1.0 feature**, and is noticeably more polished: sample-accurate audio, GPU-smooth motion, real Windows integration, and a fraction of the memory.
 
@@ -12,6 +16,7 @@ _Drafted 4 Oct 2026; current as of `main` @ b8b0a91 (desktop 1.0.0, Android 0.1.
 3. **Measured, not guessed.** Electron baselines are measured first (§9) and every stage reports against them.
 4. **UI changes are shown before they ship.** Side-by-side screenshots (Electron vs WinUI) for every page; anything that looks different from what minuda2009 liked is a bug unless agreed. (Lesson from 1.8: thin icons, filled controls and a two-line title made it worse.)
 5. Name, attribution, licence, security and honesty rules stay exactly as they are today.
+6. **Design decisions are part of this plan.** `docs/DESIGN.md` (agreed 10 Oct 2026) sets the information architecture, detail levels, UX rules and `Soncle.App` structure. Agreed changes from it are not "looks different = bug" under rule 4.
 
 ---
 
@@ -43,6 +48,8 @@ uno/Soncle.sln       (everything below lives in uno/; the repo's existing src/ s
   - the next song is fetched ahead once the current one is complete, so it never competes with it. Desktop gets all of this for free (it doesn't have it today).
 - **Android native code is kept, not rewritten.** `SoncleMediaService.java` (MediaBrowserService: Google Maps, Android Auto, lock screen, headsets, watches, foreground service) and the BotGuard WebView in `SonclePlugin.java` move into the Android head as a Java library with a .NET binding. `SoncleStreams.java` is replaced by the shared C# downloader above once its tests match.
 - **Custom drawing uses SkiaSharp, not Win2D.** Win2D is Windows-only; the meters, the EQ curve and the squiggly seekbar must also run on the Android head, so they draw with SkiaSharp (Uno's `SKCanvasElement`), which works on both.
+- **`Soncle.App` structure** (`docs/DESIGN.md` §5): layered settings (base ⊕ device profile ⊕ focus overlay ⊕ transient), a queue whose items carry their origin (user / source / flow / autoplay), `PlaybackController` as the single state machine with ducking/sleep/focus as layers, one command registry feeding Ctrl+K, accelerators, menus, tooltips and media buttons, and a notification service with levels. History, plays, skips and stats in SQLite.
+- **Platform seams:** everything platform-specific is an interface in `Soncle.Core` implemented per head (audio output, media session, stream unlocking/PO tokens, device detection, pickers, storage, power, ducking, window shell). No `#if WINDOWS`/`#if ANDROID` outside the heads.
 - **Renderer choice:** the Windows head is real WinUI (native Mica, SMTC, composition); Android uses Uno's Skia renderer. One XAML tree for both.
 
 ## 2. Keeping the Material 3 look
@@ -80,17 +87,19 @@ Today `extractColor` picks one hue/saturation from a 48×48 canvas. In C#:
 
 Every page becomes a XAML page + view model. Lists are virtualised (`ItemsRepeater`) everywhere.
 
+**Navigation changes agreed in `docs/DESIGN.md` §3** (they override the rows below): four destinations — **Home** (Home + Explore merged), **Library** (with History, Stats and an "On this computer" local-files source as tabs/filters), **Sound** (everything you hear, incl. device profiles) and **Settings** (app settings only) — plus pinned playlists. Rail on desktop, bottom bar on phone.
+
 | Today (app.js) | WinUI | Polish |
 | --- | --- | --- |
 | Shell: title bar, sidebar (236 px), main, player bar (88 px) | `NavigationRoot` grid, Toolkit `TabBar` as rail | Rail collapses at narrow widths, same as the phone layout. |
 | Page transitions (Android NavHost ±1/8 slide + 200 ms fade) | Custom `NavigationTransitionInfo` with composition springs | Back/forward gestures and mouse back button. |
-| Home (chips, shelves, "Made for you", load more) | `HomePage` | Incremental loading, skeleton shimmer instead of blank. |
-| Explore, Browse/moods | `ExplorePage`, `BrowsePage` | |
+| Home (chips, shelves, "Made for you", load more) + Explore | `HomePage` (merged, `DESIGN.md` §3.2) | Continue card, shortcut row (New releases · Charts · Moods & genres · Podcasts), both feeds loaded in parallel, skeletons. |
+| Browse/moods, charts, new releases | `BrowsePage` | Opened from Home's shortcut row. |
 | Search + suggestions + correction + filters + load more | `SearchPage`, suggest flyout in title bar | Debounced, keyboard-first. |
 | Album, Playlist, Artist, Liked, Local playlist | `CollectionPage` (shared header + track list) | "Now playing" bars on covers, Pause-instead-of-Play kept. |
 | Library (songs, downloads, playlists, albums, artists) | `LibraryPage` | |
 | Local files (folders, scan progress, album/artist filters) | `FilesPage` | Folder watching via `FileSystemWatcher`, no rescans. |
-| History, Stats | `HistoryPage`, `StatsPage` | |
+| History, Stats | tabs in `LibraryPage` | Stats gains "Your Flow" (`DESIGN.md` §6.5). |
 | Queue panel + "how the next song comes in" chip | `QueuePane` | Drag-reorder with the M3 lift; Flow plan shown in the chip (roadmap). |
 | Now playing (classic artwork morph / Android bottom sheet) + lyrics / up next / related | `NowPlayingSheet` | Connected-animation artwork morph; the sheet is a real spring with velocity from the drag. |
 | Squiggly seekbar | `SquigglySlider` (SkiaSharp canvas) | Smooth at display refresh; amplitude eases to flat on pause, like Android. |
@@ -173,7 +182,7 @@ Signal path is unchanged (deck: media → norm → bass shelf 180 Hz → fade; m
 
 **Baseline first (Electron 1.0.0, same PC, same songs):** cold start to first frame, working set idle / playing / after an hour, CPU idle and playing, processes. Today's known numbers: ~0.1 % CPU idle, ~8 % playing. **Targets for WinUI:** idle CPU ≤ 0.1 %, playing ≤ 3 %, memory well under Electron's (target < 150 MB playing, measured), no audio dropouts under load.
 
-**Budget for Android (Uno head).** Today's Capacitor APK is 5.8 MB. A .NET + Uno APK will be much bigger and slower to open, so set a budget and measure it with an empty Uno app in stage 1, before committing: arm64-only APK ≤ 30 MB, cold start to first frame ≤ 2 s on a low-end phone (4 GB RAM class), memory while playing no worse than the Capacitor app. Trimming, AOT/profiled AOT and one-ABI builds are the levers. If the budget can't be met, that is a reason to keep the Capacitor app longer.
+**Budget for Android (Uno head) — a gate, run now (`DESIGN.md` §7.2).** Today's Capacitor APK is 5.8 MB. A .NET + Uno APK will be much bigger and slower to open, so set a budget and measure it with an empty Uno app in stage 1, before committing: arm64-only APK ≤ 30 MB, cold start to first frame ≤ 2 s on a low-end phone (4 GB RAM class), memory while playing no worse than the Capacitor app. Trimming, AOT/profiled AOT and one-ABI builds are the levers. If the budget can't be met, the fallback is a .NET for Android head with a native UI over the same portable libraries and view models (or keeping Capacitor), not abandoning the shared C# code. Record the measured numbers here: _not measured yet_.
 
 - `dotnet test`: unit tests per library, run in CI on Linux (libraries) and Windows (head).
 - Shared fixtures: the JS tests' recorded responses and audio reference numbers live in one `fixtures/` folder used by both `npm test` and `dotnet test`.
@@ -195,10 +204,10 @@ Signal path is unchanged (deck: media → norm → bass shelf 180 Hz → fade; m
 | Stage | Work | Done when | Rough effort |
 | --- | --- | --- | --- |
 | **0. Prep** (in the current repo) | Export fixtures and audio reference numbers to `fixtures/`; record the playback-rule cases and `SoncleStreams` behaviour as fixtures; measure Electron baselines; screenshot every page; generate the weight-600 icon font. | Baselines and golden screenshots committed. | 2–3 days |
-| **1. Libraries** | `Soncle.Core`, `Soncle.YouTube`, `Soncle.Streams`, `Soncle.Flow` + tests; console app that searches and resolves a stream. | Fixture tests match JS output; a song resolves on a real PC. | 1–2 weeks |
+| **1. Libraries** | `Soncle.Core`, `Soncle.YouTube`, `Soncle.Streams`, `Soncle.Flow` + tests; console app that searches and resolves a stream. **Plus the Android viability gate** (empty Uno Android app measured against §9). | Fixture tests match JS output; a song resolves on a real PC; Android numbers recorded in §9. | 1–2 weeks |
 | **2. Audio** | `Soncle.Audio` on WASAPI: decks, master chain, limiter, LUFS, gapless, crossfade, tempo. | Reference tests pass; minuda2009 A/B-listens against Electron and hears no regression. | 2–3 weeks |
 | **3. Design system** | `Soncle.Design`: tokens, dynamic colour, icon font, styles, springs; a gallery page of every control. | Gallery matches the CSS components in screenshots, all themes. | 1–2 weeks |
-| **4. Shell + core pages** (the first head, per the decision at the top) | Window, Mica, title bar, rail, player bar, Home, Search, collections, Now playing, queue, lyrics, SMTC, tray. | Daily-usable preview build on `windows-preview`. | 2–3 weeks |
+| **4. Shell + core pages** (Windows head first; pages adaptive for the phone) | Window, Mica, title bar, rail, player bar, Home, Search, collections, Now playing, queue, lyrics, SMTC, tray. | Daily-usable preview build on `windows-preview`. | 2–3 weeks |
 | **5. Everything else** | Sound/EQ/AutoEq, settings, library, local files, downloads, import, stats, focus, welcome, mini player, palette, Discord, carry-over. | Parity checklist (§4) all green. | 3–4 weeks |
 | **6. Polish + switch** | §8 items, performance pass, accessibility, installer. Final Electron release adds the cookie hand-off and points to the new app. | Targets in §9 met; minuda2009 signs off; Electron retired (code kept in history). | 1–2 weeks |
 
@@ -212,7 +221,8 @@ The roadmap's next desktop version (smart crossfade, Flow full-pool analysis) st
 - **Same repo, new folder.** The C# solution lives in `uno/` in minuda2009/Soncle-music, next to the Electron and Capacitor apps, so both sides use one `fixtures/` folder and one CI. Work lands on `main` in small steps; nothing in `uno/` ships until the switch.
 - **Path filters.** `android.yml` already builds only on its `paths:` list (`mobile/**`, `renderer/**`, `src/**`, `assets/**`, …), which doesn't include `uno/` or `docs/`, so C# work never replaces the APK and it needs no change (GitHub rejects `paths` and `paths-ignore` on the same trigger anyway). A new `uno.yml` uses `paths: ['uno/**', 'fixtures/**', '.github/workflows/uno.yml']`, so Electron/Android fixes never wait on .NET builds.
 - **One unit per pull request:** the C# file(s), their tests, and the fixtures they share with the JS tests. A port is done when the C# output equals the JS output on the same fixtures (a "golden diff" test), not when it compiles.
-- **The JS stays the source of truth until the switch.** Any fix to a JS file that already has a C# port gets the same fix in C# in the same PR (the upstream-watch habit, applied to ourselves). The ledger below tracks this.
+- **The JS stays the source of truth until the switch.** Any fix to a JS file that already has a C# port gets the same fix in C# in the same PR (the upstream-watch habit, applied to ourselves). The ledger below tracks this, and a CI drift check should fail when a ported file changes without its C# counterpart or a ledger edit (`DESIGN.md` §7.3).
+- **JS UI freeze.** Once stage 4 starts, the Electron and Capacitor apps get bug fixes and committed roadmap items only, no new UI/UX (`DESIGN.md` §7.1).
 - **Headers carry over:** `// Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later` on every C# file; THIRD_PARTY_NOTICES.md gains the new libraries (Uno, Uno.Themes, Concentus, SoundTouch.Net, NAudio, SkiaSharp, Jint, H.NotifyIcon, Material Color Utilities, CommunityToolkit).
 
 ### 12.2 Transfer map
@@ -287,7 +297,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
 | `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
-| `renderer/devices.js` (M09c) | ported (`uno-migration`) | — |
+| `renderer/devices.js` (M09c) | ported (`uno-migration`) | `androidOutputLabel` added after the port (new function; ported part unchanged, fixtures still match) — port it with the Android head |
 | `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
 | `src/spotify.mjs` (M09b) | ported (`uno-migration`) | — |
 | `src/main.mjs` lyrics + `parseLrc` (M09d) | ported (`uno-migration`) | — |
@@ -298,7 +308,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
 | `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
 | `src/yt.mjs` stream resolver rules (M07, partial) | ported (`uno-migration`) | InnerTube + decipher are a head (IStreamClient) |
-| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands + tests; PR pending) | real YouTube needs the InnerTube `IStreamClient`; real songs need a WebM reader + Opus decoder |
+| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands + tests; PR #16) | real YouTube needs the InnerTube `IStreamClient`; real songs need a WebM reader + Opus decoder |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks
@@ -307,5 +317,5 @@ Its own section markers give the split. Logic goes into view models and services
 - **Deciphering in .NET** — Jint speed/compat with new player scripts. Mitigation: token-free clients first; fall back to WebView2 (already loaded for PO tokens) to run the player JS.
 - **Uno Material ≠ our CSS exactly** — expect to restyle many templates. Mitigation: gallery page and screenshot diffs from stage 3.
 - **Audio thread GC pauses** — allocation-free rule, a dedicated high-priority thread (MMCSS "Pro Audio"), and a dropout counter in debug builds.
-- **Android size and start-up.** A .NET + Uno APK is several times the 5.8 MB Capacitor APK and opens slower on cheap phones. Mitigation: the §9 budget, measured with an empty app in stage 1; trimming and AOT; keep the Capacitor app until the budget is met.
+- **Android size and start-up.** A .NET + Uno APK is several times the 5.8 MB Capacitor APK and opens slower on cheap phones — and one shared codebase is the reason for migrating, so this is the biggest risk. Mitigation: the §9 budget measured with an empty app now (`DESIGN.md` §7.2); trimming and AOT; if it fails, a native-UI .NET Android head over the same libraries, and keep the Capacitor app until then.
 - **Unsigned builds** — SmartScreen friction stays until signing is sorted.

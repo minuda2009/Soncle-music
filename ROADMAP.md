@@ -184,7 +184,10 @@ app can't yet tell what the sound is playing through (`btDevices` returns an emp
 
 ## Later: move to Uno Platform (C# / .NET): WinUI on Windows, native Android
 
-_Decided 4 Oct 2026. This replaces the earlier Dart / Flutter idea._
+_Decided 4 Oct 2026. This replaces the earlier Dart / Flutter idea. **Updated 10 Oct 2026:** Windows
+head first, with an Android viability gate before page work; the detailed plan is
+`docs/WINUI_PLAN.md` and the UI/UX/structure decisions are `docs/DESIGN.md`. Where this section
+differs from them (e.g. the stage order below), they win._
 
 **Target.** One C# codebase with XAML UI built on Uno Platform.
 - **Windows:** the WinUI 3 / Windows App SDK head. A real native Windows app: Mica, the system
