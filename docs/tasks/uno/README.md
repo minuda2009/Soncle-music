@@ -2,7 +2,8 @@
 
 This folder turns `docs/WINUI_PLAN.md` into work an agent can pick up and finish in one pull
 request. **Read `AGENTS.md` first, then `docs/WINUI_PLAN.md`** (the "why" and the target design),
-then the one task file you were given. If a task file and the plan disagree, the plan wins; say so
+then **`docs/DESIGN.md`** (UI, UX and `Soncle.App` structure decisions), then the one task file you
+were given. If a task file and the plan disagree, the plan wins; say so
 in your PR.
 
 ## What this migration is
@@ -83,10 +84,10 @@ in your PR.
   - M00 and M01 can run in parallel.
   - After them, M02, M04, M05 and M08 are independent of each other.
 - **Not tasked yet:**
-  - The design system (plan stage 3), the heads and the pages (stages 4–5). They depend on the
-    **head-order decision** at the top of `docs/WINUI_PLAN.md` ("Order: _undecided_").
-  - Their task files are written once minuda2009 records that decision. Don't start shell or page
-    work before then.
+  - The Android viability gate (`docs/DESIGN.md` §7.2) — next, before any page work.
+  - The design system (plan stage 3), the heads and the pages (stages 4–5). Head order is decided:
+    **Windows first** (plan, top). Their task files follow `docs/DESIGN.md`; don't start shell or
+    page work until those task files exist.
 
 ## Definition of done (every task)
 - The task's acceptance list is met. CI is green on the PR.

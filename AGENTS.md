@@ -13,6 +13,8 @@ agents write, test and ship the code. Licence: GPL-3.0-or-later.
   `mobile/android/app/src/main/java/com/minuda2009/soncle/` (`SonclePlugin`, `SoncleMediaService`,
   `SoncleStreams`).
 - **Plans:** `ROADMAP.md` (features), `docs/WINUI_PLAN.md` (later move to Uno Platform / C#),
+  `docs/DESIGN.md` (agreed UI, UX and app-structure decisions — **read it before any UI, UX or
+  `uno/` app work**),
   `docs/tasks/` (one file per task handed to an agent; the C# migration tasks are in
   `docs/tasks/uno/`, start with its README). `CHANGELOG.md` gets an entry for every change
   that ships.
@@ -50,6 +52,8 @@ test with the offline mock and fixtures, never against a real account.
 - **Sound and resources.** The limiter stays last in the audio chain; nothing may clip (true peak
   ≤ −1 dBTP). Measure CPU and memory instead of guessing, and write the numbers in the PR.
 - **UI.** Material 3 look, Material Symbols outlined at weight 600. Don't restyle things that
-  weren't part of the task; minuda2009 reviews UI changes from screenshots first.
+  weren't part of the task; minuda2009 reviews UI changes from screenshots first. New UI/UX follows
+  `docs/DESIGN.md` (detail levels, navigation, UX rules) and is built in the Uno app; once Uno
+  shell work starts, the Electron/Capacitor apps get bug fixes and roadmap items only.
 - **When unsure, fall back** to today's behaviour instead of guessing (this applies to audio
   analysis too).
