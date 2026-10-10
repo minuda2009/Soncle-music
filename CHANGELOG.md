@@ -12,8 +12,8 @@
   tray, and the design system come next (`docs/WINUI_PLAN.md` stage 4).
 - The build is **checked, not just compiled**: the workflow launches the packed build and needs a
   window, so a preview that no longer starts never replaces the last good one. First numbers from
-  that run (shell only, `windows-latest`, self-contained and untrimmed): window after 791 ms,
-  101.9 MB working set at idle against Electron 1.8.0's ~500 MB across five processes.
+  those runs (shell only, `windows-latest`, self-contained and untrimmed): window after 0.8–3.3 s,
+  102–116 MB working set at idle against Electron 1.8.0's ~500 MB across five processes.
 - The Linux build and test of the C# libraries is unchanged; the head is Windows-only and not in
   `uno/Soncle.sln`.
 

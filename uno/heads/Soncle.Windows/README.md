@@ -23,14 +23,14 @@ if the process exits or shows no window within 90 s. From that run:
 
 | | Shell, idle | Electron 1.8.0 |
 | --- | --- | --- |
-| Window shown after start | 791 ms (first-frame proxy) | not recorded |
-| Working set | 101.9 MB, 117 MB after 5 s | ~500 MB, all processes (`CHANGELOG.md`) |
+| Window shown after start | 0.8–3.3 s (first-frame proxy, three runs) | not recorded |
+| Working set | 102–116 MB, 117–120 MB after 5 s | ~500 MB, all processes (`CHANGELOG.md`) |
 | Download | 136.8 MB zip, run from a folder | installer |
 
 The window title the shell sets is `Soncle Preview` (`Window.Title`), the same string the custom
-title bar draws. The numbers come from the runner (no GPU, self-contained and untrimmed publish —
-trimming, ReadyToRun and Native AOT are the stage 6 performance pass), so they are the first
-WinUI build's, not minuda2009's PC: CPU and the on-PC run come from the preview link.
+title bar draws. The numbers come from the runner (a shared VM, no GPU, self-contained and
+untrimmed publish — trimming, ReadyToRun and Native AOT are the stage 6 performance pass), so they
+are the first WinUI build's, not minuda2009's PC: CPU and the on-PC run come from the preview link.
 
 ## Notes
 
