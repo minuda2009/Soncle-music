@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Soncle.Cli</RootNamespace>
+    <AssemblyName>soncle</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Soncle.Core/Soncle.Core.csproj" />
+    <ProjectReference Include="../../src/Soncle.YouTube/Soncle.YouTube.csproj" />
+    <ProjectReference Include="../../src/Soncle.Streams/Soncle.Streams.csproj" />
+    <ProjectReference Include="../../src/Soncle.Flow/Soncle.Flow.csproj" />
+    <ProjectReference Include="../../src/Soncle.Audio/Soncle.Audio.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Soncle.Cli.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -298,7 +298,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
 | `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
 | `src/yt.mjs` stream resolver rules (M07, partial) | ported (`uno-migration`) | InnerTube + decipher are a head (IStreamClient) |
-| `uno/tools/Soncle.Cli` (M12) | not started | needs M06–M08 |
+| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands + tests; PR pending) | real YouTube needs the InnerTube `IStreamClient`; real songs need a WebM reader + Opus decoder |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks
