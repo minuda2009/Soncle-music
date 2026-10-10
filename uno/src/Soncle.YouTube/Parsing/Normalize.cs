@@ -22,6 +22,8 @@ public sealed class YtItem
     public string? Params { get; init; }
     public string? Color { get; init; }
     public string? Plays { get; init; }
+    /// <summary>Search top result only: the related rows under the top card (JS <c>top.related</c>).</summary>
+    public List<YtItem>? Related { get; init; }
 
     /// <summary>
     /// Exactly which JSON keys the JS object literal for this branch contains (an undefined JS
@@ -77,7 +79,7 @@ public static partial class Normalize
         return total;
     }
 
-    private static string Txt(JsonElement? t)
+    internal static string Txt(JsonElement? t)
     {
         if (t is null || t.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return "";
         var e = t.Value;
@@ -97,10 +99,10 @@ public static partial class Normalize
         return "";
     }
 
-    private static JsonElement? Prop(JsonElement? node, string name) =>
+    internal static JsonElement? Prop(JsonElement? node, string name) =>
         node is not null && node.Value.ValueKind == JsonValueKind.Object && node.Value.TryGetProperty(name, out var v) ? v : null;
 
-    private static string PickThumb(JsonElement? list)
+    internal static string PickThumb(JsonElement? list)
     {
         if (list is null) return "";
         var e = list.Value;
@@ -135,7 +137,7 @@ public static partial class Normalize
         return e;
     }
 
-    private static string PageType(JsonElement? ep)
+    internal static string PageType(JsonElement? ep)
     {
         var cfg = Prop(Prop(Prop(Prop(ep, "payload"), "browseEndpointContextSupportedConfigs"), "browseEndpointContextMusicConfig"), "pageType");
         if (cfg is not null) return cfg.Value.GetString() ?? "";
@@ -149,7 +151,7 @@ public static partial class Normalize
     /// The raw renderers nest ids under watchEndpoint/browseEndpoint (youtubei.js flattens them into
     /// <c>payload</c>). This resolves both shapes into (videoId, browseId, playlistId, params).
     /// </summary>
-    private static (string? VideoId, string? BrowseId, string? PlaylistId, string? Params) Endpoint(JsonElement? ep)
+    internal static (string? VideoId, string? BrowseId, string? PlaylistId, string? Params) Endpoint(JsonElement? ep)
     {
         var p = Prop(ep, "payload");
         if (p is not null)
@@ -163,9 +165,9 @@ public static partial class Normalize
         return (null, null, null, null);
     }
 
-    private static JsonElement? RunEndpoint(JsonElement r) => Prop(r, "endpoint") ?? Prop(r, "navigationEndpoint");
+    internal static JsonElement? RunEndpoint(JsonElement r) => Prop(r, "endpoint") ?? Prop(r, "navigationEndpoint");
 
-    private static List<ArtistRef> ArtistsFromRuns(JsonElement? runs)
+    internal static List<ArtistRef> ArtistsFromRuns(JsonElement? runs)
     {
         var outv = new List<ArtistRef>();
         if (runs is null || runs.Value.ValueKind != JsonValueKind.Array) return outv;
@@ -180,7 +182,7 @@ public static partial class Normalize
         return outv;
     }
 
-    private static bool IsExplicit(JsonElement node)
+    internal static bool IsExplicit(JsonElement node)
     {
         foreach (var key in new[] { "badges", "subtitle_badges" })
         {
@@ -195,7 +197,7 @@ public static partial class Normalize
         return false;
     }
 
-    private static string KindFromPage(string pt) => pt switch
+    internal static string KindFromPage(string pt) => pt switch
     {
         "MUSIC_PAGE_TYPE_ALBUM" or "MUSIC_PAGE_TYPE_AUDIOBOOK" => "album",
         "MUSIC_PAGE_TYPE_PLAYLIST" => "playlist",
@@ -513,7 +515,7 @@ public static partial class Normalize
         };
     }
 
-    private static string? Str(JsonElement? e) => e is null || e.Value.ValueKind != JsonValueKind.String ? null : e.Value.GetString();
+    internal static string? Str(JsonElement? e) => e is null || e.Value.ValueKind != JsonValueKind.String ? null : e.Value.GetString();
 
     /// <summary>normShelf: dispatch on the shelf renderer kind.</summary>
     public static YtShelf? NormShelf(string renderer, JsonElement s)
