@@ -56,6 +56,18 @@ and others).
 | [music-metadata](https://github.com/Borewit/music-metadata) 11.x | MIT |
 | [Electron](https://github.com/electron/electron) 44.x (includes Chromium; its notices ship as `LICENSES.chromium.html` in the build) | MIT |
 
+## C# / .NET Windows preview dependencies (`uno/heads/Soncle.Windows`)
+
+The `windows-preview` build is a test build of the WinUI 3 head; it is not the shipping app yet.
+The head is ours; these are the platform and theme packages it is built on.
+
+| Package | Licence |
+| --- | --- |
+| [Uno Platform](https://github.com/unoplatform/uno) (`Uno.WinUI`, `Uno.Resizetizer`) | Apache-2.0 |
+| [Uno Themes](https://github.com/unoplatform/uno.themes) (Material 3 styles) | Apache-2.0 |
+| [Uno Toolkit](https://github.com/unoplatform/uno.toolkit.ui) (`Uno.Toolkit.WinUI`, `.Material`) | Apache-2.0 |
+| [Microsoft Windows App SDK](https://github.com/microsoft/WindowsAppSDK) (WinUI 3 / Mica; its `license.txt` ships in the package) | Microsoft Windows App SDK license — the platform chosen in `docs/WINUI_PLAN.md` §1 |
+
 ## C# / .NET test dependencies (`uno/`)
 
 The C# port under `uno/` is not shipped yet; these are used only to build and test it.

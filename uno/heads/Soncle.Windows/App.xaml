@@ -1,0 +1,18 @@
+<Application x:Class="Soncle.Windows.App"
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- WinUI controls, then Uno Material + Toolkit with the same palette override the Android
+             probe uses (docs/WINUI_PLAN.md §2.1). -->
+        <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+        <utum:MaterialToolkitTheme
+          xmlns:utum="using:Uno.Toolkit.UI.Material"
+          ColorOverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+</Application>

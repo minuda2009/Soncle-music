@@ -1,0 +1,101 @@
+<!-- Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later -->
+<Page
+    x:Class="Soncle.Windows.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <Page.Resources>
+        <!-- Mica shows through the title bar and the rail; the page keeps its own Material surface
+             (docs/DESIGN.md §4.5). -->
+        <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- The 48 px custom title bar (docs/WINUI_PLAN.md §2.5). -->
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+            <!-- The player bar (docs/DESIGN.md §4.1). -->
+            <RowDefinition Height="88" />
+        </Grid.RowDefinitions>
+
+        <!-- Title bar: WindowChrome makes this the drag region; the system caption buttons sit on
+             the right, so nothing is placed there. -->
+        <Grid x:Name="TitleBar" Grid.Row="0" Background="Transparent" Padding="16,0,0,0">
+            <TextBlock Text="Soncle Preview"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource TitleSmall}" />
+        </Grid>
+
+        <!-- The rail: the four destinations (docs/DESIGN.md §3.1). -->
+        <NavigationView x:Name="Rail"
+                        Grid.Row="1"
+                        Background="Transparent"
+                        PaneDisplayMode="Left"
+                        OpenPaneLength="236"
+                        IsPaneToggleButtonVisible="False"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="False"
+                        SelectionChanged="OnDestinationChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Home" IsSelected="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE80F;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Library">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F1;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Sound">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8D6;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <!-- Pages arrive with Soncle.App (plan stage 4/5); the shell shows one placeholder. -->
+            <Grid Background="{ThemeResource BackgroundBrush}" Padding="32">
+                <StackPanel VerticalAlignment="Center" Spacing="8">
+                    <TextBlock x:Name="DestinationTitle"
+                               Text="Home"
+                               Style="{StaticResource HeadlineMedium}" />
+                    <TextBlock Text="The pages arrive with Soncle.App — this build is the shell."
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                </StackPanel>
+            </Grid>
+        </NavigationView>
+
+        <!-- Player bar: the empty state is a message, never a blank square with 0:00 / 0:00
+             (docs/DESIGN.md §4.1). -->
+        <Grid Grid.Row="2"
+              Background="{ThemeResource SurfaceVariantBrush}"
+              Padding="16,0"
+              ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Width="56" Height="56"
+                    CornerRadius="8"
+                    Background="{ThemeResource PrimaryBrush}" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="Nothing playing" Style="{StaticResource TitleSmall}" />
+                <TextBlock Text="Your library is empty in this preview build."
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="Play" Style="{StaticResource FilledButtonStyle}" />
+        </Grid>
+    </Grid>
+</Page>
