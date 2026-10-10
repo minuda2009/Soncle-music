@@ -102,7 +102,7 @@
     "publish": []
   },
   "devDependencies": {
-    "electron": "^44.4.5",
+    "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "eslint": "^9.39.5",
     "resedit": "^2.0.3"

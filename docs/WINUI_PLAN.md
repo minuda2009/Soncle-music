@@ -283,6 +283,7 @@ Its own section markers give the split. Logic goes into view models and services
 | --- | --- | --- |
 | `uno/` scaffold + CI (M00) | ported (PR #10) | — |
 | `Soncle.Streams` (M08) | ported (PR #11) | — |
+| `streamproxy.mjs`, `SoncleStreams.java` | replaced by `Soncle.Streams` (pending heads) | — |
 | `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
 | `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
