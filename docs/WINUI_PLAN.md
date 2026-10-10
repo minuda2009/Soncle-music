@@ -307,8 +307,8 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/preload.cjs` → contracts (M02) | ported (`uno-migration`) | — |
 | `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
 | `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
-| `src/yt.mjs` stream resolver rules (M07, partial) | ported (`uno-migration`) | InnerTube + decipher are a head (IStreamClient) |
-| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands + tests; PR #16) | real YouTube needs the InnerTube `IStreamClient`; real songs need a WebM reader + Opus decoder |
+| `src/yt.mjs` stream resolver rules + InnerTube `/player` client (M07) | ported (`uno-migration`; client: `openhands/uno-m07-innertube`, PR pending) | deciphering and `signatureTimestamp` come from a head via `IPlayerScript`; PO-token clients (YTMUSIC, WEB) need the head's minter; not yet tried against real YouTube |
+| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands, PR #16; `--live` resolve/download, PR pending) | live search needs the catalog's InnerTube search; real songs need a WebM reader + Opus decoder |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks

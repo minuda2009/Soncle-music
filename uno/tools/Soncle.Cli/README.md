@@ -3,7 +3,12 @@
 A small tool that exercises the libraries end to end (search → resolve → download → decode →
 normalise → play) before any UI exists.
 
-## What works in this build
+## Two modes
+Say where the data comes from, every time:
+- `--offline`: recorded fixtures, no network (what CI runs).
+- `--live`: real YouTube, anonymous. **Only `resolve` and `download` work live for now.**
+
+## Offline (works end to end)
 Everything runs against **recorded fixtures, with no network**:
 
 ```
@@ -22,9 +27,23 @@ dotnet run --project uno/tools/Soncle.Cli -- --offline play offline-song out.wav
 - `play` writes a 32-bit float stereo WAV. At the end it prints its own CPU time and peak memory.
 - It never prints stream URLs, tokens or cookies, and there is no sign-in.
 
+## Live (`--live`), for you to try on your PC
+```
+dotnet run --project uno/tools/Soncle.Cli -- --live resolve <videoId>
+dotnet run --project uno/tools/Soncle.Cli -- --live download <videoId> song.webm
+```
+- Uses the same request shapes as the JS app (taken from youtubei.js 18.1.0) and the clients that
+  return plain URLs: **IOS, then ANDROID_VR**. No PO token and no player script, so the web-style
+  clients (YTMUSIC, WEB, TV, WEB_EMBEDDED) are not used here.
+- It is anonymous. No cookie is read, sent or printed, and stream URLs are never printed.
+- **Not yet tried against real YouTube**, because the build sandbox can't reach it. If `resolve`
+  fails, the error lists each client's reason; please paste it.
+- `--live search` says it isn't built yet.
+
 ## What does not work yet
-- **Real YouTube.** Without `--offline` the tool says so and stops. It needs the InnerTube client
-  (`IStreamClient`, the request + decipher side) and a transport; both plug into `ICliBackend`.
+- **Live search**, and signed-in features. They need the catalog's InnerTube calls.
+- **Web-style stream clients.** They need a head's browser engine to run YouTube's player script
+  (`IPlayerScript`) and a PO-token minter.
 - **Decoding real songs.** YouTube streams are WebM/Opus or M4A. The WebM reader and an Opus
   decoder are not in this build, so `play` of such a stream exits with code 3 and says so.
 - **Playing through speakers.** Output to the sound card (WASAPI on Windows) comes with the
