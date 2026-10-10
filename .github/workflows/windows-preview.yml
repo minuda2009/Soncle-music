@@ -1,0 +1,51 @@
+name: Windows preview
+# Builds the WinUI 3 head (uno/heads/Soncle.Windows) on GitHub's Windows runners and replaces the
+# "windows-preview" release with the run-from-folder build, like android-preview.yml does for the
+# phone. The Electron app keeps shipping until the port passes the parity checklist
+# (docs/WINUI_PLAN.md §4, §10).
+on:
+  push:
+    paths: ['uno/**', '.github/workflows/windows-preview.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# one build at a time; a newer push replaces a build still running, so an older build never wins
+concurrency:
+  group: windows-preview
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      # The SDK and the Uno.Sdk version come from uno/global.json.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: uno/global.json
+      # A failure here fails the job before anything touches the release, so the windows-preview
+      # link keeps pointing at the last good build.
+      - name: Publish the Soncle.Windows head
+        run: dotnet publish uno/heads/Soncle.Windows/Soncle.Windows.csproj -c Release -f net10.0-windows10.0.26100 -r win-x64 -p:Platform=x64 --self-contained true -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:PublishTrimmed=false -p:PublishReadyToRun=false -o publish
+      - name: Pack the run-from-folder build
+        shell: pwsh
+        run: Compress-Archive -Path publish/* -DestinationPath Soncle-preview-win-x64.zip -Force
+      - uses: actions/upload-artifact@v7
+        with:
+          name: soncle-preview-win
+          path: Soncle-preview-win-x64.zip
+          if-no-files-found: error
+      - name: Remove the previous windows-preview release
+        shell: pwsh
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete windows-preview --yes --cleanup-tag
+      - name: Publish the windows-preview release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create windows-preview Soncle-preview-win-x64.zip --prerelease --target $env:GITHUB_SHA --title "Soncle Preview (Windows, $env:GITHUB_REF_NAME)" --notes "Test build from $env:GITHUB_REF_NAME at $($env:GITHUB_SHA.Substring(0,7)). Unzip Soncle-preview-win-x64.zip and run Soncle.Windows.exe: it installs nothing, keeps its own data and leaves the normal Soncle app and its library untouched. Unsigned, so SmartScreen warns."

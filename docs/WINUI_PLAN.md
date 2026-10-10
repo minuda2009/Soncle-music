@@ -309,6 +309,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
 | `src/yt.mjs` stream resolver rules + InnerTube `/player` client (M07) | ported (`uno-migration`; client: `openhands/uno-m07-innertube`, PR pending) | deciphering and `signatureTimestamp` come from a head via `IPlayerScript`; PO-token clients (YTMUSIC, WEB) need the head's minter; not yet tried against real YouTube |
 | `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands, PR #16; `--live` resolve/download, PR pending) | live search needs the catalog's InnerTube search; real songs need a WebM reader + Opus decoder |
+| `uno/heads/Soncle.Windows` — WinUI 3 head scaffold (issue #21) | started (`windows-preview`; shell only) | `src/main.mjs` shell is the long-term source; nothing ported yet — tray, rail collapse and pages come next |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased: the Windows head starts (Soncle Preview)
+
+- **A first Windows build of the C# app** now comes from `uno/heads/Soncle.Windows` and is
+  published to the `windows-preview` release on every push that touches `uno/**` (the same way the
+  phone gets `android-preview`). It runs from a folder, installs nothing, is named **Soncle
+  Preview**, and leaves the shipping Electron app and its library untouched. It is unsigned, so
+  SmartScreen warns.
+- This first slice is the **shell**: a Mica window with the 48 px custom title bar, the four
+  destinations (Home · Library · Sound · Settings) in a rail, and the player bar. The pages,
+  tray, and the design system come next (`docs/WINUI_PLAN.md` stage 4).
+- The Linux build and test of the C# libraries is unchanged; the head is Windows-only and not in
+  `uno/Soncle.sln`.
+
 ## Unreleased: Android sound profiles that follow the output
 
 - **The phone now knows what the sound is going to** — its speaker, wired headphones, USB, a

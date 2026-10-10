@@ -1,0 +1,35 @@
+<Project Sdk="Uno.Sdk">
+
+  <PropertyGroup>
+    <!-- Windows only: this head never enters the Linux build path (uno/Soncle.sln stays the
+         libraries) or the shipping JS apps. docs/WINUI_PLAN.md §1, §10. -->
+    <TargetFramework>net10.0-windows10.0.26100</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <OutputType>WinExe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+    <RootNamespace>Soncle.Windows</RootNamespace>
+
+    <!-- The preview shares the shipping app's icon but nothing else: its own name, its own app id,
+         installed side by side (docs/WINUI_PLAN.md §10). -->
+    <ApplicationTitle>Soncle Preview</ApplicationTitle>
+    <ApplicationId>com.minuda2009.soncle.preview</ApplicationId>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationPublisher>Soncle</ApplicationPublisher>
+    <Description>Soncle Preview — the WinUI 3 head of the Soncle migration (docs/WINUI_PLAN.md).</Description>
+
+    <!-- Run from a folder: no MSIX, no certificate, no installer (that is its own step). -->
+    <WindowsPackageType>None</WindowsPackageType>
+
+    <!-- Material 3 from Uno Material + Toolkit defaults, with the palette override the probe uses;
+         the real tokens are Soncle.Design's job (docs/WINUI_PLAN.md §2.1). -->
+    <UnoFeatures>
+      Material;
+      Toolkit;
+    </UnoFeatures>
+
+    <!-- Same suppressions as the Uno template (uno/Directory.Build.props sets warnings-as-errors). -->
+    <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257</NoWarn>
+  </PropertyGroup>
+
+</Project>
