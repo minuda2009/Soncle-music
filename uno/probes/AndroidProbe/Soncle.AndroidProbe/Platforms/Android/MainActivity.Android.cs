@@ -1,3 +1,4 @@
+// Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 using Android.App;
 using Android.Content.PM;
 using Android.OS;
