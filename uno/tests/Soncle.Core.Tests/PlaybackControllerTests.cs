@@ -70,16 +70,18 @@ internal sealed class FakeClock : IPlaybackClock
 {
     public long NowMs => 0;
     public readonly ConcurrentBag<TimeSpan> Delays = new();
-    public async Task DelayAsync(TimeSpan delay, CancellationToken ct) { Delays.Add(delay); await Task.Delay(1, ct).ConfigureAwait(false); }
+    /// <summary>When set, delays never elapse (only cancel), so background timers cannot race a test.</summary>
+    public bool Hold { get; init; }
+    public async Task DelayAsync(TimeSpan delay, CancellationToken ct) { Delays.Add(delay); await Task.Delay(Hold ? Timeout.Infinite : 1, ct).ConfigureAwait(false); }
 }
 
 public class PlaybackControllerTests
 {
-    private static (PlaybackController C, FakePlayer P, FakeStreams S) New(PlaybackOptions? options = null, Func<string, double?>? lufs = null)
+    private static (PlaybackController C, FakePlayer P, FakeStreams S) New(PlaybackOptions? options = null, Func<string, double?>? lufs = null, bool holdTimers = false)
     {
         var player = new FakePlayer();
         var streams = new FakeStreams();
-        var c = new PlaybackController(player, streams, new FakeClock(), options, lufs);
+        var c = new PlaybackController(player, streams, new FakeClock { Hold = holdTimers }, options, lufs);
         return (c, player, streams);
     }
 
@@ -171,7 +173,8 @@ public class PlaybackControllerTests
     [Fact]
     public async Task StallWatchWaitsWhileDataArrivesThenReloads()
     {
-        var (c, p, _) = New(new PlaybackOptions { StallChecks = 8 });
+        // the test drives the checks itself; the watch armed by SimulateWaiting must not fire too
+        var (c, p, _) = New(new PlaybackOptions { StallChecks = 8 }, holdTimers: true);
         c.SetQueue(Q("a"));
         await c.PlayAtAsync(0);
         Assert.Equal(1, p.Loads);
