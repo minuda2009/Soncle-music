@@ -1,0 +1,28 @@
+{
+ "responseContext": {
+  "serviceTrackingParams": [
+   {
+    "service": "ECATCHER",
+    "params": [
+     {
+      "key": "client.version",
+      "value": "1.60"
+     },
+     {
+      "key": "client.name",
+      "value": "ANDROID_VR"
+     }
+    ]
+   }
+  ],
+  "maxAgeSeconds": 0,
+  "rolloutToken": "CJq6z8m0jbL9pwEQ2K3pnM6llwMY2K3pnM6llwM%3D",
+  "responseId": "IhMI0qrpnM6llwMVL6PlBx16ED2S"
+ },
+ "playabilityStatus": {
+  "status": "LOGIN_REQUIRED",
+  "reason": "Sign in to confirm you’re not a bot",
+  "contextParams": "Q0FFU0FnZ0I="
+ },
+ "adBreakHeartbeatParams": "Q0FBJTNE"
+}

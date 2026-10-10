@@ -6,4 +6,8 @@
     <RootNamespace>Soncle.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Soncle.Core.Tests" />
+  </ItemGroup>
+
 </Project>

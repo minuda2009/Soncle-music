@@ -10,4 +10,8 @@
     <ProjectReference Include="../Soncle.Core/Soncle.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Soncle.YouTube.Tests" />
+  </ItemGroup>
+
 </Project>

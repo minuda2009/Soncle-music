@@ -284,6 +284,21 @@ Its own section markers give the split. Logic goes into view models and services
 | `uno/` scaffold + CI (M00) | ported (PR #10) | — |
 | `Soncle.Streams` (M08) | ported (PR #11) | — |
 | `streamproxy.mjs`, `SoncleStreams.java` | replaced by `Soncle.Streams` (pending heads) | — |
+| `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
+| `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
+| `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
+| `renderer/devices.js` (M09c) | ported (`uno-migration`) | — |
+| `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
+| `src/spotify.mjs` (M09b) | ported (`uno-migration`) | — |
+| `src/main.mjs` lyrics + `parseLrc` (M09d) | ported (`uno-migration`) | — |
+| `src/legacy.mjs` carry-over + backups (M09e) | ported (`uno-migration`) | — |
+| `renderer/engine.js` offline + app.js policy (M10) | ported (`uno-migration`) | — |
+| `renderer/app.js` player section (M11) | ported (`uno-migration`) | — |
+| `src/preload.cjs` → contracts (M02) | ported (`uno-migration`) | — |
+| `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
+| `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
+| `src/yt.mjs` stream resolver rules (M07, partial) | ported (`uno-migration`) | InnerTube + decipher are a head (IStreamClient) |
+| `uno/tools/Soncle.Cli` (M12) | not started | needs M06–M08 |
 | everything else in 12.2 | not started | — |
 
 ## 13. Risks

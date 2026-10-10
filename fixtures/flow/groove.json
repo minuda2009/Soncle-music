@@ -1,0 +1,15 @@
+{
+ "sampleRate": 22050,
+ "bpm": 128,
+ "seconds": 20,
+ "expected": {
+  "bpm": 128.4,
+  "bpmConf": 1,
+  "key": "Am",
+  "camelot": "8A",
+  "keyConf": 1,
+  "energy": 0.258,
+  "rmsDb": -23.6,
+  "v": 2
+ }
+}

@@ -1,0 +1,108 @@
+{
+ "responseContext": {
+  "serviceTrackingParams": [
+   {
+    "service": "CSI",
+    "params": [
+     {
+      "key": "c",
+      "value": "WEB_REMIX"
+     },
+     {
+      "key": "cver",
+      "value": "1.20240101.01.00"
+     },
+     {
+      "key": "yt_li",
+      "value": "0"
+     },
+     {
+      "key": "GetSearch_rid",
+      "value": "0xe561cd2c508bf513"
+     }
+    ]
+   },
+   {
+    "service": "GFEEDBACK",
+    "params": [
+     {
+      "key": "logged_in",
+      "value": "0"
+     }
+    ]
+   },
+   {
+    "service": "ECATCHER",
+    "params": [
+     {
+      "key": "client.version",
+      "value": "1.20000101"
+     },
+     {
+      "key": "client.name",
+      "value": "WEB_REMIX"
+     }
+    ]
+   }
+  ],
+  "maxAgeSeconds": 120,
+  "responseId": "IhMI5o7hm86llwMVyGteAx3WVCLv"
+ },
+ "contents": {
+  "tabbedSearchResultsRenderer": {
+   "tabs": [
+    {
+     "tabRenderer": {
+      "title": "YT Music",
+      "selected": true,
+      "content": {
+       "sectionListRenderer": {
+        "contents": [
+         {
+          "itemSectionRenderer": {
+           "contents": [
+            {
+             "messageRenderer": {
+              "text": {
+               "runs": [
+                {
+                 "text": "No results for "
+                },
+                {
+                 "text": "daft punk",
+                 "bold": true
+                },
+                {
+                 "text": "."
+                }
+               ]
+              },
+              "icon": {
+               "iconType": "SEARCH"
+              },
+              "subtext": {
+               "messageSubtextRenderer": {
+                "text": {
+                 "runs": [
+                  {
+                   "text": "Try different keywords"
+                  }
+                 ]
+                }
+               }
+              }
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      "tabIdentifier": "music_search_catalog"
+     }
+    }
+   ]
+  }
+ }
+}

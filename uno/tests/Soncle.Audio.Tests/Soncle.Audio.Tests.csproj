@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="../Soncle.TestKit/Soncle.TestKit.csproj" />
     <ProjectReference Include="../../src/Soncle.Audio/Soncle.Audio.csproj" />
+    <ProjectReference Include="../../src/Soncle.Flow/Soncle.Flow.csproj" />
   </ItemGroup>
 
 </Project>
