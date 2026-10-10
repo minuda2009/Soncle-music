@@ -16,6 +16,22 @@ head that opens Soncle's shell on Windows. It is **Windows only** and is deliber
 Not here yet, by scope: tray / close to tray, rail collapse, `Soncle.App` pages, `Soncle.Design`
 (stage 3) and the own-data-folder carry-over. See the Issue for the exact boundary.
 
+## Measured (shell, `windows-latest`, 10 Oct 2026)
+
+The workflow does not just compile the head: it extracts the packed build, launches it and fails
+if the process exits or shows no window within 90 s. From that run:
+
+| | Shell, idle | Electron 1.8.0 |
+| --- | --- | --- |
+| Window shown after start | 791 ms (first-frame proxy) | not recorded |
+| Working set | 101.9 MB, 117 MB after 5 s | ~500 MB, all processes (`CHANGELOG.md`) |
+| Download | 136.8 MB zip, run from a folder | installer |
+
+The window title the shell sets is `Soncle Preview` (`Window.Title`), the same string the custom
+title bar draws. The numbers come from the runner (no GPU, self-contained and untrimmed publish —
+trimming, ReadyToRun and Native AOT are the stage 6 performance pass), so they are the first
+WinUI build's, not minuda2009's PC: CPU and the on-PC run come from the preview link.
+
 ## Notes
 
 - The rail is a WinUI `NavigationView` in `Left` mode. `docs/WINUI_PLAN.md` §3 names the Uno
@@ -34,9 +50,12 @@ dotnet publish uno/heads/Soncle.Windows/Soncle.Windows.csproj `
 ```
 
 `.github/workflows/windows-preview.yml` does exactly this on `windows-latest` and replaces the
-`windows-preview` release with the zip. The build is unsigned, so SmartScreen warns; run from a
-folder, nothing is installed. Its app id is `com.minuda2009.soncle.preview` and it never reads or
-writes the shipping app's `%APPDATA%\Soncle`.
+`windows-preview` release with the zip. That job first launches the packed build (a window must
+appear) and only then touches the release, so a head that no longer starts never replaces the last
+good preview. The build is unsigned, so SmartScreen warns; run from a folder, nothing is installed.
+Its app id is `com.minuda2009.soncle.preview` and it never reads or writes the shipping app's
+`%APPDATA%\Soncle` (the window exists; nothing persists yet — the carry-over arrives with the
+switch).
 
 Building for Windows needs Windows: Uno's SDK stops with `UNOB0014` on other systems, and
 WinAppSDK's XAML compiler is a Windows binary.
