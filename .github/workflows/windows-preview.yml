@@ -19,6 +19,8 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
+    # Bounds the job (restore, publish, pack); a hung build would hold the concurrency group.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       # The SDK and the Uno.Sdk version come from uno/global.json.
@@ -32,6 +34,47 @@ jobs:
       - name: Pack the run-from-folder build
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath Soncle-preview-win-x64.zip -Force
+      # Acceptance 2 is "a window appears": the build must open the shell, not merely compile. Run
+      # the packed build (the same bytes the release carries) and report the start-to-window time
+      # and the idle working set the Issue asks for (docs/WINUI_PLAN.md §9). A step that fails here
+      # fails the job before the release is touched, so a head that no longer starts never replaces
+      # the last good preview (acceptance 3).
+      - name: Smoke-test the packed build (window, first-frame proxy, working set)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive -Path Soncle-preview-win-x64.zip -DestinationPath smoke -Force
+          $exe = Join-Path $PWD 'smoke/Soncle.Windows.exe'
+          if (-not (Test-Path $exe)) { throw 'Soncle-preview-win-x64.zip does not contain Soncle.Windows.exe' }
+          $zip = Get-Item Soncle-preview-win-x64.zip
+          $exeCount = (Get-ChildItem smoke -Filter *.exe).Count
+          $dllCount = (Get-ChildItem smoke -Filter *.dll).Count
+          Write-Host "packed build: $([math]::Round($zip.Length / 1MB, 1)) MB, $exeCount exe, $dllCount dll"
+
+          $proc = Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(90)
+            while ([DateTime]::UtcNow -lt $deadline) {
+              Start-Sleep -Milliseconds 250
+              $proc.Refresh()
+              if ($proc.HasExited -or $proc.MainWindowHandle -ne 0) { break }
+            }
+            $window = $sw.ElapsedMilliseconds
+            if ($proc.HasExited) { throw "Soncle.Windows.exe exited (code $($proc.ExitCode)) before showing a window" }
+            if ($proc.MainWindowHandle -eq 0) { throw 'Soncle.Windows.exe showed no window within 90 s' }
+            $proc.Refresh()
+            Write-Host "start to window: $window ms (first-frame proxy, windows-latest)"
+            Write-Host "window title: '$($proc.MainWindowTitle)'"
+            Write-Host "working set at idle: $([math]::Round($proc.WorkingSet64 / 1MB, 1)) MB"
+            Start-Sleep -Seconds 5
+            $proc.Refresh()
+            if ($proc.HasExited) { throw 'Soncle.Windows.exe exited within 5 s of showing its window' }
+            Write-Host "working set after 5 s: $([math]::Round($proc.WorkingSet64 / 1MB, 1)) MB"
+          }
+          finally {
+            if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          }
       - uses: actions/upload-artifact@v7
         with:
           name: soncle-preview-win
