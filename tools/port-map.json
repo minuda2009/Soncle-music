@@ -1,0 +1,18 @@
+{
+  "_comment": "JS files with a C# port (docs/WINUI_PLAN.md §12.5). A change to a key needs a change under one of its C# paths or to the ledger in the same PR. Checked by tools/drift-check.mjs. Partly ported files that change for UI reasons all the time (renderer/app.js, src/main.mjs) are left out.",
+  "renderer/audio/worklets.js": ["uno/src/Soncle.Audio/Dsp"],
+  "renderer/engine.js": ["uno/src/Soncle.Audio"],
+  "renderer/flow/analyze.js": ["uno/src/Soncle.Flow"],
+  "renderer/flow/flow.js": ["uno/src/Soncle.Flow"],
+  "renderer/devices.js": ["uno/src/Soncle.Services/DeviceClassifier.cs"],
+  "src/defaults.mjs": ["uno/src/Soncle.Core/Store"],
+  "src/legacy.mjs": ["uno/src/Soncle.Core/Store", "uno/src/Soncle.Services/CarryOver.cs"],
+  "src/autoeq.mjs": ["uno/src/Soncle.Services/AutoEq.cs"],
+  "src/spotify.mjs": ["uno/src/Soncle.Services/Import.cs"],
+  "src/preload.cjs": ["uno/src/Soncle.Core/Contracts"],
+  "src/yt.mjs": ["uno/src/Soncle.YouTube"],
+  "src/botguard.mjs": ["uno/src/Soncle.YouTube"],
+  "src/potoken.mjs": ["uno/src/Soncle.YouTube"],
+  "src/streamproxy.mjs": ["uno/src/Soncle.Streams"],
+  "mobile/android/app/src/main/java/com/minuda2009/soncle/SoncleStreams.java": ["uno/src/Soncle.Streams"]
+}
