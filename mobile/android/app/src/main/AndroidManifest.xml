@@ -67,4 +67,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Bluetooth output names ("Galaxy Buds2") for per-device sound profiles. Asked only when the
+         user opens that setting on Android 12+; without it the app works from the output type. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 </manifest>

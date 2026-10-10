@@ -1,7 +1,7 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 import { icon, setIcon, hasIcon } from './icons.js';
 import { Engine, EQ_BANDS, EQ_PRESETS, PRESET_PREAMP } from './engine.js';
-import { classifyOutput, DEVICE_INFO } from './devices.js';
+import { classifyOutput, androidOutputLabel, DEVICE_INFO } from './devices.js';
 import { planFlow, transition, featLabel, contextFor } from './flow/flow.js';
 import { sample as sampleAudio, SR as SAMPLE_RATE } from './flow/sampler.js';
 // "1 song" / "2 songs"
@@ -1291,9 +1291,9 @@ VIEWS.history = (ctx) => {
 };
 
 // ---- settings ----
-// Rows for things the Android app doesn't do (windows, tray, Discord, Windows audio devices,
-// downloads for now) are left out there.
-const MOBILE_HIDDEN = new Set(['Mica window backdrop', 'Output device', 'Per-device sound profiles', 'Auto-tune new devices', 'Saved device profiles', 'Smart ducking', 'Lower music to', 'Focus mode', 'Discord Rich Presence', 'Downloaded songs', 'Auto-download liked songs', 'Open downloads folder', 'Keep running in the tray', 'Keyboard shortcuts']);
+// Rows for things the Android app doesn't do (windows, tray, Discord, downloads for now) are left
+// out there. Sound profiles per output work on the phone too (SonclePlugin.java reports the output).
+const MOBILE_HIDDEN = new Set(['Mica window backdrop', 'Output device', 'Smart ducking', 'Lower music to', 'Focus mode', 'Discord Rich Presence', 'Downloaded songs', 'Auto-download liked songs', 'Open downloads folder', 'Keep running in the tray', 'Keyboard shortcuts']);
 function settingRow({ ic, title, sub, control, onclick, disabled }) {
   if (api.mobile && MOBILE_HIDDEN.has(title)) return null;
   // A disabled row must not fire its click handler or its switch handler.
@@ -1371,7 +1371,7 @@ VIEWS.settings = async (ctx) => {
   v.append(group('Audio output & devices',
     settingRow({ ic: meta.icon, title: info?.label ? info.model : 'System default output', sub: [meta.name, info?.bluetooth ? 'Bluetooth' : '', info?.handsFree ? 'hands-free (call) mode — lower quality' : ''].filter(Boolean).join(' • '), control: h('button', { class: 'btn outline', onclick: () => go('equalizer') }, icon('eqIcon'), 'Sound') }),
     settingRow({ ic: 'speaker', title: 'Output device', sub: 'Where Soncle plays audio', control: outSel }),
-    settingRow({ ic: 'headphones', title: 'Per-device sound profiles', sub: 'Remember EQ and volume separately for each headphone, earbud, speaker or car', control: sw('perDeviceSound', () => refreshDevices(false)) }),
+    settingRow({ ic: 'headphones', title: 'Per-device sound profiles', sub: 'Remember EQ and volume separately for each headphone, earbud, speaker or car', control: sw('perDeviceSound', onPerDeviceSound) }),
     settingRow({ ic: 'autoEq', title: 'Auto-tune new devices', sub: 'Start new devices with an EQ matched to their type (earbuds, headphones, speaker, car, laptop…)', control: sw('autoDeviceEq') }),
     settingRow({ ic: 'volumeOff', title: 'Pause when headphones disconnect', sub: 'Stop music instead of switching to speakers', control: sw('pauseOnDisconnect') }),
     settingRow({ ic: 'ff', title: 'Bluetooth lyrics delay', sub: 'Compensates for wireless audio latency so synced lyrics line up', control: rangeCtl('btLyricsDelay', { min: 0, max: 500, step: 10, fmt: (x) => x + ' ms' }) }),
@@ -1654,6 +1654,9 @@ async function applyHeadphone(entry, { quiet = false } = {}) {
 // When personal audio connects without a correction yet, offer the measured profile once.
 async function suggestHeadphoneProfile(info) {
   if (!info?.label || S().hpSuggest === false) return;
+  // AutoEq-by-name on the phone is a later task; until then, the phone keeps the desktop behaviour
+  // of not offering a correction it can't yet fetch there.
+  if (api.mobile) return;
   if (!(HP_TYPES.includes(info.type) || info.bluetooth)) return;
   DB.hpAsked = DB.hpAsked || {};
   const key = OUT.key || info.model;
@@ -1802,6 +1805,9 @@ VIEWS.stats = (ctx, { range = '30' }) => {
 // ================= audio output devices =================
 const OUT = { devices: [], info: null, key: '', bt: [] };
 async function refreshDevices(announce = false) {
+  // On the phone Android picks the output itself and reports it; on the desktop Chromium lists the
+  // outputs and the user picks one (the "Output device" row).
+  if (api.audioOutput) return refreshPhoneOutput(announce);
   let list = [];
   try { list = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audiooutput'); } catch {}
   OUT.bt = await api.btDevices().catch(() => []);
@@ -1819,11 +1825,38 @@ async function refreshDevices(announce = false) {
   updateDeviceButton();
   if (changed) onDeviceChanged(prev, announce);
 }
-function onDeviceChanged(prev, announce) {
+async function refreshPhoneOutput(announce = false) {
+  let out = null;
+  try { out = await api.audioOutput(); } catch {}
+  const noisy = !!out?.noisy;
+  OUT.bt = await api.btDevices().catch(() => []);
+  const info = classifyOutput(out ? androidOutputLabel(out) : '', OUT.bt);
+  const key = info.label ? info.model : '';
+  const changed = key !== OUT.key;
+  const prev = OUT.info;
+  OUT.info = info;
+  OUT.key = key;
+  updateDeviceButton();
+  if (changed) onDeviceChanged(prev, announce, noisy);
+  else if (noisy) onAudioNoisy(announce);
+}
+// Android's "audio becoming noisy" broadcast: headphones were unplugged. Pause instead of blasting
+// the speaker, the same promise as the desktop disconnect check below. A second event within a
+// moment (the broadcast and the device change) must not pause or toast twice.
+let lastNoisyPause = 0;
+function onAudioNoisy(announce) {
+  if (!announce || S().pauseOnDisconnect === false || !P.playing) return;
+  if (Date.now() - lastNoisyPause < 1500) return;
+  lastNoisyPause = Date.now();
+  engine.pause();
+  toast('Headphones disconnected — paused');
+}
+function onDeviceChanged(prev, announce, fromNoisy = false) {
   const info = OUT.info, meta = DEVICE_INFO[info.type];
-  // pause when personal audio disconnects and output falls back to speakers
+  // pause when personal audio disconnects and output falls back to speakers; a becoming-noisy
+  // event already paused, so don't pause again here
   const personal = (i) => i && (i.bluetooth || ['earbuds', 'headphones', 'wired'].includes(i.type));
-  if (announce && S().pauseOnDisconnect !== false && personal(prev) && !personal(info) && P.playing) { engine.pause(); toast(`${prev.model} disconnected — paused`); }
+  if (!fromNoisy && announce && S().pauseOnDisconnect !== false && personal(prev) && !personal(info) && P.playing) { engine.pause(); toast(`${prev.model} disconnected — paused`); }
   let applied = '';
   if (S().perDeviceSound && OUT.key) {
     DB.deviceProfiles = DB.deviceProfiles || {};
@@ -1863,6 +1896,16 @@ function saveDeviceProfile() {
   DB.deviceProfiles = DB.deviceProfiles || {};
   DB.deviceProfiles[OUT.key] = { eq: structuredClone(S().eq), sound: Object.fromEntries(SOUND_KEYS.map((k) => [k, S()[k]])), volume: S().volume, type: OUT.info.type, bluetooth: OUT.info.bluetooth, model: OUT.info.model, updated: Date.now() };
   persist('deviceProfiles');
+}
+// Touching "Per-device sound profiles" on the phone is when Android 12+ is asked for the Bluetooth
+// permission (needed for device names). It asks whether the switch is being turned on or off, so a
+// user whose profile is already on still gets prompted. Profiles work from the type without it.
+async function onPerDeviceSound() {
+  if (api.mobile && api.bluetoothPermission && api.requestBluetoothPermission) {
+    const granted = await api.bluetoothPermission().catch(() => true);
+    if (!granted) await api.requestBluetoothPermission().catch(() => false);
+  }
+  refreshDevices(false);
 }
 function updateDeviceButton() {
   const b = $('#pbDevice');
@@ -3272,6 +3315,9 @@ function wire() {
   setIcon($('#pbFocus'), 'focus');
   $('#pbFocus').onclick = focusButtonClick;
   api.onDuck(onDuck);
+  // The phone reports its output changing (and headphones being pulled) natively; re-reading picks
+  // up the new output and, on a becoming-noisy event, pauses.
+  api.onAudioOutput?.(() => refreshDevices(true));
   $('#pbMini').onclick = () => toggleMini();
   $('#pbThumb').addEventListener('dblclick', () => { if (MINI) toggleMini(false); });
   $('#npTempo').onclick = tempoDialog;

@@ -83,6 +83,30 @@ export async function mintPoToken(identifier, log = () => {}) {
   return tok;
 }
 
+// ---------- audio output ----------
+/** The active output: { id, type, name, bluetooth }. type is speaker, wired, usb, bluetooth, car, hdmi or other. */
+export async function nativeAudioOutput() {
+  return Soncle.getOutput();
+}
+/** Calls fn({ id, type, name, bluetooth }) on a change, or fn({ noisy: true }) when headphones are pulled. */
+export function nativeOnAudioOutput(fn) {
+  try { Soncle.addListener('outputChanged', fn); } catch { /* no native output reporting here */ }
+}
+/** Bluetooth output names, if the app is allowed to read them. */
+export async function nativeBtDevices() {
+  const r = await Soncle.getBluetoothDevices().catch(() => null);
+  return Array.isArray(r?.names) ? r.names : [];
+}
+/** Whether BLUETOOTH_CONNECT is granted (or not needed on this Android version). */
+export async function nativeBluetoothPermission() {
+  const r = await Soncle.getBluetoothPermission().catch(() => null);
+  return r?.granted === true;
+}
+/** Asks for BLUETOOTH_CONNECT (Android 12+); only when the user opens the device profiles setting. */
+export async function nativeRequestBluetoothPermission() {
+  return Soncle.requestBluetoothPermission().catch(() => ({ granted: false }));
+}
+
 // ---------- sign-in ----------
 export const SIGNIN_URL = 'https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F';
 /** Opens Google's sign-in page; resolves the YouTube cookie header, or throws if cancelled. */

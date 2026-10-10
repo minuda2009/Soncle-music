@@ -50,6 +50,21 @@ export function classifyOutput(label, btNames = []) {
   return { label: raw, model: model || raw || 'System default', endpoint, type, bluetooth, handsFree };
 }
 
+// Android reports the active output as { id, type, name } (SonclePlugin.java). Turn that into a
+// label the classifier above already understands, so the desktop device-profile path is reused.
+export function androidOutputLabel({ type, name, bluetooth } = {}) {
+  const product = String(name || '').trim();
+  switch (type) {
+    case 'speaker': return 'Speakers (Phone speaker)';
+    case 'wired': return 'Headphones (Wired headphones)';
+    case 'usb': return product ? `USB Audio (${product})` : 'USB Audio (USB Audio)';
+    case 'hdmi': return 'HDMI (TV)';
+    case 'car': return product ? `Car audio (${product})` : 'Car audio';
+    case 'bluetooth': return product ? `Bluetooth audio (${product})` : 'Bluetooth audio (Bluetooth)';
+    default: return bluetooth && product ? `Bluetooth audio (${product})` : product || 'Audio output';
+  }
+}
+
 export const DEVICE_INFO = {
   earbuds: { name: 'Earbuds', icon: 'earbuds', preset: 'Earbuds' },
   headphones: { name: 'Headphones', icon: 'headphones', preset: 'Headphones' },

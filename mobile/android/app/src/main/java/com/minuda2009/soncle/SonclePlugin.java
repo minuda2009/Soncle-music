@@ -3,9 +3,21 @@ package com.minuda2009.soncle;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioAttributes;
+import android.media.AudioDeviceCallback;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
@@ -15,17 +27,23 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import androidx.core.content.ContextCompat;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,9 +59,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  *    User-Agent);
  *  - Google sign-in in a full-screen WebView, then reading the YouTube cookies;
  *  - the media session and playback notification (SoncleMediaService), which is also what
- *    Google Maps, the lock screen, headsets and cars talk to.
+ *    Google Maps, the lock screen, headsets and cars talk to;
+ *  - which output the sound is going to (speaker, wired, USB, Bluetooth, car), so the app can
+ *    switch sound profiles like the desktop does.
  */
-@CapacitorPlugin(name = "Soncle")
+@CapacitorPlugin(name = "Soncle", permissions = {
+    @Permission(alias = "bluetooth", strings = { "android.permission.BLUETOOTH_CONNECT" })
+})
 public class SonclePlugin extends Plugin {
     private static final String YT = "https://www.youtube.com/";
     private WebView bg;
@@ -54,6 +76,11 @@ public class SonclePlugin extends Plugin {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private String artUrl = "";
+
+    private AudioDeviceCallback deviceCallback;
+    private BroadcastReceiver noisyReceiver;
+    private String lastOutputKey = null;
+    private boolean noisyGuard = false;
 
     @Override
     public void load() {
@@ -69,6 +96,274 @@ public class SonclePlugin extends Plugin {
             d.put("key", key);
             notifyListeners("streamExpired", d);
         };
+        startOutputWatch();
+    }
+
+    // ---------- audio output ----------
+    private AudioManager audio() {
+        return (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+    }
+
+    private void startOutputWatch() {
+        AudioManager am = audio();
+        if (am == null) return;
+        deviceCallback = new AudioDeviceCallback() {
+            @Override
+            public void onAudioDevicesAdded(AudioDeviceInfo[] added) {
+                maybeOutputChanged();
+            }
+
+            @Override
+            public void onAudioDevicesRemoved(AudioDeviceInfo[] removed) {
+                maybeOutputChanged();
+            }
+        };
+        am.registerAudioDeviceCallback(deviceCallback, main);
+        noisyReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) notifyNoisy();
+            }
+        };
+        try {
+            getContext().registerReceiver(noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+        } catch (Exception e) {
+            noisyReceiver = null;   // becoming-noisy is a bonus; never let it break the plugin
+        }
+    }
+
+    private void stopOutputWatch() {
+        AudioManager am = audio();
+        if (am != null && deviceCallback != null) {
+            try { am.unregisterAudioDeviceCallback(deviceCallback); } catch (Exception ignored) { }
+        }
+        deviceCallback = null;
+        if (noisyReceiver != null) {
+            try { getContext().unregisterReceiver(noisyReceiver); } catch (Exception ignored) { }
+        }
+        noisyReceiver = null;
+    }
+
+    private void maybeOutputChanged() {
+        // Routing can lag the device callback (LE Audio takes longer to settle), so re-read a few
+        // times; otherwise a quick connect could still look like the old output and the profile
+        // would not switch.
+        checkOutput();
+        main.postDelayed(this::checkOutput, 300);
+        main.postDelayed(this::checkOutput, 900);
+        main.postDelayed(this::checkOutput, 1800);
+    }
+
+    private void checkOutput() {
+        JSObject o = readOutput();
+        String key = o.getString("id", "") + "|" + o.getString("type", "") + "|" + o.getString("name", "");
+        if (key.equals(lastOutputKey)) return;
+        lastOutputKey = key;
+        notifyListeners("outputChanged", o);
+    }
+
+    private void notifyNoisy() {
+        JSObject d = new JSObject();
+        d.put("noisy", true);
+        notifyListeners("outputChanged", d);
+        // "becoming noisy" often fires just before the device list settles; re-read so the switch to
+        // the phone speaker (and its profile) is not missed. The guard stops a second pause toast.
+        noisyGuard = true;
+        main.postDelayed(() -> { noisyGuard = false; checkOutput(); }, 700);
+    }
+
+    /**
+     * The output the sound is actually going to. Android 13+ answers this directly with
+     * getAudioDevicesForAttributes (the anticipatory audio routing API); below that there is no
+     * public per-app route, so prefer a connected personal output over the built-in speaker.
+     */
+    private AudioDeviceInfo pickOutput(AudioManager am) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            try {
+                AudioAttributes media = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build();
+                List<AudioDeviceInfo> devices = am.getAudioDevicesForAttributes(media);
+                if (devices != null && !devices.isEmpty()) return devices.get(0);
+            } catch (Exception ignored) { /* fall through to the ordered scan */ }
+        }
+        AudioDeviceInfo bt = null, usb = null, wired = null, speaker = null;
+        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            switch (d.getType()) {
+                case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP:
+                case AudioDeviceInfo.TYPE_BLUETOOTH_SCO:
+                    if (bt == null) bt = d;
+                    break;
+                case AudioDeviceInfo.TYPE_USB_DEVICE:
+                case AudioDeviceInfo.TYPE_USB_HEADSET:
+                case AudioDeviceInfo.TYPE_USB_ACCESSORY:
+                    if (usb == null) usb = d;
+                    break;
+                case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
+                case AudioDeviceInfo.TYPE_WIRED_HEADSET:
+                    if (wired == null) wired = d;
+                    break;
+                case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER:
+                    if (speaker == null) speaker = d;
+                    break;
+                default:
+                    if (isBluetooth(d.getType()) && bt == null) bt = d;   // BLE headset/speaker
+                    break;
+            }
+        }
+        return bt != null ? bt : usb != null ? usb : wired != null ? wired : speaker;
+    }
+
+    private JSObject readOutput() {
+        AudioManager am = audio();
+        AudioDeviceInfo d = am == null ? null : pickOutput(am);
+        JSObject o = new JSObject();
+        if (d == null) {
+            o.put("id", 0);
+            o.put("type", "speaker");
+            o.put("name", "");
+            o.put("bluetooth", false);
+            o.put("noisy", noisyGuard);
+            return o;
+        }
+        String type = isCarDevice(d) ? "car" : outputType(d.getType());
+        o.put("id", d.getId());
+        o.put("type", type);
+        o.put("name", productName(d));
+        o.put("bluetooth", isBluetooth(d.getType()));
+        o.put("noisy", noisyGuard);
+        return o;
+    }
+
+    private static boolean isBluetooth(int t) {
+        if (t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) return true;
+        // BLE audio (LE Audio earbuds) — common on newer Galaxy/Pixel phones — is Bluetooth too.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && (t == AudioDeviceInfo.TYPE_BLE_HEADSET || t == AudioDeviceInfo.TYPE_BLE_SPEAKER
+                    || t == AudioDeviceInfo.TYPE_BLE_BROADCAST || t == AudioDeviceInfo.TYPE_HEARING_AID)) return true;
+        return false;
+    }
+
+    private static String outputType(int t) {
+        switch (t) {
+            case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER:
+            case AudioDeviceInfo.TYPE_BUILTIN_EARPIECE:
+                return "speaker";
+            case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
+            case AudioDeviceInfo.TYPE_WIRED_HEADSET:
+                return "wired";
+            case AudioDeviceInfo.TYPE_USB_DEVICE:
+            case AudioDeviceInfo.TYPE_USB_HEADSET:
+            case AudioDeviceInfo.TYPE_USB_ACCESSORY:
+                return "usb";
+            case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP:
+            case AudioDeviceInfo.TYPE_BLUETOOTH_SCO:
+                return "bluetooth";
+            case AudioDeviceInfo.TYPE_HDMI:
+            case AudioDeviceInfo.TYPE_HDMI_ARC:
+            case AudioDeviceInfo.TYPE_HDMI_EARC:
+                return "hdmi";
+            default:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        && (t == AudioDeviceInfo.TYPE_BLE_HEADSET || t == AudioDeviceInfo.TYPE_BLE_SPEAKER
+                            || t == AudioDeviceInfo.TYPE_BLE_BROADCAST || t == AudioDeviceInfo.TYPE_HEARING_AID)) return "bluetooth";
+                return "other";
+        }
+    }
+
+    // The product name of a Bluetooth device needs BLUETOOTH_CONNECT on Android 12+; without it the
+    // app still knows the type, so profiles work from the type alone.
+    private String productName(AudioDeviceInfo d) {
+        if (isBluetooth(d.getType()) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && getPermissionState("bluetooth") != PermissionState.GRANTED) return "";
+        try {
+            CharSequence n = d.getProductName();
+            return n == null ? "" : n.toString();
+        } catch (SecurityException e) {
+            return "";
+        }
+    }
+
+    private boolean bluetoothConnectAllowed() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+                || getPermissionState("bluetooth") == PermissionState.GRANTED;
+    }
+
+    /**
+     * A car's Bluetooth class-of-device says "car audio" even when its name is not a car brand
+     * (many say "Uconnect", a model number, or just "Bluetooth"). Needs BLUETOOTH_CONNECT to read
+     * the device.
+     */
+    private boolean isCarDevice(AudioDeviceInfo d) {
+        if (!isBluetooth(d.getType()) || !bluetoothConnectAllowed()) return false;
+        try {
+            BluetoothManager bm = (BluetoothManager) getContext().getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothAdapter adapter = bm == null ? null : bm.getAdapter();
+            if (adapter == null) return false;
+            BluetoothDevice device = adapter.getRemoteDevice(d.getAddress());
+            BluetoothClass cls = device.getBluetoothClass();
+            if (cls == null) return false;
+            // Cars report the AUDIO_VIDEO major class with the car-audio minor class; there is no
+            // separate "car" major class. Headset/speaker minor classes are deliberately excluded.
+            return cls.getDeviceClass() == BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO;
+        } catch (Exception ignored) {
+            return false;   /* class unavailable */
+        }
+    }
+
+    /** The active media output: { id, type, name, bluetooth, noisy }. */
+    @PluginMethod
+    public void getOutput(PluginCall call) {
+        call.resolve(readOutput());
+    }
+
+    /** Bluetooth output names the app can see (needs BLUETOOTH_CONNECT on Android 12+). */
+    @PluginMethod
+    public void getBluetoothDevices(PluginCall call) {
+        List<String> seen = new ArrayList<>();
+        AudioManager am = audio();
+        if (am != null && bluetoothConnectAllowed()) {
+            for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+                if (!isBluetooth(d.getType())) continue;
+                String n = productName(d);
+                if (!n.isEmpty() && !seen.contains(n)) seen.add(n);
+            }
+        }
+        JSObject r = new JSObject();
+        r.put("names", new JSArray(seen));
+        call.resolve(r);
+    }
+
+    /** Whether BLUETOOTH_CONNECT is granted (or not needed); the UI asks when it isn't. */
+    @PluginMethod
+    public void getBluetoothPermission(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("granted", bluetoothConnectAllowed());
+        call.resolve(r);
+    }
+
+    /** Asked when per-device profiles need Bluetooth names and the permission isn't granted yet. */
+    @PluginMethod
+    public void requestBluetoothPermission(PluginCall call) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            JSObject r = new JSObject();
+            r.put("granted", true);
+            call.resolve(r);
+            return;
+        }
+        if (getPermissionState("bluetooth") == PermissionState.GRANTED) {
+            JSObject r = new JSObject();
+            r.put("granted", true);
+            call.resolve(r);
+            return;
+        }
+        requestPermissionForAlias("bluetooth", call, "bluetoothPermissionCallback");
+    }
+
+    @PermissionCallback
+    private void bluetoothPermissionCallback(PluginCall call) {
+        if (call == null) return;
+        JSObject r = new JSObject();
+        r.put("granted", getPermissionState("bluetooth") == PermissionState.GRANTED);
+        call.resolve(r);
     }
 
     // ---------- song streams (SoncleStreams) ----------
@@ -320,6 +615,7 @@ public class SonclePlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        stopOutputWatch();
         destroyBotguard();
         io.shutdownNow();
     }
