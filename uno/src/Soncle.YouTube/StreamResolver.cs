@@ -19,6 +19,8 @@ public sealed record PlayerResponse(string Status, string? Reason, IReadOnlyList
 public interface IStreamClient
 {
     string UserAgent { get; }
+    /// <summary>The User-Agent stream requests must carry for <paramref name="client"/> (<c>uaFor</c> in yt.mjs). Defaults to <see cref="UserAgent"/>.</summary>
+    string UserAgentFor(string client) => UserAgent;
     Task<PlayerResponse> GetPlayerAsync(string videoId, string client, string? potToken, CancellationToken ct);
     /// <summary>Whether [start,end] of the URL is fetchable (the seek probe). Returns null on success, else the failure reason.</summary>
     Task<string?> CanSeekAsync(string client, string url, IReadOnlyDictionary<string, string> headers, long length, CancellationToken ct);
@@ -147,7 +149,8 @@ public sealed class StreamResolver
         var url = fmt.Url;
         if (string.IsNullOrEmpty(url)) throw new InvalidOperationException("no url");
         if (streamPot is not null) url = WithQuery(url, "pot", streamPot);
-        var headers = HeadersFor(spec.Client, _client.UserAgent);
+        var ua = _client.UserAgentFor(spec.Client);
+        var headers = HeadersFor(spec.Client, ua);
         var length = fmt.ContentLength;
         if (length == 0 && TryQueryLong(url, "clen") is { } clen && clen > 0) length = clen;
         if (length == 0) length = await _client.ProbeLengthAsync(spec.Client, url, headers, ct);
@@ -155,7 +158,7 @@ public sealed class StreamResolver
         if (seek is not null) throw new InvalidOperationException($"range probe failed ({seek})");
         var expSec = TryQueryLong(url, "expire") ?? 0;
         var expires = expSec > 0 ? expSec * 1000 : _nowMs() + 3 * 3600_000;
-        return new ResolvedStream(url, spec.Client, headers, _client.UserAgent, fmt.MimeType, length, fmt.Bitrate, fmt.LoudnessDb, expires - 10 * 60_000);
+        return new ResolvedStream(url, spec.Client, headers, ua, fmt.MimeType, length, fmt.Bitrate, fmt.LoudnessDb, expires - 10 * 60_000);
     }
 
     private static IReadOnlyDictionary<string, string> HeadersFor(string client, string ua)
