@@ -259,8 +259,9 @@ and meters; focus mode; offline wait-and-resume.
   Services/App` view models) and give Android a .NET for Android head with a native UI (or keep
   Capacitor) — the shared logic is most of the win, so no C# work is wasted.
 - **7.3 Drift check.** Any change to a JS file that has a C# port (plan §12.5 ledger) needs the C#
-  update in the same PR, or a ledger note. CI should fail when a ported file changes without its C#
-  counterpart or a ledger edit. (First drift found: `renderer/devices.js` gained `androidOutputLabel`
+  update in the same PR, or a ledger note. The CI `drift` job (`tools/drift-check.mjs` +
+  `tools/port-map.json`) fails when a ported file changes without its C# counterpart or a ledger
+  edit; add each new port to the map. (First drift found: `renderer/devices.js` gained `androidOutputLabel`
   after M09c.)
 - **7.4 UI changes are shown first.** Screenshots (and side-by-side with Electron where a page
   exists) before merging, as in `AGENTS.md`. Visual changes beyond this file need minuda2009's OK.
