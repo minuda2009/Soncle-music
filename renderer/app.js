@@ -2,7 +2,7 @@
 import { icon, setIcon, hasIcon } from './icons.js';
 import { Engine, EQ_BANDS, EQ_PRESETS, PRESET_PREAMP } from './engine.js';
 import { classifyOutput, androidOutputLabel, DEVICE_INFO } from './devices.js';
-import { planFlow, transition, featLabel, contextFor } from './flow/flow.js';
+import { planFlow, transition, featLabel, contextFor, flowCoverage, analysisOrder, afterFailure, pickNext } from './flow/flow.js';
 import { sample as sampleAudio, SR as SAMPLE_RATE } from './flow/sampler.js';
 // "1 song" / "2 songs"
 const nOf = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -1385,7 +1385,7 @@ VIEWS.settings = async (ctx) => {
     settingRow({ ic: 'radio', title: 'Flow radio', sub: 'Start radio arranges songs by tempo and key so crossfades blend instead of clashing', control: sw('flowRadio') }),
     settingRow({ ic: 'quality', title: 'Learn songs for Flow radio', sub: 'Analyses ~30 s of each song on this computer for tempo and key (about 0.5 MB of data per song) and remembers it', control: sw('flowLearn') }),
     settingRow({ ic: 'crossfade', title: 'Crossfade by how songs mix', sub: 'Use a short blend when two songs would clash', control: sw('flowXf') }),
-    settingRow({ ic: 'clearAll', title: 'Forget learned songs', sub: 'Tempo and key data Flow radio has learned', control: h('button', { class: 'btn outline', onclick: async (e) => { await api.flowClear(); FLOW.feats.clear(); FLOW.asked.clear(); FLOW.failed.clear(); e.target.textContent = 'Cleared'; } }, 'Clear') }),
+    settingRow({ ic: 'clearAll', title: 'Forget learned songs', sub: 'Tempo and key data Flow radio has learned', control: h('button', { class: 'btn outline', onclick: async (e) => { await api.flowClear(); FLOW.feats.clear(); FLOW.asked.clear(); FLOW.failed.clear(); FLOW.tries.clear(); e.target.textContent = 'Cleared'; } }, 'Clear') }),
     settingRow({ ic: 'next', title: 'Autoplay', sub: 'Keep playing similar songs when the queue ends', control: sw('autoplay') }),
     settingRow({ ic: 'next', title: 'Skip songs that fail to play', control: sw('autoSkipOnError') }),
     settingRow({ ic: 'queue', title: 'Prevent duplicate songs in queue', control: sw('noDuplicates') }),
@@ -2824,6 +2824,7 @@ setInterval(() => {
   if (P.playing && !P.loading && !engine.xfading) {
     const tempo = S().tempo || 1;
     const d = engine.duration, t = engine.currentTime;
+    if (P.flow && d > 0) flowDecideLate(d - t);
     const n = nextIndex(), nt = n != null ? P.queue[n] : null;
     const plan = nt && d - t < 40 && P.repeat !== 'one' && !P.sleep?.endOfSong ? transitionPlan(P.current, nt) : null;
     // Smart crossfade: follow the song's loudness so the blend starts when the outro actually fades
@@ -2927,8 +2928,10 @@ function buildQueue() {
   if (upcoming.length) {
     box.append(h('div', { class: 'q-label' }, ...(P.source ? ['Next from: ', sourceLabel()] : ['Next up'])));
     if (P.flow && P.flow.queue === P.queue) {
-      const known = upcoming.filter((t) => featOf(t.id)?.bpm).length;
-      box.append(h('div', { class: 'flow-note' }, icon('crossfade'), h('span', null, P.flow.locked ? 'Flow radio • you rearranged the queue, so it stays as you set it' : `Flow radio • ${contextFor().label} mood • arranged by tempo, key and your taste • ${known}/${nOf(upcoming.length, 'song', 'songs')} analysed`)));
+      const cov = flowCoverage(P.flow.pool, featOf, FLOW.failed), c = P.flow.commit;
+      const learning = cov.partial && S().flowLearn !== false ? `Learning the radio • ${cov.known} of ${nOf(cov.total, 'song', 'songs')}` : `${cov.known} of ${nOf(cov.total, 'song', 'songs')} analysed`;
+      const partialPick = c && c.id === upcoming[0]?.id && c.partial ? ` • next song chosen from ${c.known} of ${c.total}` : '';
+      box.append(h('div', { class: 'flow-note' }, icon('crossfade'), h('span', null, P.flow.locked ? 'Flow radio • you rearranged the queue, so it stays as you set it' : `Flow radio • ${contextFor().label} mood • ${cov.partial && S().flowLearn !== false ? '' : 'arranged by tempo, key and your taste • '}${learning}${partialPick}`)));
     }
     upcoming.slice(0, 300).forEach((t, j) => box.append(mk(t, P.idx + 1 + j)));
   }
@@ -3402,7 +3405,7 @@ function wire() {
 // tempo stays in a comfortable band and keys stay harmonically compatible. Tempo/key/energy come
 // from analysing ~30 s of each song locally (no external service) and are remembered, so radios
 // get better over time; with nothing known yet it falls back to YouTube's order.
-const FLOW = { feats: new Map(), asked: new Set(), queue: [], running: 0, worker: null, jobs: new Map(), jobId: 0, failed: new Set() };
+const FLOW = { feats: new Map(), asked: new Set(), queue: [], running: 0, worker: null, jobs: new Map(), jobId: 0, failed: new Set(), tries: new Map() };
 const featOf = (id) => FLOW.feats.get(id) || null;
 // Energy is compared by its rank among the songs we know (raw values sit in a narrow band).
 let energyIdx = { n: -1, sorted: [] };
@@ -3465,6 +3468,9 @@ async function ensureFeatures(tracks, { front = false } = {}) {
   pumpAnalysis();
 }
 let onBattery = false;
+// While a radio is new (its first songs) the whole pool is measured back to back; afterwards it
+// drops to low priority (idle time) for songs added later.
+const flowFast = () => !!(P.flow && P.flow.queue === P.queue && P.idx < 3 && flowCoverage(P.flow.pool, featOf, FLOW.failed).pending > 0);
 async function pumpAnalysis() {
   if (engine.xfading || P.xfPending) { setTimeout(pumpAnalysis, 3000); return; }   // never during a blend
   while (FLOW.running < 1 && FLOW.queue.length) {
@@ -3479,15 +3485,19 @@ async function pumpAnalysis() {
         if (!pcm || pcm.length < SAMPLE_RATE * 8) throw new Error('too short');
         const f = await runAnalysis(new Float32Array(pcm));
         if (f) { FLOW.feats.set(t.id, f); api.flowPut(t.id, f).catch(() => {}); onFlowLearned(t.id); }
-      } catch (e) { FLOW.failed.add(t.id); console.warn('flow: could not analyse', t.id, e.message); }
-      finally { FLOW.running--; (window.requestIdleCallback || setTimeout)(() => pumpAnalysis(), { timeout: 2000 }); }
+      } catch (e) {
+        // one retry, at the back of the line; only then is the song given up on
+        if (afterFailure(FLOW.tries, t.id) === 'retry') FLOW.queue.push(t); else FLOW.failed.add(t.id);
+        console.warn('flow: could not analyse', t.id, e.message);
+        onFlowLearned(null);
+      } finally { FLOW.running--; if (flowFast()) pumpAnalysis(); else (window.requestIdleCallback || setTimeout)(() => pumpAnalysis(), { timeout: 2000 }); }
     })();
   }
 }
 let flowReplanTimer = null;
 function onFlowLearned(id) {
-  if (P.flow && (P.flow.pool.some((t) => t.id === id) || P.current?.id === id)) { clearTimeout(flowReplanTimer); flowReplanTimer = setTimeout(replanFlow, 1200); }
-  if (P.current?.id === id && P.streamInfo) setStreamInfo(P.current, P.streamInfo.info);
+  if (id && P.flow && (P.flow.pool.some((t) => t.id === id) || P.current?.id === id)) { clearTimeout(flowReplanTimer); flowReplanTimer = setTimeout(replanFlow, 1200); }
+  if (id && P.current?.id === id && P.streamInfo) setStreamInfo(P.current, P.streamInfo.info);
   if (!$('#queuePanel').hidden || (P.npTab === 'queue' && !$('#nowPlaying').hidden)) { clearTimeout(onFlowLearned.t); onFlowLearned.t = setTimeout(renderQueue, 400); }
 }
 // Keep everything already played and the current song (plus the next one near the end of the
@@ -3505,11 +3515,26 @@ function replanFlow() {
   if (!rest.length) return;
   const from = fixed[fixed.length - 1];
   const ctx = FOCUS ? { ...contextFor(), energy: 0.42, maxBpm: 130, label: 'focus' } : contextFor();   // focus: steady, unhurried
-  const plan = planFlow(from, rest, featRanked, { ctx, band: FOCUS ? 0.08 : 0.12, taste: tasteModel() }).slice(0, Math.max(0, F.size - fixed.length));
+  const cov = flowCoverage(F.pool, featOf, FLOW.failed);
+  const plan = pickNext(from, rest, featRanked, { ctx, band: FOCUS ? 0.08 : 0.12, taste: tasteModel(), failed: FLOW.failed })?.plan.slice(0, Math.max(0, F.size - fixed.length)) || [];
   const tail = plan.map((p) => ({ ...withQid(p.track), auto: true, flowScore: p.score }));
   P.queue.splice(keep, P.queue.length - keep, ...tail);
   F.queue = P.queue;
+  // the next song is committed ~35 s before the end: remember how much of the pool that choice saw
+  const nx = P.queue[P.idx + 1];
+  if (nearEnd && nx && F.commit?.qid !== nx.qid) {
+    F.commit = { qid: nx.qid, id: nx.id, known: cov.known, total: cov.total, partial: cov.partial };
+    console.info(`flow: next pick ${nx.id} chosen from ${cov.known} of ${cov.total} measured${cov.partial ? ' (partial)' : ''}`);
+  }
   queueChanged();
+}
+/** Decide late: ~35 s before the end, re-plan once from everything measured by then. */
+function flowDecideLate(remaining) {
+  const F = P.flow;
+  if (!F || F.locked || P.queue !== F.queue || remaining > 35 || F.decidedFor === P.current?.qid) return;
+  F.decidedFor = P.current?.qid;
+  clearTimeout(flowReplanTimer);
+  replanFlow();
 }
 /** Start a flow radio from a song, album, playlist, artist or local playlist. */
 async function startFlowRadio(item) {
@@ -3546,7 +3571,7 @@ async function startFlowRadio(item) {
   if (P.flow !== F) return;
   replanFlow();
   $('#toast').hidden = true;
-  ensureFeatures([seed, ...pool.slice(0, 10)], { front: true });
+  ensureFeatures([seed, ...analysisOrder(pool, featOf, { next: P.queue.slice(1, 4), failed: FLOW.failed })], { front: true });
 }
 // autoplay for flow radios: grow the pool and re-arrange instead of appending blindly
 async function growFlowPool() {
@@ -3563,7 +3588,7 @@ async function growFlowPool() {
     F.size += add.length;
     await loadFeats(add.map((t) => t.id));
     replanFlow();
-    ensureFeatures(add.slice(0, 20));
+    ensureFeatures(add);
   } finally { F.growing = false; }
   return true;
 }
@@ -3750,7 +3775,7 @@ function startFlowRadioFromCurrent() {
     P.flow = { seed: t, pool, queue: P.queue, size: P.queue.length + 30 };
     await loadFeats(pool.map((x) => x.id));
     replanFlow();
-    ensureFeatures(pool.slice(0, 10));
+    ensureFeatures(analysisOrder(pool, featOf, { failed: FLOW.failed }), { front: true });
   }).catch(() => {});
 }
 function focusTick() {
