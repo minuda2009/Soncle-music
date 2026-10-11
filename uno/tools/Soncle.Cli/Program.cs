@@ -2,7 +2,7 @@
 using Soncle.Cli;
 
 // soncle --offline [<fixtures dir>] <command> …   recorded fixtures, no network
-// soncle --live <command> …                       real YouTube, anonymous (resolve and download only for now)
+// soncle --live <command> …                       real YouTube, anonymous (search, resolve and download; no decoding yet)
 var rest = args.ToList();
 var offlineAt = rest.IndexOf("--offline");
 var liveAt = rest.IndexOf("--live");
