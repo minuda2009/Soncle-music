@@ -11,28 +11,44 @@ headphone correction (AutoEq). Built with Electron and [youtubei.js](https://git
 > [Metrolist](https://github.com/MetrolistGroup/Metrolist) for Android, and is not affiliated with
 > or endorsed by Metrolist Group, Google or YouTube.
 
-## Install
+## Download
 
-Download **`Soncle-Setup-1.0.0.exe`** from the releases page and run it.
-- You choose the folder. No admin rights are needed for a per-user install.
-- It adds Start menu and desktop shortcuts, and appears in *Settings → Apps* with a normal
-  uninstaller.
-- Uninstalling keeps your library and settings. To remove them too, delete `%APPDATA%\Soncle`.
+**[Latest release →](https://github.com/minuda2009/Soncle-music/releases/latest)** has everything
+you need:
 
-Prefer not to install? `Soncle-Portable-1.0.0.exe` runs from anywhere.
+| You want | Get this file |
+| --- | --- |
+| Windows, installed (Start menu, uninstaller) | `Soncle-Setup-<version>.exe` |
+| Windows, no install | `Soncle-Portable-<version>.exe` |
+| Android phone | `Soncle-Android-<version>.apk` |
 
-The builds are not code-signed yet, so Windows SmartScreen may say "Windows protected your PC".
-Choose **More info → Run anyway**.
+Windows builds are not code-signed yet, so SmartScreen may say "Windows protected your PC". Choose
+**More info → Run anyway**. The installer lets you pick the folder and needs no admin rights;
+uninstalling keeps your library and settings (delete `%APPDATA%\Soncle` to remove them too).
 
 Signing in is optional. When you click *Sign in*, a separate Chrome, Edge or Brave window opens on
 Google's sign-in page, because Google does not allow sign-in inside apps. Soncle picks up the
 session and closes that window. Your normal browser profile is not touched.
 
-## Android (early)
+### Test builds (not the stable release)
 
-`mobile/` holds the Android app (0.1.0). It reuses this app's UI, audio engine and YouTube code,
-packaged with Capacitor. To build it, see [mobile/README.md](./mobile/README.md). It needs Android
-Studio, and sign-in and downloads aren't in it yet.
+Built automatically while the app is being worked on. They can be broken, and each one replaces the
+previous.
+
+| Release | What it is |
+| --- | --- |
+| [android-latest](https://github.com/minuda2009/Soncle-music/releases/tag/android-latest) | Newest Android build from `main` |
+| [android-preview](https://github.com/minuda2009/Soncle-music/releases/tag/android-preview) | Android build of the branch being tested ("Soncle Preview", installs next to the normal app) |
+| [windows-preview](https://github.com/minuda2009/Soncle-music/releases/tag/windows-preview) | First build of the new C# Windows app (shell only so far) |
+
+## Where the project is
+
+- **Today's apps:** the Windows desktop app (Electron, this folder's root) and the Android app
+  (`mobile/`, Capacitor, reusing the desktop's UI and code). Both are being maintained.
+- **Next:** a rewrite in C# on the Uno Platform (`uno/`), one app for Windows and Android that
+  uses less memory. It is not usable yet; the plan and progress are in
+  [docs/WINUI_PLAN.md](./docs/WINUI_PLAN.md), the roadmap in [ROADMAP.md](./ROADMAP.md).
+- What changed and when: [CHANGELOG.md](./CHANGELOG.md).
 
 ## Author
 
@@ -94,10 +110,11 @@ npm start               # run the app
 npm test                # unit tests (node:test)
 npm run lint            # eslint (0 errors, 0 warnings)
 npm run dist:win        # installer + portable exe (x64)
+# stable releases are built by the Release workflow, see docs/RELEASING.md
 npm run upstream:check  # what changed upstream since the last sync (see UPSTREAM.md)
 ```
 
-Current state: **46 tests**. Two are skipped automatically without their fixtures: the local-files
+The test suite runs with `npm test`. Some tests are skipped automatically without their fixtures: the local-files
 test needs a sample music folder, and the sign-in test needs `SONCLE_SIGNIN_BROWSER` (a Chromium-based
 browser) and a display. The tests cover:
 - the limiter: transparent below the ceiling, and no true-peak overs on hot material;

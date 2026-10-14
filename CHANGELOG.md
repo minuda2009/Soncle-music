@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased: a clear place to download Soncle
+
+- **The README now leads with a Download table** that points at the latest release: the Windows
+  installer, the portable exe and the Android APK. The rolling test builds are listed separately
+  and marked as such, and the README says where the project is going (the C# rewrite).
+- **A `Release` workflow** builds the Windows installer, the portable exe and the Android APK and
+  publishes them as a normal GitHub release with checksums (`docs/RELEASING.md`).
+
 ## Unreleased: the Windows head starts (Soncle Preview)
 
 - **A first Windows build of the C# app** now comes from `uno/heads/Soncle.Windows` and is
