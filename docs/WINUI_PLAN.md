@@ -298,7 +298,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `streamproxy.mjs`, `SoncleStreams.java` | replaced by `Soncle.Streams` (pending heads) | — |
 | `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
 | `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
-| `renderer/flow/webm.js` (M05) | ported (`openhands/uno-webm-cues`, PR pending) | `WebmCues`; checked on two real Opus WebM files (`fixtures/flow/webm.json`, byte-identical rebuild). `sampler.js` (fetching ~30 s, `middle()`, decoding) is not ported yet; it comes with the decoder |
+| `renderer/flow/webm.js` (M05) | ported (`openhands/uno-webm-cues`, PR pending) | `WebmCues`; checked on two real Opus WebM files (`fixtures/flow/webm.json`, byte-identical rebuild). `sampler.js` is ported as `Sampler` + `Resampler` (`openhands/uno-sampler`): WebM/Opus only; non-WebM (AAC) waits for the platform decoders |
 | Opus-in-WebM demux (`WebmOpusReader`, `OpusToc`, `Soncle.Core.Media.Ebml`; new, no JS to port: Chromium decodes in the JS apps) | added (`openhands/uno-opus-demux`, PR pending) | checked against ffprobe on the two WebM fixtures (`fixtures/flow/opus-oracle.json`); the Opus decoder itself follows |
 | Opus decode orchestration (`OpusWebmDecoder`, `IOpusDecoder` seam; new) | added (`openhands/uno-opus-decode`, PR pending) | pre-skip, end padding, output gain, mono and errors tested with a counting fake codec; the real codec is `Soncle.Audio.Opus` (Concentus 2.2.2 adapter, `openhands/uno-opus-codec`), checked in CI against ffmpeg: same length to the sample, level within 0.05 dB |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
