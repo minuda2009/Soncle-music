@@ -12,6 +12,9 @@
 //   ffmpeg -f lavfi -i "$SRC" -c:a libopus -b:a 24k -vbr on -f webm -cluster_time_limit 1000 \
 //     -reserve_index_space 1024 -fflags +bitexact -flags:a +bitexact fixtures/flow/sample.webm
 //   (same without -reserve_index_space for sample-tailcues.webm)
+// fixtures/flow/mono.webm (1 s, one channel; only the decoder tests read it):
+//   ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t):s=48000:d=1' -ac 1 -c:a libopus -b:a 12k -vbr on -f webm \
+//     -cluster_time_limit 1000 -fflags +bitexact -flags:a +bitexact fixtures/flow/mono.webm
 //
 //   node tools/fixtures/export-webm.mjs
 import fs from 'node:fs';
