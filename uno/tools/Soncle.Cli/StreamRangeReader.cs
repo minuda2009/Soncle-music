@@ -1,6 +1,7 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 using Soncle.Flow;
 using Soncle.Streams;
+using Soncle.YouTube;
 
 namespace Soncle.Cli;
 
