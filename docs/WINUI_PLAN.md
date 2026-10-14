@@ -300,7 +300,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
 | `renderer/flow/webm.js` (M05) | ported (`openhands/uno-webm-cues`, PR pending) | `WebmCues`; checked on two real Opus WebM files (`fixtures/flow/webm.json`, byte-identical rebuild). `sampler.js` (fetching ~30 s, `middle()`, decoding) is not ported yet; it comes with the decoder |
 | Opus-in-WebM demux (`WebmOpusReader`, `OpusToc`, `Soncle.Core.Media.Ebml`; new, no JS to port: Chromium decodes in the JS apps) | added (`openhands/uno-opus-demux`, PR pending) | checked against ffprobe on the two WebM fixtures (`fixtures/flow/opus-oracle.json`); the Opus decoder itself follows |
-| Opus decode orchestration (`OpusWebmDecoder`, `IOpusDecoder` seam; new) | added (`openhands/uno-opus-decode`, PR pending) | pre-skip, end padding, output gain, mono and errors tested with a counting fake codec; the real codec (Concentus adapter) is checked against the ffmpeg numbers next |
+| Opus decode orchestration (`OpusWebmDecoder`, `IOpusDecoder` seam; new) | added (`openhands/uno-opus-decode`, PR pending) | pre-skip, end padding, output gain, mono and errors tested with a counting fake codec; the real codec is `Soncle.Audio.Opus` (Concentus 2.2.2 adapter, `openhands/uno-opus-codec`), checked in CI against ffmpeg: same length to the sample, level within 0.05 dB |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
 | `renderer/devices.js` (M09c) | ported (`uno-migration`) | `androidOutputLabel` added after the port (new function; ported part unchanged, fixtures still match) — port it with the Android head |
 | `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
@@ -313,7 +313,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
 | `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
 | `src/yt.mjs` stream resolver rules + InnerTube `/player` client (M07) | ported (`uno-migration`; client: `openhands/uno-m07-innertube`, PR pending) | deciphering and `signatureTimestamp` come from a head via `IPlayerScript`; PO-token clients (YTMUSIC, WEB) need the head's minter; not yet tried against real YouTube |
-| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands, PR #16; `--live` resolve/download; `--live search`, `openhands/uno-m12-search`, PR pending) | real songs need a WebM reader + Opus decoder; search continuation (`searchMore`) and signed-in catalog calls are not ported |
+| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands, PR #16; `--live` resolve/download; `--live search`, `openhands/uno-m12-search`, PR pending) | WebM/Opus songs now decode for `play`/`analyze` (`openhands/uno-cli-opus`); M4A/AAC waits for the platform decoders; search continuation (`searchMore`) and signed-in catalog calls are not ported |
 | `yt.mjs` `search()` request side + youtubei.js `music.search` (M07) | ported (`openhands/uno-m12-search`, PR pending) | `InnerTubeCatalogClient`; request checked against youtubei.js' own (`fixtures/yt/expected/search-request.json`); not yet tried against real YouTube |
 | `uno/heads/Soncle.Windows` — WinUI 3 head scaffold (issue #21) | started (`windows-preview`; shell only) | `src/main.mjs` shell is the long-term source; nothing ported yet — tray, rail collapse and pages come next |
 | everything else in 12.2 | not started | — |
