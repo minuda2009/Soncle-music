@@ -6,7 +6,7 @@ normalise → play) before any UI exists.
 ## Two modes
 Say where the data comes from, every time:
 - `--offline`: recorded fixtures, no network (what CI runs).
-- `--live`: real YouTube, anonymous. `search`, `resolve` and `download` work live; `play` and `analyze` on real songs wait for the decoder (see below).
+- `--live`: real YouTube, anonymous. `search`, `resolve` and `download` work live; `play` and `analyze` work on WebM/Opus songs (see below).
 
 ## Offline (works end to end)
 Everything runs against **recorded fixtures, with no network**:
@@ -49,8 +49,9 @@ dotnet run --project uno/tools/Soncle.Cli -- --live download <videoId> song.webm
   only catalog call ported so far.
 - **Web-style stream clients.** They need a head's browser engine to run YouTube's player script
   (`IPlayerScript`) and a PO-token minter.
-- **Decoding real songs.** YouTube streams are WebM/Opus or M4A. The WebM reader and an Opus
-  decoder are not in this build, so `play` of such a stream exits with code 3 and says so.
+- **M4A/AAC.** YouTube streams are WebM/Opus or M4A. WebM/Opus decodes here (a managed decoder,
+  checked against ffmpeg); an M4A stream exits with code 3 and says so. AAC comes with the
+  platform decoders (Media Foundation, MediaCodec).
 - **Playing through speakers.** Output to the sound card (WASAPI on Windows) comes with the
   Windows head; elsewhere `play` writes a WAV.
 

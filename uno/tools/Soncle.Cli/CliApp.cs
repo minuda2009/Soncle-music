@@ -55,7 +55,7 @@ public sealed class CliApp
         }
         catch (NotSupportedException e)
         {
-            return Fail(Unsupported, $"can't decode '{e.Message}' yet: the WebM/Opus decoder is not part of this build.");
+            return Fail(Unsupported, $"can't decode '{e.Message}': only WebM/Opus streams can be decoded so far (M4A/AAC is not supported yet).");
         }
         catch (OperationCanceledException) { return Fail(Failed, "cancelled."); }
         catch (Exception e)

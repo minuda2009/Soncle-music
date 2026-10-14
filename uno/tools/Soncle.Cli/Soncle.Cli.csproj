@@ -13,6 +13,7 @@
     <ProjectReference Include="../../src/Soncle.Streams/Soncle.Streams.csproj" />
     <ProjectReference Include="../../src/Soncle.Flow/Soncle.Flow.csproj" />
     <ProjectReference Include="../../src/Soncle.Audio/Soncle.Audio.csproj" />
+    <ProjectReference Include="../../src/Soncle.Audio.Opus/Soncle.Audio.Opus.csproj" />
   </ItemGroup>
 
   <ItemGroup>
