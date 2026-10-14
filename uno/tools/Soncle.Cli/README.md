@@ -6,7 +6,7 @@ normalise → play) before any UI exists.
 ## Two modes
 Say where the data comes from, every time:
 - `--offline`: recorded fixtures, no network (what CI runs).
-- `--live`: real YouTube, anonymous. `search`, `resolve` and `download` work live; `play` and `analyze` work on WebM/Opus songs (see below).
+- `--live`: real YouTube, anonymous. `search`, `resolve` and `download` work live; `play` and `analyze` work on WebM/Opus songs; `analyze` downloads only about 15 s of audio (see below).
 
 ## Offline (works end to end)
 Everything runs against **recorded fixtures, with no network**:
