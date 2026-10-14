@@ -1,0 +1,14 @@
+{
+  "note": "analyze.js on ffmpeg-decoded fixtures/flow/sample.webm (mono, 22050 Hz)",
+  "samples": 176400,
+  "result": {
+    "bpm": 127.9,
+    "bpmConf": 0,
+    "key": "A",
+    "camelot": "11B",
+    "keyConf": 1,
+    "energy": 0.31,
+    "rmsDb": -17.4,
+    "v": 2
+  }
+}
