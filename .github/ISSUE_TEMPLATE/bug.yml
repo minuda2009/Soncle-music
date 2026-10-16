@@ -1,0 +1,23 @@
+name: Something is broken
+description: A song won't play, the app crashes, something sounds wrong
+labels: [bug]
+body:
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Windows installer, Windows portable, Android, Soncle Preview]
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: Version, description: "The release you downloaded, e.g. 1.0.0"}
+  - type: textarea
+    id: what
+    attributes: {label: What happened, description: "What did you do, what did you expect, what happened instead?"}
+    validations: {required: true}
+  - type: textarea
+    id: log
+    attributes:
+      label: Diagnostic log
+      description: "Settings → Copy diagnostic log. It has host names only, never cookies. Don't paste cookies or passwords anywhere."
+      render: text

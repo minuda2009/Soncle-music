@@ -1,0 +1,8 @@
+name: Idea
+description: Something Soncle should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes: {label: What would you like, description: "And what are you trying to do when you want it?"}
+    validations: {required: true}
