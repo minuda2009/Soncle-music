@@ -297,7 +297,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `Soncle.Streams` (M08) | ported (PR #11) | — |
 | `streamproxy.mjs`, `SoncleStreams.java` | replaced by `Soncle.Streams` (pending heads) | — |
 | `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
-| `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
+| `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | `flow.js` gained `flowCoverage`, `analysisOrder`, `afterFailure`, `holdUnmeasured` and a `pickNext` change (Flow radio analyses the whole pool, `openhands/flow-radio-full-pool`); the ported functions are unchanged and their fixtures still match. Port the new ones with the Flow queue in the C# app |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
 | `renderer/devices.js` (M09c) | ported (`uno-migration`) | `androidOutputLabel` added after the port (new function; ported part unchanged, fixtures still match) — port it with the Android head |
 | `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
