@@ -18,7 +18,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           set +e
-          npm run dist:win > build.log 2>&1
+          npm run dist:win -- --publish never > build.log 2>&1
           code=$?
           if [ $code -ne 0 ]; then
             msg=$(tail -n 25 build.log | cut -c1-400 | sed ':a;N;$!ba;s/\r//g;s/%/%25/g;s/\n/%0A/g')
