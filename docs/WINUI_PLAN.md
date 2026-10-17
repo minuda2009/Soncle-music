@@ -299,6 +299,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
 | `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | `flow.js` gained `flowCoverage`, `analysisOrder`, `afterFailure`, `holdUnmeasured` and a `pickNext` change (Flow radio analyses the whole pool, `openhands/flow-radio-full-pool`); the ported functions are unchanged and their fixtures still match. Port the new ones with the Flow queue in the C# app |
 | `renderer/flow/webm.js` (M05) | ported (`openhands/uno-webm-cues`, PR pending) | `WebmCues`; checked on two real Opus WebM files (`fixtures/flow/webm.json`, byte-identical rebuild). `sampler.js` (fetching ~30 s, `middle()`, decoding) is not ported yet; it comes with the decoder |
+| Opus-in-WebM demux (`WebmOpusReader`, `OpusToc`, `Soncle.Core.Media.Ebml`; new, no JS to port: Chromium decodes in the JS apps) | added (`openhands/uno-opus-demux`, PR pending) | checked against ffprobe on the two WebM fixtures (`fixtures/flow/opus-oracle.json`); the Opus decoder itself follows |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
 | `renderer/devices.js` (M09c) | ported (`uno-migration`) | `androidOutputLabel` added after the port (new function; ported part unchanged, fixtures still match) — port it with the Android head |
 | `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |

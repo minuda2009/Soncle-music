@@ -1,5 +1,5 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
-using System.Buffers.Binary;
+using Soncle.Core.Media;
 
 namespace Soncle.Flow;
 
@@ -41,83 +41,9 @@ public readonly record struct WebmRange(long From, double To, double T0, bool Cu
 /// </summary>
 public static class WebmCues
 {
-    private const long Ebml = 0x1a45dfa3, Segment = 0x18538067, Info = 0x1549a966, Tracks = 0x1654ae6b,
+    private const long EbmlId = 0x1a45dfa3, Segment = 0x18538067, Info = 0x1549a966, Tracks = 0x1654ae6b,
         CuesId = 0x1c53bb6b, Cluster = 0x1f43b675, CuePoint = 0xbb, CueTime = 0xb3,
         CueTrackPositions = 0xb7, CueClusterPosition = 0xf1, TimecodeScale = 0x2ad7b1, Duration = 0x4489;
-
-    private readonly record struct El(long Id, long Start, long DataStart, long DataEnd, bool Unknown);
-
-    // ---------- EBML reading ----------
-    private static (long V, int Len)? ReadId(ReadOnlySpan<byte> b, long p)
-    {
-        if (p < 0 || p >= b.Length) return null;
-        var x = b[(int)p];
-        var len = x >= 0x80 ? 1 : x >= 0x40 ? 2 : x >= 0x20 ? 3 : x >= 0x10 ? 4 : 0;
-        if (len == 0 || p + len > b.Length) return null;
-        long v = 0;
-        for (var i = 0; i < len; i++) v = v * 256 + b[(int)p + i];
-        return (v, len);
-    }
-
-    /// <summary>A size is -1 for "unknown" (all value bits set).</summary>
-    private static (long V, int Len)? ReadSize(ReadOnlySpan<byte> b, long p)
-    {
-        if (p < 0 || p >= b.Length) return null;
-        int x = b[(int)p];
-        var len = 1; var mask = 0x80;
-        while (len <= 8 && (x & mask) == 0) { len++; mask >>= 1; }
-        if (len > 8 || p + len > b.Length) return null;
-        long v = x & (mask - 1);
-        var allOnes = v == mask - 1;
-        for (var i = 1; i < len; i++)
-        {
-            v = v * 256 + b[(int)p + i];
-            if (b[(int)p + i] != 0xff) allOnes = false;
-        }
-        return (allOnes ? -1 : v, len);
-    }
-
-    // doubles, as in JS (a Number); only values past 2^53 differ, and no real file has those
-    private static double ReadUint(ReadOnlySpan<byte> b, long p, long n)
-    {
-        double v = 0;
-        for (var i = 0; i < n && p + i < b.Length; i++) v = v * 256 + b[(int)(p + i)];
-        return v;
-    }
-
-    private static double? ReadFloat(ReadOnlySpan<byte> b, long p, long n)
-    {
-        if (p + n > b.Length) return null;
-        // the JS reads 4 bytes as float32 and anything else as float64; only 4 and 8 are valid EBML floats
-        return n switch
-        {
-            4 => BinaryPrimitives.ReadSingleBigEndian(b.Slice((int)p, 4)),
-            8 => BinaryPrimitives.ReadDoubleBigEndian(b.Slice((int)p, 8)),
-            _ => null,
-        };
-    }
-
-    private static IEnumerable<El> Children(ReadOnlyMemory<byte> b, long start, long end)
-    {
-        var p = start;
-        while (p < end)
-        {
-            var id = ReadId(b.Span, p); if (id is null) yield break;
-            var sz = ReadSize(b.Span, p + id.Value.Len); if (sz is null) yield break;
-            var dataStart = p + id.Value.Len + sz.Value.Len;
-            var dataEnd = sz.Value.V < 0 ? end : dataStart + sz.Value.V;
-            yield return new El(id.Value.V, p, dataStart, dataEnd, sz.Value.V < 0);
-            if (sz.Value.V < 0) yield break;
-            p = dataEnd;
-        }
-    }
-
-    // like Uint8Array.subarray: the end is clamped to the data we have
-    private static ReadOnlyMemory<byte> Sub(ReadOnlyMemory<byte> b, long start, long end)
-    {
-        end = Math.Min(end, b.Length);
-        return start >= end ? ReadOnlyMemory<byte>.Empty : b.Slice((int)start, (int)(end - start));
-    }
 
     // ---------- the four functions ----------
 
@@ -125,40 +51,40 @@ public static class WebmCues
     public static WebmHead? ParseHead(ReadOnlyMemory<byte> b)
     {
         long segDataStart = -1, ebmlEnd = -1;
-        foreach (var el in Children(b, 0, b.Length))
+        foreach (var el in Ebml.Children(b, 0, b.Length))
         {
-            if (el.Id == Ebml) ebmlEnd = el.DataEnd;
+            if (el.Id == EbmlId) ebmlEnd = el.DataEnd;
             if (el.Id == Segment) { segDataStart = el.DataStart; break; }
         }
         if (segDataStart < 0 || ebmlEnd < 0) return null;
 
-        var head = new WebmHead { Ebml = Sub(b, 0, ebmlEnd), SegDataStart = segDataStart };
-        foreach (var el in Children(b, segDataStart, b.Length))
+        var head = new WebmHead { Ebml = Ebml.Sub(b, 0, ebmlEnd), SegDataStart = segDataStart };
+        foreach (var el in Ebml.Children(b, segDataStart, b.Length))
         {
             if (el.DataEnd > b.Length && el.Id != Cluster) { head.Truncated = el.Id; break; }
             if (el.Id == Info)
             {
-                head.Parts.Add(Sub(b, el.Start, el.DataEnd));
-                foreach (var c in Children(b, el.DataStart, el.DataEnd))
+                head.Parts.Add(Ebml.Sub(b, el.Start, el.DataEnd));
+                foreach (var c in Ebml.Children(b, el.DataStart, el.DataEnd))
                 {
-                    if (c.Id == TimecodeScale) head.Scale = ReadUint(b.Span, c.DataStart, c.DataEnd - c.DataStart);
-                    if (c.Id == Duration && ReadFloat(b.Span, c.DataStart, c.DataEnd - c.DataStart) is { } d) head.Duration = d;
+                    if (c.Id == TimecodeScale) head.Scale = Ebml.ReadUint(b.Span, c.DataStart, c.DataEnd - c.DataStart);
+                    if (c.Id == Duration && Ebml.ReadFloat(b.Span, c.DataStart, c.DataEnd - c.DataStart) is { } d) head.Duration = d;
                 }
             }
-            else if (el.Id == Tracks) head.Parts.Add(Sub(b, el.Start, el.DataEnd));
+            else if (el.Id == Tracks) head.Parts.Add(Ebml.Sub(b, el.Start, el.DataEnd));
             else if (el.Id == CuesId)
             {
                 var cues = new List<WebmCue>();
-                foreach (var cp in Children(b, el.DataStart, el.DataEnd))
+                foreach (var cp in Ebml.Children(b, el.DataStart, el.DataEnd))
                 {
                     if (cp.Id != CuePoint) continue;
                     double time = 0; double pos = -1;
-                    foreach (var c in Children(b, cp.DataStart, cp.DataEnd))
+                    foreach (var c in Ebml.Children(b, cp.DataStart, cp.DataEnd))
                     {
-                        if (c.Id == CueTime) time = ReadUint(b.Span, c.DataStart, c.DataEnd - c.DataStart);
+                        if (c.Id == CueTime) time = Ebml.ReadUint(b.Span, c.DataStart, c.DataEnd - c.DataStart);
                         if (c.Id == CueTrackPositions)
-                            foreach (var d in Children(b, c.DataStart, c.DataEnd))
-                                if (d.Id == CueClusterPosition) pos = ReadUint(b.Span, d.DataStart, d.DataEnd - d.DataStart);
+                            foreach (var d in Ebml.Children(b, c.DataStart, c.DataEnd))
+                                if (d.Id == CueClusterPosition) pos = Ebml.ReadUint(b.Span, d.DataStart, d.DataEnd - d.DataStart);
                     }
                     if (pos >= 0) cues.Add(new WebmCue(time * head.Scale / 1e9, segDataStart + (long)pos));
                 }
@@ -194,12 +120,12 @@ public static class WebmCues
     public static ReadOnlyMemory<byte> WholeClusters(ReadOnlyMemory<byte> b)
     {
         long end = 0;
-        foreach (var el in Children(b, 0, b.Length))
+        foreach (var el in Ebml.Children(b, 0, b.Length))
         {
             if (el.Id != Cluster || el.DataEnd > b.Length) break;
             end = el.DataEnd;
         }
-        return Sub(b, 0, end);
+        return Ebml.Sub(b, 0, end);
     }
 
     /// <summary>Assemble a standalone WebM: EBML header + Segment(unknown size){Info, Tracks, clusters…}.</summary>
