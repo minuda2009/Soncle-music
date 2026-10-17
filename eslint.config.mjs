@@ -1,6 +1,6 @@
 export default [
   {
-    files: ['src/**/*.mjs', 'src/**/*.cjs', 'renderer/**/*.js', 'test/**/*.mjs', 'tools/**/*.mjs', 'mobile/src/**/*.js', 'mobile/*.mjs', 'mobile/tools/**/*.mjs'],
+    files: ['src/**/*.mjs', 'src/**/*.cjs', 'renderer/**/*.js', 'test/**/*.mjs', 'tools/**/*.mjs', 'mobile/src/**/*.js', 'mobile/*.mjs', 'mobile/tools/**/*.mjs', 'extension/**/*.js', 'extension/*.mjs'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
@@ -16,7 +16,7 @@ export default [
         Headers: 'readonly', AbortController: 'readonly', CustomEvent: 'readonly', Event: 'readonly',
         MouseEvent: 'readonly', crypto: 'readonly', structuredClone: 'readonly', Float32Array: 'readonly',
         getComputedStyle: 'readonly', Element: 'readonly', EventTarget: 'readonly', Intl: 'readonly',
-        Worker: 'readonly', self: 'readonly', OfflineAudioContext: 'readonly', performance: 'readonly', PointerEvent: 'readonly', WheelEvent: 'readonly', ReadableStream: 'readonly', AudioWorkletNode: 'readonly', MediaSource: 'readonly', KeyboardEvent: 'readonly', location: 'readonly', Uint8Array: 'readonly', atob: 'readonly', btoa: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly', OffscreenCanvas: 'readonly', MediaRecorder: 'readonly', Blob: 'readonly', File: 'readonly', FileReader: 'readonly'
+        Worker: 'readonly', self: 'readonly', OfflineAudioContext: 'readonly', performance: 'readonly', PointerEvent: 'readonly', WheelEvent: 'readonly', ReadableStream: 'readonly', AudioWorkletNode: 'readonly', MediaSource: 'readonly', KeyboardEvent: 'readonly', location: 'readonly', Uint8Array: 'readonly', atob: 'readonly', btoa: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly', OffscreenCanvas: 'readonly', chrome: 'readonly', MediaRecorder: 'readonly', Blob: 'readonly', File: 'readonly', FileReader: 'readonly'
       }
     },
     rules: {

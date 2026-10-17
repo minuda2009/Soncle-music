@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Soncle Companion (unofficial, for YouTube Music)",
+  "short_name": "Soncle Companion",
+  "version": "0.1.0",
+  "description": "Synced lyrics and lyric cards for YouTube Music, with Soncle's look. Unofficial and not affiliated with YouTube or Google. It does not block ads, so artists are paid as usual.",
+  "icons": { "128": "icon.png" },
+  "permissions": ["storage"],
+  "host_permissions": ["https://lrclib.net/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [
+    { "matches": ["https://music.youtube.com/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "web_accessible_resources": [
+    { "resources": ["shared/*", "shared/lyriccard/*"], "matches": ["https://music.youtube.com/*"] }
+  ]
+}

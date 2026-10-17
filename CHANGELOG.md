@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased: Soncle Companion, a browser extension (first slice)
+
+- **`extension/`**: an unofficial extension for music.youtube.com that adds synced lyrics (LRCLIB), a per-song
+  timing nudge and the lyric cards, while leaving the real YouTube Music as it is. It does not block
+  ads, so artists are paid as usual. Build with `node extension/build.mjs`, load `extension/dist` unpacked
+  (see `extension/README.md`). Tested here against a copy of the page structure, not the live site.
+- `parseLrc` moved from `renderer/app.js` to `renderer/lrc.js` so the apps and the extension share one parser.
+
 ## Unreleased: lyric cards for Reels and Stories
 
 - **Lyric card** (new button under the lyrics, desktop and phone). Pick a few lines and Soncle sets
