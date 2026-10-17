@@ -8,6 +8,7 @@
 - **The README is redesigned** around what a visitor needs: what Soncle is, a one-line install table, what makes it different, and a short FAQ. Developer material moved to `docs/DEVELOPING.md`, and bug and idea issue forms were added.
 - **A `Release` workflow** builds the Windows installer, the portable exe and the Android APK and
   publishes them as a normal GitHub release with checksums (`docs/RELEASING.md`).
+  The desktop step runs with `--publish never`: electron-builder otherwise tries to publish by itself in CI and fails without a token.
 
 ## Unreleased: Flow radio now measures the whole radio
 
