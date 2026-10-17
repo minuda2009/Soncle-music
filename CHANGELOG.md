@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased: a clear place to download Soncle
+
+- **The README now leads with a Download table** that points at the latest release: the Windows
+  installer, the portable exe and the Android APK. The rolling test builds are listed separately
+  and marked as such, and the README says where the project is going (the C# rewrite).
+- **The README is redesigned** around what a visitor needs: what Soncle is, a one-line install table, what makes it different, and a short FAQ. Developer material moved to `docs/DEVELOPING.md`, and bug and idea issue forms were added.
+- **A `Release` workflow** builds the Windows installer, the portable exe and the Android APK and
+  publishes them as a normal GitHub release with checksums (`docs/RELEASING.md`).
+
 ## Unreleased: Flow radio now measures the whole radio
 
 - **A Flow radio is analysed in full, not just its first 10 songs.** A radio pool is usually 40–60

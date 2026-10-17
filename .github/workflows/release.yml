@@ -1,0 +1,103 @@
+name: Release
+# Builds the shipping (Electron) Windows installer and portable exe, plus the Android APK, and
+# publishes them as a normal GitHub release, the one the README's Download link points to.
+# Run it from Actions → Release → Run workflow (the tag defaults to v<package.json version>),
+# or push a tag like v1.0.0. A release that already exists for the tag is replaced.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (blank = v + the version in package.json)'
+        required: false
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: soncle-windows
+          path: |
+            dist/Soncle-Setup-*.exe
+            dist/Soncle-Portable-*.exe
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Build the web layer
+        working-directory: mobile
+        run: |
+          npm ci
+          npm run sync
+      - name: Build the APK
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/Soncle-android.apk"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: soncle-android
+          path: Soncle-android.apk
+          if-no-files-found: error
+
+  publish:
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          case "$GITHUB_REF" in refs/tags/*) ;; *) TAG="${INPUT_TAG:-v$VERSION}" ;; esac
+          mv out/Soncle-android.apk "out/Soncle-Android-${TAG#v}.apk" 2>/dev/null || true
+          (cd out && sha256sum Soncle-* > SHA256SUMS.txt)
+          cat > notes.md <<NOTES
+          **Windows** (64-bit): run \`Soncle-Setup-${VERSION}.exe\` to install, or \`Soncle-Portable-${VERSION}.exe\` to run without installing.
+          Builds are not code-signed yet, so SmartScreen may say "Windows protected your PC": choose **More info → Run anyway**.
+
+          **Android**: open \`Soncle-Android-${TAG#v}.apk\` on the phone and allow installing from your browser if asked.
+
+          What changed: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/CHANGELOG.md). \`SHA256SUMS.txt\` has the checksums.
+          Soncle is independent and unofficial; artists are not paid through the app.
+          NOTES
+          sed -i 's/^          //' notes.md
+          gh release delete "$TAG" --yes || true
+          gh release create "$TAG" out/* --target "$GITHUB_SHA" --latest \
+            --title "Soncle ${TAG#v}" --notes-file notes.md
