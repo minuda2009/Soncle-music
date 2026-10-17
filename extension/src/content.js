@@ -5,8 +5,9 @@
   if (window.__soncleCompanion) return;
   window.__soncleCompanion = true;
   const url = (p) => chrome.runtime.getURL(p);
-  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType }, { FORMATS, untimed }] = await Promise.all([
-    import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js'))
+  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType }, { FORMATS, untimed }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }] = await Promise.all([
+    import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js')),
+    import(url('shared/palette.js')), import(url('shared/theme.js'))
   ]);
 
   // ---------- reading the page ----------
@@ -29,6 +30,11 @@
     async set(o) { try { await chrome.storage.local.set({ offsets: o }); } catch { /* storage unavailable */ } }
   };
   let offsets = await store.get();
+  const prefs = {
+    async get() { try { return { ...DEFAULTS, ...((await chrome.storage.local.get('settings')).settings || {}) }; } catch { return { ...DEFAULTS }; } },
+    async set(v) { try { await chrome.storage.local.set({ settings: v }); } catch { /* storage unavailable */ } }
+  };
+  let settings = await prefs.get();
 
   // ---------- UI (shadow DOM so the page's styles cannot reach it) ----------
   const host = document.createElement('div');
@@ -36,41 +42,44 @@
   host.style.cssText = 'position:fixed;z-index:2147483000;inset:auto 16px 96px auto;';
   const root = host.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>
-    :host { all: initial; font-family: "Segoe UI", Roboto, system-ui, sans-serif; color: #e4e1e9; }
+    :host { all: initial; font-family: "Segoe UI", Roboto, system-ui, sans-serif; color: var(--on-surface, #e4e1e9); }
     * { box-sizing: border-box; }
     button { font: inherit; color: inherit; cursor: pointer; }
-    .fab { background: #3b3d63; border: 0; border-radius: 20px; padding: 10px 16px; font-weight: 650; box-shadow: 0 4px 16px #0006; }
-    .panel { position: fixed; right: 16px; bottom: 150px; width: 380px; max-width: calc(100vw - 32px); height: min(560px, 70vh); background: #1b1b21f2; backdrop-filter: blur(18px); border-radius: 24px; box-shadow: 0 12px 48px #000a; display: flex; flex-direction: column; overflow: hidden; }
+    .fab { background: var(--primary-container, #3b3d63); color: var(--on-primary-container, #e4e1e9); border: 0; border-radius: 20px; padding: 10px 16px; font-weight: 650; box-shadow: 0 4px 16px #0006; }
+    .panel { position: fixed; right: 16px; bottom: 150px; width: 380px; max-width: calc(100vw - 32px); height: min(560px, 70vh); background: rgb(var(--surface-rgb, 27 27 33) / .95); backdrop-filter: blur(18px); border-radius: 24px; box-shadow: 0 12px 48px #000a; display: flex; flex-direction: column; overflow: hidden; }
     .panel[hidden], .modal[hidden] { display: none; }
     header { padding: 16px 18px 8px; display: flex; gap: 8px; align-items: flex-start; }
-    header .t { flex: 1; min-width: 0; } header b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } header span { color: #c8c5d0; font-size: 13px; }
+    header .t { flex: 1; min-width: 0; } header b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } header span { color: var(--on-surface-var, #c8c5d0); font-size: 13px; }
     .lines { flex: 1; overflow-y: auto; padding: 8px 18px 24px; scroll-behavior: smooth; }
     .ln { font-size: 22px; font-weight: 700; line-height: 1.3; padding: 7px 0; opacity: .32; cursor: pointer; transition: opacity .3s, transform .3s; transform-origin: left; }
     .ln.on { opacity: 1; transform: scale(1.04); } .ln.past { opacity: .5; }
     .plain .ln { font-size: 16px; font-weight: 500; opacity: .85; cursor: default; }
-    .msg { padding: 28px 18px; color: #c8c5d0; }
-    footer { display: flex; align-items: center; gap: 6px; padding: 8px 14px 14px; font-size: 12px; color: #c8c5d0; flex-wrap: wrap; }
+    .set { padding: 4px 18px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--outline-var, #47464f); }
+    .set[hidden] { display: none; } .set .row label { width: 96px; }
+    .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; } .sw.on { border-color: var(--on-surface, #fff); }
+    .msg { padding: 28px 18px; color: var(--on-surface-var, #c8c5d0); }
+    footer { display: flex; align-items: center; gap: 6px; padding: 8px 14px 14px; font-size: 12px; color: var(--on-surface-var, #c8c5d0); flex-wrap: wrap; }
     footer .sp { flex: 1; }
-    .chip { background: transparent; border: 1px solid #47464f; border-radius: 14px; padding: 4px 10px; font-size: 12px; }
-    .chip:hover, .x:hover { background: #ffffff1a; }
+    .chip { background: transparent; border: 1px solid var(--outline-var, #47464f); border-radius: 14px; padding: 4px 10px; font-size: 12px; }
+    .chip:hover, .x:hover { background: rgb(var(--ov, 255 255 255) / .1); }
     .x { background: none; border: 0; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; }
     .modal { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; }
-    .dlg { background: #2a292f; border-radius: 28px; padding: 22px; width: 640px; max-width: 94vw; max-height: 94vh; overflow: auto; }
+    .dlg { background: var(--surface-3, #2a292f); border-radius: 28px; padding: 22px; width: 640px; max-width: 94vw; max-height: 94vh; overflow: auto; }
     .dlg h3 { margin: 0 0 14px; font-weight: 500; font-size: 22px; }
     .body { display: flex; gap: 16px; align-items: flex-start; } .body canvas { flex: none; background: #000; border-radius: 12px; max-height: 52vh; }
     .opts { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-    .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .row label { width: 84px; color: #c8c5d0; font-size: 13px; }
-    .row .chip.on { background: #3b3d63; border-color: #3b3d63; font-weight: 650; }
-    .pick { max-height: 140px; overflow: auto; border: 1px solid #47464f; border-radius: 12px; }
-    .pick div { padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .pick .on { background: #3b3d63; }
-    .st { margin-top: 10px; font-size: 12.5px; color: #c8c5d0; min-height: 18px; }
+    .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .row label { width: 84px; color: var(--on-surface-var, #c8c5d0); font-size: 13px; }
+    .row .chip.on { background: var(--primary-container, #3b3d63); border-color: var(--primary-container, #3b3d63); font-weight: 650; }
+    .pick { max-height: 140px; overflow: auto; border: 1px solid var(--outline-var, #47464f); border-radius: 12px; }
+    .pick div { padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .pick .on { background: var(--primary-container, #3b3d63); }
+    .st { margin-top: 10px; font-size: 12.5px; color: var(--on-surface-var, #c8c5d0); min-height: 18px; }
     .act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-    .btn { border: 0; border-radius: 20px; padding: 10px 18px; font-weight: 650; background: #3b3d63; } .btn.main { background: #bfc2f0; color: #1b1b21; } .btn:disabled { opacity: .4; pointer-events: none; } .btn.text { background: none; color: #bfc2f0; }
+    .btn { border: 0; border-radius: 20px; padding: 10px 18px; font-weight: 650; background: var(--primary-container, #3b3d63); } .btn.main { background: var(--primary, #bfc2f0); color: var(--on-primary, #1b1b21); } .btn:disabled { opacity: .4; pointer-events: none; } .btn.text { background: none; color: var(--primary, #bfc2f0); }
     @media (max-width: 560px) { .body { flex-direction: column; align-items: center; } .body canvas { max-height: 26vh; } }
   </style>
   <button class="fab" title="Lyrics and lyric cards">Soncle</button>
-  <div class="panel" hidden><header><div class="t"><b class="ti"></b><span class="ar"></span></div><button class="x" title="Close">×</button></header><div class="lines"></div>
-    <footer><span class="src"></span><span class="sp"></span><button class="chip card">Lyric card</button><span class="adj"></span></footer></div>
+  <div class="panel" hidden><header><div class="t"><b class="ti"></b><span class="ar"></span></div><button class="x" title="Close">×</button></header><div class="set" hidden></div><div class="lines"></div>
+    <footer><span class="src"></span><span class="sp"></span><button class="chip look">Style</button><button class="chip card">Lyric card</button><span class="adj"></span></footer></div>
   <div class="modal" hidden></div>`;
   document.documentElement.append(host);
   const fab = $('.fab', root), panel = $('.panel', root), linesBox = $('.lines', root), modal = $('.modal', root);
@@ -81,6 +90,47 @@
     const b = Object.assign(document.createElement('button'), { className: 'chip', textContent: label, title: 'Show lyrics ' + (d < 0 ? 'earlier' : 'later') });
     b.onclick = () => nudge(d); adj.append(b);
   }
+
+  // ---------- Soncle style on the page ----------
+  const styleEl = Object.assign(document.createElement('style'), { id: 'soncle-companion-theme' });
+  let coverHs = null;
+  const dark = matchMedia('(prefers-color-scheme: dark)');
+  function applyStyle() {
+    const mode = resolveMode(settings.mode, dark.matches);
+    let [h, s] = accentHs(settings.accent);
+    if (settings.dynamic && coverHs) [h, s] = [coverHs[0], Math.max(coverHs[1], 25)];
+    for (const [k, v] of Object.entries(themeVars(h, s, mode))) host.style.setProperty(k, v);   // the panel always wears it
+    styleEl.textContent = settings.on ? cssFor(h, s, mode) : '';
+    if (!styleEl.isConnected) (document.head || document.documentElement).append(styleEl);
+  }
+  dark.addEventListener?.('change', applyStyle);
+  async function coverColour(t) {
+    coverHs = null;
+    if (t.thumb) {
+      try {
+        const im = new Image(); im.crossOrigin = 'anonymous'; im.src = t.thumb; await im.decode();
+        const c = document.createElement('canvas'); c.width = c.height = 48;
+        const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0, 48, 48);
+        if (track?.key === t.key) coverHs = dominantHue(x.getImageData(0, 0, 48, 48).data);
+      } catch { /* cover not readable: keep the accent */ }
+    }
+    applyStyle();
+  }
+  const setPref = async (k, v) => { settings = { ...settings, [k]: v }; await prefs.set(settings); applyStyle(); drawSettings(); };
+  const setBox = $('.set', root);
+  function drawSettings() {
+    const mk = (tag, props, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+    const chips = (key, opts) => mk('div', { className: 'row' }, ...opts.map(([v, l]) => mk('button', { className: 'chip' + (settings[key] === v ? ' on' : ''), textContent: l, onclick: () => setPref(key, v) })));
+    const row = (label, ctl) => mk('div', { className: 'row' }, mk('label', { textContent: label }), ctl);
+    const sw = mk('div', { className: 'row' }, ...ACCENTS.map((c) => mk('button', { className: 'sw' + (settings.accent === c ? ' on' : ''), title: c, style: `background:${c}`, onclick: () => setPref('accent', c) })));
+    setBox.replaceChildren(
+      row('Soncle style', chips('on', [[true, 'On'], [false, 'Off']])),
+      row('Theme', chips('mode', [['dark', 'Dark'], ['black', 'Black'], ['light', 'Light'], ['system', 'System']])),
+      row('Accent', sw),
+      row('From the cover', chips('dynamic', [[true, 'On'], [false, 'Off']])));
+  }
+  $('.look', root).onclick = () => { setBox.hidden = !setBox.hidden; };
+  drawSettings(); applyStyle();
 
   // ---------- lyrics ----------
   let track = null, lyr = null, lineEls = [], active = -2, userScroll = 0;
@@ -109,7 +159,7 @@
     linesBox.replaceChildren(...lineEls);
   }
   async function load(t) {
-    track = t; lyr = null; active = -2; $('.ti', root).textContent = t.title; $('.ar', root).textContent = names(t); $('.src', root).textContent = '';
+    track = t; lyr = null; active = -2; coverColour(t); $('.ti', root).textContent = t.title; $('.ar', root).textContent = names(t); $('.src', root).textContent = '';
     show('Looking for lyrics…');
     let res = null;
     try { res = await chrome.runtime.sendMessage({ type: 'lyrics', track: { title: t.title, artists: t.artists, album: t.album, duration: t.duration } }); } catch { /* worker asleep or gone */ }

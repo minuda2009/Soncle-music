@@ -1,6 +1,6 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 // Builds the browser extension into extension/dist/: its own files plus the modules it shares with
-// the apps (renderer/lrc.js, renderer/lyriccard/*), copied unchanged so nothing is forked.
+// the apps (renderer/lrc.js, renderer/palette.js, renderer/lyriccard/*), copied unchanged so nothing is forked.
 //   node extension/build.mjs [outDir]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,6 +18,8 @@ fs.copyFileSync(path.join(here, 'src', 'background.js'), path.join(out, 'backgro
 fs.copyFileSync(path.join(here, 'src', 'content.js'), path.join(out, 'content.js'));
 fs.copyFileSync(path.join(here, 'src', 'lyrics.js'), path.join(out, 'shared', 'lyrics.js'));
 fs.copyFileSync(path.join(root, 'renderer', 'lrc.js'), path.join(out, 'shared', 'lrc.js'));
+fs.copyFileSync(path.join(root, 'renderer', 'palette.js'), path.join(out, 'shared', 'palette.js'));
+fs.copyFileSync(path.join(here, 'src', 'theme.js'), path.join(out, 'shared', 'theme.js'));
 fs.cpSync(path.join(root, 'renderer', 'lyriccard'), path.join(out, 'shared', 'lyriccard'), { recursive: true });
 fs.copyFileSync(path.join(root, 'LICENSE'), path.join(out, 'LICENSE'));
 console.log('extension built in', out);

@@ -85,3 +85,38 @@ test('the shared LRC parser reads plain and enhanced lines and gives each an end
   assert.equal(lines[2].text, '');
   assert.equal(lines[2].end, 16);
 });
+
+// ---- the Soncle style layer (imported from a real build, where palette.js sits beside theme.js) ----
+async function builtTheme() {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'soncle-ext-theme-'));
+  execFileSync('node', [path.join(root, 'extension', 'build.mjs'), out], { stdio: 'pipe' });
+  return import(path.join(out, 'shared', 'theme.js'));
+}
+
+test('the style points the site\'s own variables at Soncle\'s palette, in every mode', async () => {
+  const { cssFor } = await builtTheme();
+  for (const mode of ['dark', 'black', 'light']) {
+    const css = cssFor(250, 40, mode);
+    assert.match(css, /--sc-primary: hsl\(/);
+    assert.match(css, /--ytmusic-general-background-c: var\(--sc-bg\)/);
+    assert.match(css, /--yt-spec-text-primary: var\(--sc-on-surface\)/);
+    assert.match(css, new RegExp(`color-scheme: ${mode === 'light' ? 'light' : 'dark'}`));
+  }
+  assert.match(cssFor(250, 40, 'black'), /--sc-bg: #000;/);
+});
+
+test('the style only recolours and rounds: it never hides, removes or blocks anything', async () => {
+  const { cssFor } = await builtTheme();
+  const css = cssFor(250, 40, 'dark');
+  for (const bad of ['display: none', 'display:none', 'visibility', 'opacity: 0', 'ad-', 'promo', 'pointer-events', 'remove']) assert.ok(!css.includes(bad), bad);
+});
+
+test('mode and accent settings resolve sensibly', async () => {
+  const { resolveMode, accentHs, DEFAULTS, ACCENTS } = await builtTheme();
+  assert.equal(resolveMode('system', true), 'dark');
+  assert.equal(resolveMode('system', false), 'light');
+  assert.equal(resolveMode('black', false), 'black');
+  assert.equal(resolveMode('nonsense', false), 'dark');
+  assert.deepEqual(accentHs('not a colour'), accentHs(ACCENTS[0]));
+  assert.equal(DEFAULTS.on, true);
+});
