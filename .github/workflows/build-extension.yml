@@ -1,0 +1,32 @@
+name: Build extension
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'extension/**'
+      - 'renderer/**'
+      - 'LICENSE'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build extension
+        run: node extension/build.mjs
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist
+          path: extension/dist
