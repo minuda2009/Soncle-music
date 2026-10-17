@@ -1,0 +1,436 @@
+{
+  "note": "youtubei.js 18.1.0 music.search request (generate_session_locally, TZ=UTC, fixed visitor data)",
+  "session": {
+    "lang": "en",
+    "location": "US",
+    "timeZone": "UTC"
+  },
+  "omitted": "context.client.visitorData and the x-goog-visitor-id header (both were \"TEST-VISITOR\"); tests add them back",
+  "requests": [
+    {
+      "query": "daft punk",
+      "type": "all",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "daft punk",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    },
+    {
+      "query": "daft punk",
+      "type": "song",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "daft punk",
+        "params": "EgWKAQIIAQ%3D%3D",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    },
+    {
+      "query": "daft punk",
+      "type": "video",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "daft punk",
+        "params": "EgWKAQIQAQ%3D%3D",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    },
+    {
+      "query": "daft punk",
+      "type": "album",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "daft punk",
+        "params": "EgWKAQIYAQ%3D%3D",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    },
+    {
+      "query": "daft punk",
+      "type": "artist",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "daft punk",
+        "params": "EgWKAQIgAQ%3D%3D",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    },
+    {
+      "query": "daft punk",
+      "type": "playlist",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "daft punk",
+        "params": "EgWKAQIoAQ%3D%3D",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    },
+    {
+      "query": "sigur rós – hoppípolla & \"more\"",
+      "type": "all",
+      "method": "POST",
+      "url": "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json",
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "*",
+        "content-type": "application/json",
+        "origin": "https://www.youtube.com",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "x-youtube-client-name": "67",
+        "x-youtube-client-version": "1.20250219.01.00"
+      },
+      "body": {
+        "query": "sigur rós – hoppípolla & \"more\"",
+        "isAudioOnly": true,
+        "context": {
+          "client": {
+            "hl": "en",
+            "gl": "US",
+            "remoteHost": "",
+            "screenDensityFloat": 1,
+            "screenHeightPoints": 1440,
+            "screenPixelDensity": 1,
+            "screenWidthPoints": 2560,
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20250219.01.00",
+            "osName": "Windows",
+            "osVersion": "10.0",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "platform": "DESKTOP",
+            "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+            "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+            "timeZone": "UTC",
+            "originalUrl": "https://www.youtube.com",
+            "deviceMake": "",
+            "deviceModel": "",
+            "browserName": "Chrome",
+            "browserVersion": "125.0.0.0",
+            "utcOffsetMinutes": 0,
+            "memoryTotalKbytes": "8000000",
+            "mainAppWebInfo": {
+              "graftUrl": "https://www.youtube.com",
+              "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+              "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+              "isWebNativeShareAvailable": true
+            }
+          },
+          "user": {
+            "enableSafetyMode": false,
+            "lockedSafetyMode": false
+          },
+          "request": {
+            "useSsl": true,
+            "internalExperimentFlags": []
+          }
+        }
+      }
+    }
+  ]
+}

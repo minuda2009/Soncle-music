@@ -297,7 +297,7 @@ Its own section markers give the split. Logic goes into view models and services
 | `Soncle.Streams` (M08) | ported (PR #11) | — |
 | `streamproxy.mjs`, `SoncleStreams.java` | replaced by `Soncle.Streams` (pending heads) | — |
 | `renderer/audio/worklets.js` (M04) | ported (`openhands/uno-migration`) | — |
-| `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | — |
+| `renderer/flow/analyze.js`, `flow.js` (M05) | ported (`uno-migration`) | `flow.js` gained `flowCoverage`, `analysisOrder`, `afterFailure`, `holdUnmeasured` and a `pickNext` change (Flow radio analyses the whole pool, `openhands/flow-radio-full-pool`); the ported functions are unchanged and their fixtures still match. Port the new ones with the Flow queue in the C# app |
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
 | `renderer/devices.js` (M09c) | ported (`uno-migration`) | `androidOutputLabel` added after the port (new function; ported part unchanged, fixtures still match) — port it with the Android head |
 | `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
@@ -310,7 +310,8 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/yt.mjs` parse side (M06) | ported (`uno-migration`) | — |
 | `src/botguard.mjs` + potoken minter rules (M07, partial) | ported (`uno-migration`) | the WebView/HTTP side is a head |
 | `src/yt.mjs` stream resolver rules + InnerTube `/player` client (M07) | ported (`uno-migration`; client: `openhands/uno-m07-innertube`, PR pending) | deciphering and `signatureTimestamp` come from a head via `IPlayerScript`; PO-token clients (YTMUSIC, WEB) need the head's minter; not yet tried against real YouTube |
-| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands, PR #16; `--live` resolve/download, PR pending) | live search needs the catalog's InnerTube search; real songs need a WebM reader + Opus decoder |
+| `uno/tools/Soncle.Cli` (M12) | partly ported (offline commands, PR #16; `--live` resolve/download; `--live search`, `openhands/uno-m12-search`, PR pending) | real songs need a WebM reader + Opus decoder; search continuation (`searchMore`) and signed-in catalog calls are not ported |
+| `yt.mjs` `search()` request side + youtubei.js `music.search` (M07) | ported (`openhands/uno-m12-search`, PR pending) | `InnerTubeCatalogClient`; request checked against youtubei.js' own (`fixtures/yt/expected/search-request.json`); not yet tried against real YouTube |
 | `uno/heads/Soncle.Windows` — WinUI 3 head scaffold (issue #21) | started (`windows-preview`; shell only) | `src/main.mjs` shell is the long-term source; nothing ported yet — tray, rail collapse and pages come next |
 | everything else in 12.2 | not started | — |
 

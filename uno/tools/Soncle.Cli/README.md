@@ -6,7 +6,7 @@ normalise → play) before any UI exists.
 ## Two modes
 Say where the data comes from, every time:
 - `--offline`: recorded fixtures, no network (what CI runs).
-- `--live`: real YouTube, anonymous. **Only `resolve` and `download` work live for now.**
+- `--live`: real YouTube, anonymous. `search`, `resolve` and `download` work live; `play` and `analyze` on real songs wait for the decoder (see below).
 
 ## Offline (works end to end)
 Everything runs against **recorded fixtures, with no network**:
@@ -29,6 +29,7 @@ dotnet run --project uno/tools/Soncle.Cli -- --offline play offline-song out.wav
 
 ## Live (`--live`), for you to try on your PC
 ```
+dotnet run --project uno/tools/Soncle.Cli -- --live search daft punk
 dotnet run --project uno/tools/Soncle.Cli -- --live resolve <videoId>
 dotnet run --project uno/tools/Soncle.Cli -- --live download <videoId> song.webm
 ```
@@ -38,10 +39,14 @@ dotnet run --project uno/tools/Soncle.Cli -- --live download <videoId> song.webm
 - It is anonymous. No cookie is read, sent or printed, and stream URLs are never printed.
 - **Not yet tried against real YouTube**, because the build sandbox can't reach it. If `resolve`
   fails, the error lists each client's reason; please paste it.
-- `--live search` says it isn't built yet.
+- `--live search` posts the same request youtubei.js sends for a YouTube Music search (the
+  `WEB_REMIX` client, no cookie) and prints the same rows as `--offline search`. A filtered search
+  that fails or comes back empty is repeated as "all", as the JS app does. It is checked against
+  youtubei.js' own request, not yet against real YouTube; if it fails, please paste the error.
 
 ## What does not work yet
-- **Live search**, and signed-in features. They need the catalog's InnerTube calls.
+- **Signed-in features** and **more results** (the continuation behind "show more"). Search is the
+  only catalog call ported so far.
 - **Web-style stream clients.** They need a head's browser engine to run YouTube's player script
   (`IPlayerScript`) and a PO-token minter.
 - **Decoding real songs.** YouTube streams are WebM/Opus or M4A. The WebM reader and an Opus

@@ -9,6 +9,25 @@
 - **A `Release` workflow** builds the Windows installer, the portable exe and the Android APK and
   publishes them as a normal GitHub release with checksums (`docs/RELEASING.md`).
 
+## Unreleased: Flow radio now measures the whole radio
+
+- **A Flow radio is analysed in full, not just its first 10 songs.** A radio pool is usually 40–60
+  songs; only 10 (in YouTube's order) were ever measured, so Flow arranged the radio knowing a small
+  slice of it. Now the whole pool is measured: the songs lined up for the next slots first, then the
+  rest.
+- **Fast while the radio is new.** For the first songs the measuring runs back to back instead of
+  waiting for idle moments, then drops back to low priority for songs added later. It still never
+  runs during a blend and still pauses on battery.
+- **Late decision.** About 35 s before a song ends, the next one is chosen from everything measured
+  by then. Until the pool is done, an unmeasured song can't win just because YouTube listed it early:
+  every measured song ranks ahead of it.
+- **Honest progress.** The queue's Flow note reads "Learning the radio • 23 of 48 songs" while it
+  works, and says when the next song was chosen from partial data.
+- **A song that fails to measure gets one retry** at the back of the line before it is given up on
+  (it used to be skipped for the whole session).
+- Tests: coverage, measuring order, the retry rule, and a 50-song scenario in which every pick comes
+  from measured songs and the last pick sees the whole pool.
+
 ## Unreleased: the Windows head starts (Soncle Preview)
 
 - **A first Windows build of the C# app** now comes from `uno/heads/Soncle.Windows` and is

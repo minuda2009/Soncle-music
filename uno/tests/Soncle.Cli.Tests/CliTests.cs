@@ -140,6 +140,43 @@ public class CliTests : IDisposable
         Assert.Equal(r, r2);
     }
 
+    /// <summary>Answers every request with the recorded search page and remembers what was asked.</summary>
+    private sealed class SearchStub : HttpMessageHandler
+    {
+        public readonly List<(string Url, string Body, bool HasCookie)> Seen = new();
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Seen.Add((request.RequestUri!.ToString(), request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct), request.Headers.Contains("Cookie")));
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(File.ReadAllText(Fixtures.Path("yt/raw/search-all.json")), System.Text.Encoding.UTF8, "application/json"),
+            };
+        }
+    }
+
+    [Fact]
+    public async Task LiveSearchPrintsTheSameResultsAsTheRecordedPage()
+    {
+        // `--live search` goes through the InnerTube catalog client; here the network is a stub
+        var stub = new SearchStub();
+        using var live = LiveBackend.Create(new HttpClient(stub), new Soncle.YouTube.InnerTube.InnerTubeSession { VisitorData = "v" });
+        var (code, o, e) = await Run(live, "search", "daft", "punk");
+        Assert.Equal(CliApp.Ok, code);
+        Assert.Equal("", e);
+        Assert.Contains("(YouTube (anonymous))", o);
+        Assert.Contains("top:", o);
+        Assert.Contains("Daft Punk", o);
+
+        var (_, offline, _) = await Run(Backend(), "search", "daft", "punk");
+        // the lines after the header are the same rows as the offline backend prints
+        Assert.Equal(offline.Split('\n').Skip(1), o.Split('\n').Skip(1));
+
+        var req = Assert.Single(stub.Seen);
+        Assert.Contains("/youtubei/v1/search", req.Url);
+        Assert.Contains("\"query\":\"daft punk\"", req.Body);
+        Assert.False(req.HasCookie);
+    }
+
     /// <summary>The offline backend with a decoder that refuses everything (a format we cannot decode yet).</summary>
     private sealed class NoDecoder : ICliBackend
     {
