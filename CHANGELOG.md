@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased: lyric cards for Reels and Stories
+
+- **Lyric card** (new button under the lyrics, desktop and phone). Pick a few lines and Soncle sets
+  them as big type in mixed sizes: the key words large, small words quiet. Save it as a picture, or as
+  a short video where the words appear on the song's timing (9:16, 4:5 or 1:1; cover, colour or black
+  background; centred or left). The video is silent on purpose: add the song in Instagram's own music
+  picker so the artist is still paid. Synced lyrics give the video; plain lyrics give the picture only.
+  On the phone the file goes through the share sheet when the system offers one for files, otherwise to
+  the Documents folder. (Checked in headless Chromium at desktop and phone size; the phone's share
+  path still needs a test on a real device.)
+
 ## Unreleased: a clear place to download Soncle
 
 - **The README now leads with a Download table** that points at the latest release: the Windows
