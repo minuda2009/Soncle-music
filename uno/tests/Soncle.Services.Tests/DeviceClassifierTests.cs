@@ -41,4 +41,19 @@ public class DeviceClassifierTests
         }
         Assert.Equal(DeviceClassifier.DeviceInfo.Count, info.EnumerateObject().Count());
     }
+
+    [Fact]
+    public void AndroidOutputLabelMatchesTheJs()
+    {
+        var root = JsonDocument.Parse(File.ReadAllText(Fixtures.Path("devices/classify.json"))).RootElement;
+        var cases = root.GetProperty("androidLabels");
+        Assert.True(cases.GetArrayLength() >= 15);
+        foreach (var c in cases.EnumerateArray())
+        {
+            var input = c.GetProperty("input");
+            string? Str(string k) => input.TryGetProperty(k, out var v) ? v.GetString() : null;
+            var bt = input.TryGetProperty("bluetooth", out var b) && b.GetBoolean();
+            Assert.Equal(c.GetProperty("label").GetString(), DeviceClassifier.AndroidOutputLabel(Str("type"), Str("name"), bt));
+        }
+    }
 }
