@@ -84,6 +84,7 @@ export function contextFor(date = new Date()) {
  *   band        allowed tempo drift from the seed (fraction)
  *   ctx         contextFor() — time-of-day energy target
  *   taste       { artist(name)→0..1 affinity, liked(id)→bool, recent(id)→0..1 how recently played, skips(id)→count }
+ *   holdUnmeasured  rank songs without features behind every measured one (partial-data radios)
  */
 export function planFlow(seed, pool, feat, o = {}) {
   const band = o.band ?? 0.12;
@@ -123,6 +124,9 @@ export function planFlow(seed, pool, feat, o = {}) {
       if (f && famRun >= 2) s -= 0.08;
       if (!f && newRun >= 3 && a === 0) s -= 0.05;
     }
+    // while the pool is only partly measured, an unmeasured song must not win just because YouTube
+    // listed it early: every measured candidate ranks ahead of it (it stays in the tail as a preview)
+    if (o.holdUnmeasured && !cf) s -= 0.6;
     const ar = artistOf(c);
     if (ar && recentArtists.includes(ar)) s -= 0.12;          // don't stack the same artist
     if (c.album?.name && p.album?.name && c.album.name === p.album.name) s -= 0.04;
@@ -149,6 +153,46 @@ export function planFlow(seed, pool, feat, o = {}) {
     prev = pick; prevF = feat(pick.id); step++;
   }
   return out;
+}
+
+/**
+ * How much of a radio's pool has been measured. `failed` is the set of ids given up on.
+ * `done` means nothing is left to measure (everything is known or given up on).
+ */
+export function flowCoverage(pool, feat, failed = new Set()) {
+  let known = 0, gaveUp = 0;
+  for (const t of pool) { if (feat(t.id)) known++; else if (failed.has(t.id)) gaveUp++; }
+  const total = pool.length;
+  return { total, known, failed: gaveUp, pending: total - known - gaveUp, done: known + gaveUp === total, partial: known + gaveUp < total };
+}
+
+/**
+ * Songs still to measure, in the order to measure them: the songs lined up for the next slots first,
+ * then the rest of the pool in YouTube's relevance order. Songs already known or given up on are left out.
+ */
+export function analysisOrder(pool, feat, { next = [], failed = new Set() } = {}) {
+  const todo = (t) => t?.id && !feat(t.id) && !failed.has(t.id);
+  const seen = new Set(), out = [];
+  for (const t of [...next, ...pool]) if (todo(t) && !seen.has(t.id)) { seen.add(t.id); out.push(t); }
+  return out;
+}
+
+/** After a failed measurement: try once more later, then give up (so one bad stream is not a permanent skip). */
+export function afterFailure(tries, id, max = 2) {
+  const n = (tries.get(id) || 0) + 1;
+  tries.set(id, n);
+  return n < max ? 'retry' : 'give-up';
+}
+
+/**
+ * The next song to commit to, chosen from everything measured so far.
+ * `known`/`total` say how much of the pool that choice was made from.
+ */
+export function pickNext(from, rest, feat, o = {}) {
+  const cov = flowCoverage(rest, feat, o.failed);
+  const plan = planFlow(from, rest, feat, { ...o, holdUnmeasured: true });
+  const first = plan[0];
+  return first ? { track: first.track, known: cov.known, total: cov.total, partial: cov.partial, score: first.score, plan } : null;
 }
 
 /** Human-friendly label for chips: "124 BPM · 8A" */
