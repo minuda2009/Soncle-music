@@ -24,7 +24,7 @@ public sealed class LiveBackend : ICliBackend, IDisposable
         _catalog = new InnerTubeCatalogClient(http, session);
         Resolver = resolver;
         Fetcher = new HttpStreamFetcher(http);
-        Decoder = new NoDecoder();
+        Decoder = new OpusDecoder();
     }
 
     public static async Task<LiveBackend> CreateAsync(CancellationToken ct)
@@ -53,10 +53,4 @@ public sealed class LiveBackend : ICliBackend, IDisposable
     public Task<YtSearchPage> SearchAsync(string query, CancellationToken ct) => _catalog.SearchAsync(query, "all", ct);
 
     public void Dispose() => _http.Dispose();
-
-    private sealed class NoDecoder : IAudioDecoder
-    {
-        public bool CanDecode(string mime) => false;
-        public IAudioSource Decode(Stream data, string mime) => throw new NotSupportedException(mime);
-    }
 }

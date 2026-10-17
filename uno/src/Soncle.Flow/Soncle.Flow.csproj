@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Soncle.Core/Soncle.Core.csproj" />
+    <ProjectReference Include="../Soncle.Audio/Soncle.Audio.csproj" />
   </ItemGroup>
 
 </Project>

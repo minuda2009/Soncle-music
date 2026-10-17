@@ -86,6 +86,8 @@ The C# port under `uno/` is not shipped yet; these are used only to build and te
   (Krumhansl, *Cognitive Foundations of Musical Pitch*, 1990). These are published experimental
   values.
 - The Camelot wheel notation is used only as a naming scheme for keys.
+- The C# Opus decoder uses [Concentus](https://github.com/lostromb/concentus) by Logan Stromberg, a managed
+  port of the Xiph.Org Opus codec (BSD-3-Clause).
 
 No lyrics, audio or artwork ship with the app. The app fetches them at runtime from YouTube Music,
 LRCLIB, or the user's own files.

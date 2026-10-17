@@ -55,7 +55,7 @@ public sealed class CliApp
         }
         catch (NotSupportedException e)
         {
-            return Fail(Unsupported, $"can't decode '{e.Message}' yet: the WebM/Opus decoder is not part of this build.");
+            return Fail(Unsupported, $"can't decode '{e.Message}': only WebM/Opus streams can be decoded so far (M4A/AAC is not supported yet).");
         }
         catch (OperationCanceledException) { return Fail(Failed, "cancelled."); }
         catch (Exception e)
@@ -153,9 +153,21 @@ public sealed class CliApp
     // ---------- analyze ----------
     private async Task<int> AnalyzeAsync(string id, CancellationToken ct)
     {
-        var (source, _, _) = await LoadSongAsync(id, ct);
-        if (source is not MemoryPcmSource mem) return Fail(Failed, "this backend's decoder can't give PCM for analysis.");
-        var r = Analyzer.Analyze(mem.ToMono(), mem.SampleRate);
+        var s = await _b.Resolver.ResolveAsync(id, ct: ct);
+        FlowAnalysis? r;
+        if (_b.Decoder is OpusDecoder opus && opus.CanDecode(s.Mime))
+        {
+            // like the app: fetch only ~15 s from the middle of the song (the head plus a few clusters)
+            var pcm = await Sampler.SampleAsync(new StreamRangeReader(_b.Fetcher, s), opus.Codec, ct: ct);
+            if (pcm is null) return Fail(Failed, "could not read a sample from this stream.");
+            r = Analyzer.Analyze(pcm.Value.Span, Sampler.SampleRate);
+        }
+        else
+        {
+            var (source, _, _) = await LoadSongAsync(id, ct);
+            if (source is not MemoryPcmSource mem) return Fail(Failed, "this backend's decoder can't give PCM for analysis.");
+            r = Analyzer.Analyze(mem.ToMono(), mem.SampleRate);
+        }
         _out.WriteLine($"{id} ({_b.Name})");
         if (r is null) { _out.WriteLine("  not enough audio to analyse."); return Ok; }
         _out.WriteLine("  tempo:  " + (r.Bpm is { } bpm ? $"{bpm:0.0} BPM (confidence {r.BpmConf:0.00})" : "unknown"));

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <SoncleIsLibrary>true</SoncleIsLibrary>
+    <RootNamespace>Soncle.Audio.Opus</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Concentus" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Soncle.Audio/Soncle.Audio.csproj" />
+  </ItemGroup>
+
+</Project>

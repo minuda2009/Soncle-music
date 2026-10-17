@@ -116,7 +116,7 @@ public class CliTests : IDisposable
     {
         var (code, _, e) = await Run(new NoDecoder(Backend()), "play", OfflineBackend.SongId, Path.Combine(_dir, "x.wav"));
         Assert.Equal(CliApp.Unsupported, code);
-        Assert.Contains("decoder", e);
+        Assert.Contains("can't decode", e);
     }
 
     [Fact]

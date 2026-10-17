@@ -1,0 +1,375 @@
+{
+  "note": "renderer/flow/webm.js results for fixtures/flow/sample*.webm",
+  "files": {
+    "sample.webm": {
+      "length": 43871,
+      "head": {
+        "ebmlLength": 36,
+        "segDataStart": 48,
+        "partLengths": [
+          37,
+          106
+        ],
+        "cues": [
+          {
+            "t": 0,
+            "pos": 1462
+          },
+          {
+            "t": 0.981,
+            "pos": 6028
+          },
+          {
+            "t": 1.981,
+            "pos": 11190
+          },
+          {
+            "t": 2.981,
+            "pos": 16242
+          },
+          {
+            "t": 3.981,
+            "pos": 21440
+          },
+          {
+            "t": 4.981,
+            "pos": 26843
+          },
+          {
+            "t": 5.981,
+            "pos": 32386
+          },
+          {
+            "t": 6.981,
+            "pos": 38015
+          },
+          {
+            "t": 7.981,
+            "pos": 43631
+          }
+        ],
+        "firstCluster": 1462,
+        "scale": 1000000,
+        "duration": 8008,
+        "truncated": null
+      },
+      "ranges": [
+        {
+          "args": {
+            "total": 43871
+          },
+          "got": {
+            "from": 11190,
+            "to": 43871,
+            "t0": 1.981,
+            "cutAtCluster": false
+          }
+        },
+        {
+          "args": {
+            "total": 43871,
+            "atFrac": 0.35,
+            "secs": 3
+          },
+          "got": {
+            "from": 11190,
+            "to": 26843,
+            "t0": 1.981,
+            "cutAtCluster": false
+          }
+        },
+        {
+          "args": {
+            "total": 43871,
+            "atFrac": 0.8,
+            "secs": 2
+          },
+          "got": {
+            "from": 32386,
+            "to": 43631,
+            "t0": 5.981,
+            "cutAtCluster": false
+          }
+        },
+        {
+          "args": {
+            "total": 43871,
+            "atFrac": 0,
+            "secs": 30
+          },
+          "got": {
+            "from": 1462,
+            "to": 43871,
+            "t0": 0,
+            "cutAtCluster": false
+          }
+        },
+        {
+          "args": {
+            "total": "Infinity",
+            "atFrac": 0.5,
+            "secs": 2
+          },
+          "got": {
+            "from": 21440,
+            "to": 32386,
+            "t0": 3.981,
+            "cutAtCluster": false
+          }
+        }
+      ],
+      "slices": [
+        {
+          "from": 1462,
+          "to": 43871,
+          "keptLength": 42409
+        },
+        {
+          "from": 1462,
+          "to": 43870,
+          "keptLength": 42169
+        },
+        {
+          "from": 1462,
+          "to": 38871,
+          "keptLength": 36553
+        },
+        {
+          "from": 1462,
+          "to": 1562,
+          "keptLength": 0
+        },
+        {
+          "from": 1462,
+          "to": 1463,
+          "keptLength": 0
+        }
+      ],
+      "rebuilt": {
+        "length": 42600,
+        "sha256": "f5b67d23099e7cb448727a8528f28f28afd0d05b0769a3099d8f70be0181df62"
+      },
+      "truncatedHeads": [
+        {
+          "n": 20,
+          "head": null
+        },
+        {
+          "n": 60,
+          "head": null
+        },
+        {
+          "n": 100,
+          "head": null
+        },
+        {
+          "n": 150,
+          "head": null
+        },
+        {
+          "n": 1461,
+          "head": {
+            "ebmlLength": 36,
+            "segDataStart": 48,
+            "partLengths": [
+              37,
+              106
+            ],
+            "cues": [
+              {
+                "t": 0,
+                "pos": 1462
+              },
+              {
+                "t": 0.981,
+                "pos": 6028
+              },
+              {
+                "t": 1.981,
+                "pos": 11190
+              },
+              {
+                "t": 2.981,
+                "pos": 16242
+              },
+              {
+                "t": 3.981,
+                "pos": 21440
+              },
+              {
+                "t": 4.981,
+                "pos": 26843
+              },
+              {
+                "t": 5.981,
+                "pos": 32386
+              },
+              {
+                "t": 6.981,
+                "pos": 38015
+              },
+              {
+                "t": 7.981,
+                "pos": 43631
+              }
+            ],
+            "firstCluster": -1,
+            "scale": 1000000,
+            "duration": 8008,
+            "truncated": 236
+          }
+        }
+      ]
+    },
+    "sample-tailcues.webm": {
+      "length": 43014,
+      "head": {
+        "ebmlLength": 36,
+        "segDataStart": 48,
+        "partLengths": [
+          37,
+          106
+        ],
+        "cues": null,
+        "firstCluster": 438,
+        "scale": 1000000,
+        "duration": 8008,
+        "truncated": null
+      },
+      "ranges": [
+        {
+          "args": {
+            "total": 43014
+          },
+          "got": {
+            "from": 438,
+            "to": 43014,
+            "t0": 0,
+            "cutAtCluster": true
+          }
+        },
+        {
+          "args": {
+            "total": 43014,
+            "atFrac": 0.35,
+            "secs": 3
+          },
+          "got": {
+            "from": 438,
+            "to": 43014,
+            "t0": 0,
+            "cutAtCluster": true
+          }
+        },
+        {
+          "args": {
+            "total": 43014,
+            "atFrac": 0.8,
+            "secs": 2
+          },
+          "got": {
+            "from": 438,
+            "to": 43014,
+            "t0": 0,
+            "cutAtCluster": true
+          }
+        },
+        {
+          "args": {
+            "total": 43014,
+            "atFrac": 0,
+            "secs": 30
+          },
+          "got": {
+            "from": 438,
+            "to": 43014,
+            "t0": 0,
+            "cutAtCluster": true
+          }
+        },
+        {
+          "args": {
+            "total": "Infinity",
+            "atFrac": 0.5,
+            "secs": 2
+          },
+          "got": {
+            "from": 438,
+            "to": 600438,
+            "t0": 0,
+            "cutAtCluster": true
+          }
+        }
+      ],
+      "slices": [
+        {
+          "from": 438,
+          "to": 43014,
+          "keptLength": 42409
+        },
+        {
+          "from": 438,
+          "to": 43013,
+          "keptLength": 42409
+        },
+        {
+          "from": 438,
+          "to": 38014,
+          "keptLength": 36553
+        },
+        {
+          "from": 438,
+          "to": 538,
+          "keptLength": 0
+        },
+        {
+          "from": 438,
+          "to": 439,
+          "keptLength": 0
+        }
+      ],
+      "rebuilt": {
+        "length": 42600,
+        "sha256": "f5b67d23099e7cb448727a8528f28f28afd0d05b0769a3099d8f70be0181df62"
+      },
+      "truncatedHeads": [
+        {
+          "n": 20,
+          "head": null
+        },
+        {
+          "n": 60,
+          "head": null
+        },
+        {
+          "n": 100,
+          "head": null
+        },
+        {
+          "n": 150,
+          "head": null
+        },
+        {
+          "n": 437,
+          "head": {
+            "ebmlLength": 36,
+            "segDataStart": 48,
+            "partLengths": [
+              37,
+              106
+            ],
+            "cues": null,
+            "firstCluster": -1,
+            "scale": 1000000,
+            "duration": 8008,
+            "truncated": 307544935
+          }
+        }
+      ]
+    }
+  },
+  "notWebm": {
+    "garbage": null,
+    "empty": null
+  }
+}
