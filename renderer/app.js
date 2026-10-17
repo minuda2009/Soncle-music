@@ -1960,6 +1960,7 @@ function lyricsTools(source) {
   const btn = (label, title, fn) => h('button', { class: 'ly-btn', title, onclick: fn }, label);
   return h('div', { class: 'ly-tools' },
     h('span', { class: 'lyrics-src' }, source ? 'Lyrics from ' + source : ''),
+    cardButton(),
     h('div', { class: 'ly-adj', title: 'Adjust lyrics timing for this song ( [ and ] keys )' },
       icon('ff'),
       btn('−0.5', 'Show lyrics 0.5 s earlier', () => adjustLyricsOffset(-0.5)),
@@ -1968,6 +1969,80 @@ function lyricsTools(source) {
       btn('+0.1', 'Later ( ] )', () => adjustLyricsOffset(0.1)),
       btn('+0.5', 'Show lyrics 0.5 s later', () => adjustLyricsOffset(0.5)),
       btLyricsDelay() ? h('span', { class: 'bt-tag', title: 'Bluetooth delay compensation is applied' }, icon('bluetooth'), `+${Math.round(btLyricsDelay() * 1000)}ms`) : null));
+}
+
+// ---- lyric card: words in mixed sizes as an image or a silent video (for Reels and Stories) ----
+const cardButton = () => h('button', { class: 'ly-btn ly-share', title: 'Make a lyric card: an image or a short video of the words', onclick: () => lyricCardDialog() }, icon('share'), 'Lyric card');
+async function lyricCardDialog() {
+  const L = P.lyrics, t = P.current;
+  const synced = !!L?.lines?.length;
+  const rows = synced ? L.lines.filter((l) => l.text) : (L?.plain || '').split(/\n/).map((x) => x.trim()).filter(Boolean).map((text) => ({ text }));
+  if (!t || !rows.length) return toast('No lyrics to turn into a card');
+  const [{ createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType }, { FORMATS, untimed }] = await Promise.all([import('./lyriccard/draw.js'), import('./lyriccard/export.js'), import('./lyriccard/layout.js')]);
+  const cur = synced ? L.lines[Math.max(0, LY?.active ?? 0)] : null;
+  const st = { start: Math.max(0, rows.indexOf(cur)), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true };
+  const cover = await new Promise((res) => { const u = thumbOf(t); if (!u) return res(null); const im = new Image(); im.crossOrigin = 'anonymous'; im.referrerPolicy = 'no-referrer'; im.onload = () => res(im); im.onerror = () => res(null); im.src = u; });
+  const col = await extractColor(thumbOf(t)).catch(() => null);
+  const MAX_S = 60, canRecord = synced && !!videoType();
+  const measureCtx = document.createElement('canvas').getContext('2d');
+  const pv = document.createElement('canvas'), pctx = pv.getContext('2d');
+  let card = null, t0 = performance.now(), busy = null;
+
+  const picked = () => rows.slice(st.start, st.start + st.count);
+  const still = () => createCard({ lines: synced ? picked() : untimed(picked().map((r) => r.text)), still: true, ...base() }, measureCtx);
+  const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: t.title, artist: artistNames(t), cover, hue: col?.[0] ?? 235, sat: Math.max(40, col?.[1] ?? 55) });
+  const status = h('div', { class: 'lc-status' });
+  const saveImg = h('button', { class: 'btn tonal', onclick: () => saveImage() }, 'Save image');
+  const saveVid = h('button', { class: 'btn filled', onclick: () => saveVideo() }, 'Save video');
+  const rebuild = () => {
+    if (busy) return;
+    const fmt = FORMATS[st.format], k = 0.2;
+    pv.width = Math.round(fmt.w * k); pv.height = Math.round(fmt.h * k);
+    card = synced ? createCard({ lines: picked(), ...base() }, measureCtx) : still();
+    t0 = performance.now();
+    const tooLong = synced && card.duration > MAX_S;
+    saveVid.hidden = !canRecord;
+    saveVid.disabled = tooLong || !card.duration;
+    status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This device cannot record video; the image still works.' : tooLong ? `That is ${Math.round(card.duration)} s: pick fewer lines (up to ${MAX_S} s).` : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in Instagram’s music picker so the artist is still paid.`;
+  };
+  const loop = () => {
+    if (!pv.isConnected || $('#modal').hidden) return;
+    if (card && !busy) { const d = card.duration || 1; card.render(pctx, synced ? ((performance.now() - t0) / 1000) % (d + 1.2) : 0, 0.2); }
+    requestAnimationFrame(loop);
+  };
+  const fileName = (ext) => `${(t.title || 'lyrics').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 50) || 'lyrics'}-lyrics.${ext}`;
+  const finish = (how) => toast(how === 'shared' ? 'Shared' : how === 'saved-documents' ? 'Saved to your Documents folder' : how === 'downloaded' ? 'Saved' : '');
+  async function saveImage() {
+    try { finish(await saveBlob(await renderPng(still()), fileName('png'))); } catch { toast('Could not save the image'); }
+  }
+  async function saveVideo() {
+    if (busy) { busy.abort(); return; }
+    busy = new AbortController();
+    saveImg.disabled = true; saveVid.textContent = 'Cancel';
+    try {
+      const blob = await recordVideo(card, { signal: busy.signal, onProgress: (p) => { status.textContent = `Recording ${Math.round(p * 100)}%…`; } });
+      finish(await saveBlob(blob, fileName(blob.type.includes('mp4') ? 'mp4' : 'webm')));
+    } catch (e) { if (e.message !== 'Cancelled') toast('Could not make the video'); }
+    busy = null; saveImg.disabled = false; saveVid.textContent = 'Save video'; rebuild();
+  }
+
+  const chips = (key, options, after) => { const box = h('div', { class: 'seg' }); const draw = () => box.replaceChildren(...options.map(([v, label]) => h('button', { class: st[key] === v ? 'on' : '', onclick: () => { if (busy) return; st[key] = v; draw(); after?.(); } }, label))); draw(); return box; };
+  const list = h('div', { class: 'lc-lines' });
+  const drawList = () => list.replaceChildren(...rows.map((r, i) => h('div', { class: 'lc-line' + (i >= st.start && i < st.start + st.count ? ' on' : ''), onclick: () => { if (busy) return; st.start = i; drawList(); rebuild(); } }, r.text)));
+  const count = h('output', null, String(st.count));
+  const step = (d) => { if (busy) return; st.count = Math.max(1, Math.min(10, st.count + d)); count.textContent = st.count; drawList(); rebuild(); };
+  drawList(); rebuild();
+  modal(h('div', { class: 'dialog lc-dialog' }, h('h3', null, 'Lyric card'),
+    h('div', { class: 'lc-body' }, pv, h('div', { class: 'lc-opts' },
+      h('div', { class: 'lc-row' }, h('label', null, 'Lines'), h('button', { class: 'icon-btn', title: 'Fewer lines', onclick: () => step(-1) }, icon('minus')), count, h('button', { class: 'icon-btn', title: 'More lines', onclick: () => step(1) }, icon('add'))),
+      list,
+      h('div', { class: 'lc-row' }, h('label', null, 'Size'), chips('format', Object.values(FORMATS).map((f) => [f.id, f.id === 'story' ? '9:16' : f.id === 'portrait' ? '4:5' : '1:1']), rebuild)),
+      h('div', { class: 'lc-row' }, h('label', null, 'Background'), chips('background', BACKGROUNDS, rebuild)),
+      h('div', { class: 'lc-row' }, h('label', null, 'Text'), chips('align', [['center', 'Centre'], ['left', 'Left']], rebuild)),
+      h('div', { class: 'lc-row' }, h('label', null, 'Song name'), chips('showTitle', [[true, 'Show'], [false, 'Hide']], rebuild)))),
+    status,
+    h('div', { class: 'd-actions' }, h('button', { class: 'text-btn', onclick: () => { busy?.abort(); closeModal(); } }, 'Close'), saveImg, saveVid)));
+  requestAnimationFrame(loop);
 }
 
 // ---- mini player ----
@@ -3118,7 +3193,7 @@ function renderLyrics() {
   if (!L || L.loading) return panel.replaceChildren(loading());
   if (L.none || (!L.lines?.length && !L.plain)) return panel.replaceChildren(h('div', { class: 'lyrics-empty' }, icon('lyrics'), h('h3', null, 'No lyrics found'), h('div', null, 'Lyrics for this song aren’t available.')));
   if (!L.lines?.length) {
-    panel.replaceChildren(h('div', { class: 'lyrics plain unsynced' }, L.plain.split(/\n/).map((x) => h('div', { class: 'lyric-line' }, x || ' '))), h('div', { class: 'lyrics-src' }, L.source ? 'Lyrics from ' + L.source : ''));
+    panel.replaceChildren(h('div', { class: 'lyrics plain unsynced' }, L.plain.split(/\n/).map((x) => h('div', { class: 'lyric-line' }, x || ' '))), h('div', { class: 'ly-tools' }, h('span', { class: 'lyrics-src' }, L.source ? 'Lyrics from ' + L.source : ''), cardButton()));
     return;
   }
   const stage = h('div', { class: 'ly-stage' + (S().lyricsGlow ? ' glow' : '') });

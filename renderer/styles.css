@@ -967,3 +967,20 @@ body.mac .wl-skip { right: 20px; }
 
 .dialog.licences { width: min(760px, 92vw); }
 .lic-text { max-height: 55vh; overflow: auto; white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, Consolas, monospace; background: rgb(var(--ov) / .05); padding: 14px 16px; border-radius: 14px; user-select: text; }
+
+/* lyric card dialog */
+.dialog.lc-dialog { width: 640px; }
+.lc-body { display: flex; gap: 18px; align-items: flex-start; }
+.lc-body canvas { flex: none; border-radius: 12px; background: #000; max-height: 56vh; width: auto; }
+.lc-opts { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.lc-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lc-row label { width: 84px; color: var(--on-surface-var); font-size: 13px; }
+.lc-row output { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.lc-lines { max-height: 150px; overflow: auto; border: 1px solid var(--outline-var); border-radius: 12px; }
+.lc-line { padding: 6px 12px; cursor: pointer; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-line:hover { background: rgb(var(--ov) / .07); }
+.lc-line.on { background: var(--primary-container); color: var(--on-primary-container); }
+.lc-status { margin-top: 12px; font-size: 12.5px; color: var(--on-surface-var); min-height: 18px; }
+.ly-share { display: inline-flex; align-items: center; gap: 6px; }
+.ly-share .ic { width: 16px; height: 16px; }
+@media (max-width: 560px) { .lc-body { flex-direction: column; align-items: center; } .lc-body canvas { max-height: 30vh; } }
