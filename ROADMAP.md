@@ -163,10 +163,9 @@ An unofficial extension that brings some Soncle features to the real YouTube Mus
 people who want them but also want artists paid (no ad blocking, no stream access). It lives in
 `extension/` and shares code with the apps (`renderer/lrc.js`, `renderer/lyriccard/`).
 
-- **Done (0.1):** synced lyrics from LRCLIB, timing nudge, lyric cards (picture and silent video).
-- **Next:** check the page selectors against the live site, Soncle's colours from the cover, equaliser and
-  loudness through Web Audio on the page's own player, keyboard shortcuts, a Firefox build, store listing
-  text that says plainly it is unofficial.
+- **Done (0.1–0.3):** synced lyrics, lyric cards, deeper Soncle theming, feature panel with Coming soon.
+- **Next:** equaliser and loudness through Web Audio on the page's own player, keyboard shortcuts, Firefox
+  build, store listing that says it is unofficial and **strictly not an ad blocker**.
 - **Not in scope:** anything that fetches, decodes or saves the stream (Flow analysis, downloads), and ad blocking.
 
 ## Android next: sound per output (phone-specific EQ)

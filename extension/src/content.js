@@ -1,6 +1,6 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
-// Runs on music.youtube.com. Adds a lyrics panel and lyric cards next to the page's own player. It
-// only reads the song title and the player's clock; it does not touch the audio or the ads.
+// Runs on music.youtube.com. Adds Soncle features next to the real player.
+// Strictly not an ad blocker: never hides ads, promos or pays walls; never touches the stream.
 (async () => {
   if (window.__soncleCompanion) return;
   window.__soncleCompanion = true;
@@ -54,8 +54,12 @@
     .ln { font-size: 22px; font-weight: 700; line-height: 1.3; padding: 7px 0; opacity: .32; cursor: pointer; transition: opacity .3s, transform .3s; transform-origin: left; }
     .ln.on { opacity: 1; transform: scale(1.04); } .ln.past { opacity: .5; }
     .plain .ln { font-size: 16px; font-weight: 500; opacity: .85; cursor: default; }
-    .set { padding: 4px 18px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--outline-var, #47464f); }
-    .set[hidden] { display: none; } .set .row label { width: 96px; }
+    .set { padding: 4px 18px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--outline-var, #47464f); max-height: 42%; overflow-y: auto; }
+    .set[hidden] { display: none; } .set .row label { width: 110px; flex-shrink: 0; }
+    .set .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .set .hint { font-size: 11px; color: var(--on-surface-var, #c8c5d0); line-height: 1.35; padding: 2px 0 6px; }
+    .set .soon { opacity: .55; pointer-events: none; }
+    .set .tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--primary, #bfc2f0); border: 1px solid var(--outline-var, #47464f); border-radius: 999px; padding: 2px 8px; }
     .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; } .sw.on { border-color: var(--on-surface, #fff); }
     .msg { padding: 28px 18px; color: var(--on-surface-var, #c8c5d0); }
     footer { display: flex; align-items: center; gap: 6px; padding: 8px 14px 14px; font-size: 12px; color: var(--on-surface-var, #c8c5d0); flex-wrap: wrap; }
@@ -121,13 +125,28 @@
   function drawSettings() {
     const mk = (tag, props, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
     const chips = (key, opts) => mk('div', { className: 'row' }, ...opts.map(([v, l]) => mk('button', { className: 'chip' + (settings[key] === v ? ' on' : ''), textContent: l, onclick: () => setPref(key, v) })));
-    const row = (label, ctl) => mk('div', { className: 'row' }, mk('label', { textContent: label }), ctl);
+    const row = (label, ctl, soon = false) => {
+      const r = mk('div', { className: 'row' + (soon ? ' soon' : '') }, mk('label', { textContent: label }), ctl);
+      if (soon) r.append(mk('span', { className: 'tag', textContent: 'Coming soon' }));
+      return r;
+    };
     const sw = mk('div', { className: 'row' }, ...ACCENTS.map((c) => mk('button', { className: 'sw' + (settings.accent === c ? ' on' : ''), title: c, style: `background:${c}`, onclick: () => setPref('accent', c) })));
+    const dead = mk('div', { className: 'row' }, mk('button', { className: 'chip', textContent: 'On', disabled: true }), mk('button', { className: 'chip', textContent: 'Off', disabled: true }));
     setBox.replaceChildren(
+      mk('div', { className: 'hint', textContent: 'Unofficial companion for the real YouTube Music. Strictly not an ad blocker — ads stay; artists are paid as usual.' }),
       row('Soncle style', chips('on', [[true, 'On'], [false, 'Off']])),
       row('Theme', chips('mode', [['dark', 'Dark'], ['black', 'Black'], ['light', 'Light'], ['system', 'System']])),
       row('Accent', sw),
-      row('From the cover', chips('dynamic', [[true, 'On'], [false, 'Off']])));
+      row('From the cover', chips('dynamic', [[true, 'On'], [false, 'Off']])),
+      row('Synced lyrics', mk('div', { className: 'row' }, mk('button', { className: 'chip on', textContent: 'On', disabled: true })), false),
+      row('Lyric cards', mk('div', { className: 'row' }, mk('button', { className: 'chip on', textContent: 'On', disabled: true })), false),
+      row('Equaliser', dead, true),
+      row('Loudness (LUFS)', dead, true),
+      row('True-peak limiter', dead, true),
+      row('Gapless / crossfade', dead, true),
+      row('AutoEq headphones', dead, true),
+      row('Keyboard shortcuts', dead, true),
+      row('Flow radio', dead, true));
   }
   $('.look', root).onclick = () => { setBox.hidden = !setBox.hidden; };
   drawSettings(); applyStyle();

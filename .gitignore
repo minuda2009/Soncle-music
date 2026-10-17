@@ -4,3 +4,4 @@ dist/
 .DS_Store
 upstream/REPORT.md
 Soncle-core-source.md
+extension/dist/

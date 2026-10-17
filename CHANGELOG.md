@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased: Companion extension 0.3 — deeper look + feature panel
+
+- **Deeper Soncle theming** of music.youtube.com (more YTM / yt-spec variables, nav, player bar, cards, chips).
+- **Feature panel** lists every Soncle capability; unfinished items show **Coming soon**.
+- Stated clearly: the extension is **strictly not an ad blocker** — ads stay.
+- Version **0.3.0**.
+
 ## Unreleased: Soncle's look for YouTube Music (extension 0.2)
 
 - The extension recolours music.youtube.com with Soncle's palette: dark, black, light or system theme, nine
