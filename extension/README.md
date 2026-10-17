@@ -1,17 +1,16 @@
 # Soncle Companion (browser extension)
 
-Unofficial. Not affiliated with YouTube or Google. It does **not** block ads, so artists are paid
+Unofficial. Not affiliated with YouTube or Google. It is **strictly not an ad blocker**. It does **not** hide or remove ads, so artists are paid
 as usual: this is for people who want some of Soncle's features while staying on the real YouTube Music.
 
 Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later. Written with AI coding agents.
 
-## What it does (version 0.2)
+## What it does (version 0.3.0)
 
-- **Soncle's look on YouTube Music**: the page is recoloured with the same palette as the apps (dark,
-  black, light or system; nine accents; or the colours of the cover art, changing with each song), with
-  softer rounded cards and covers. It works by pointing the site's own colour variables at Soncle's, so it
-  keeps working when the site's markup changes. It only recolours and rounds: it hides nothing and blocks
-  nothing, ads included. Switch it off or change it under **Style** in the panel.
+- **Soncle's look on YouTube Music (deeper)**: full-page palette from the apps (dark / black / light /
+  system; nine accents; or cover-art colours that change per song). Maps a wider set of YTM and yt-spec
+  variables, softens nav, player bar, cards, chips, menus and the side guide, and keeps Soncle's font
+  stack. Still **only** recolors and rounds — ads and promos stay visible. Toggle under **Style**.
 
 - **Synced lyrics** next to the player, from [LRCLIB](https://lrclib.net), highlighted line by line from the
   page's own player clock. Click a line to jump to it. Per-song timing nudge (−0.5 / −0.1 / +0.1 / +0.5 s).
@@ -32,6 +31,21 @@ Then open `chrome://extensions`, switch on **Developer mode**, choose **Load unp
 `extension/dist`. Open https://music.youtube.com, play a song and press the **Soncle** button at the
 bottom right.
 
+## Features
+
+| Feature | Status |
+|---|---|
+| Soncle look (theme, accent, cover colours) | **On** |
+| Synced lyrics (LRCLIB) + timing nudge | **On** |
+| Lyric cards (image / silent video) | **On** |
+| Equaliser | Coming soon |
+| Loudness (LUFS) | Coming soon |
+| True-peak limiter | Coming soon |
+| Gapless / crossfade | Coming soon |
+| AutoEq headphones | Coming soon |
+| Keyboard shortcuts | Coming soon |
+| Flow radio | Coming soon |
+
 ## Honest status
 
 - The page script finds the song through YouTube Music's own elements (`ytmusic-player-bar`, `.title`,
@@ -40,8 +54,8 @@ bottom right.
   button shows "No lyrics" on every song, those selectors are the first thing to check.
 - Not on any extension store yet. Firefox is untested.
 - The style rules use the colour variables public YouTube Music themes are known to use (general background a/b/c, brand background, player bar, text colours) and a few element names; checked here on a mock page, not the live site. Some surfaces may keep their own colours until the variables are checked against the real page.
-- Planned next: a full Now Playing page in Soncle's layout, equaliser and loudness through Web Audio on the page's own
-  player, keyboard shortcuts.
+- Planned next: equaliser and loudness through Web Audio on the page's own player, keyboard shortcuts,
+  a denser Now Playing layout if the live site still leaves hard-coded surfaces.
 
 ## How it shares code
 
