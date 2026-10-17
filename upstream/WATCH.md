@@ -1,4 +1,4 @@
-# Upstream watch · 2026-10-12
+# Upstream watch · 2026-10-17
 
 New releases and relevant changes in projects Soncle learns from. Nothing here is applied automatically.
 
@@ -10,22 +10,21 @@ _YouTube Music desktop app (Electron; formerly th-ch/youtube-music). Same platfo
 ## youtubei.js (LuanRT/YouTube.js)
 _The library Soncle uses for every YouTube request. Most 'YouTube changed something' fixes land here first (Dependabot also opens the version bump)._
 
-- Nothing relevant since last week.
+
+Relevant commits (6 of 19):
+- [`cb4a44e`](https://github.com/LuanRT/YouTube.js/commit/cb4a44e508cbc04d30cb9b774da86fa884917743) fix(LockupView): `duration` getter not working with very long videos (#1306) _(fix)_
+- [`02c5c8d`](https://github.com/LuanRT/YouTube.js/commit/02c5c8d4c48fd9d9e87be6337ae99833e9a9c879) fix(parser): Add `ToggleableListItemView` class (#1282) _(fix)_
+- [`710900a`](https://github.com/LuanRT/YouTube.js/commit/710900af6c76f469d4be522e5e19cd1debd6baf6) fix: Handle missing session config and import `Text` in `ToggleFormField` (#1276) _(fix)_
+- [`f268ba1`](https://github.com/LuanRT/YouTube.js/commit/f268ba1f57995cc3bc751af2c824a0b87b917a68) fix(LockupMetadataView): Handle missing titles (#1278) _(fix)_
+- [`935364f`](https://github.com/LuanRT/YouTube.js/commit/935364fed3fd042213231d08bd544fa6f42d2165) fix(Video): `is_live` getter not working (#1291) _(fix)_
+- [`ae4e655`](https://github.com/LuanRT/YouTube.js/commit/ae4e655587f839bf732ff2ddc93cc4258de79c7c) fix(LockupView): Parser error when `content_type` is `undefined` (#1297) _(fix)_
 
 ## yt-dlp (yt-dlp/yt-dlp)
 _Early warning: yt-dlp usually reacts within hours when YouTube changes stream clients, client versions or PO token rules._
 
-
-Relevant commits (2 of 2):
-- [`8973412`](https://github.com/yt-dlp/yt-dlp/commit/897341241f2bfb2439fe0367f4c7c9ccd29a3828) [ie/youtube] Set `tv_samsung` as a default client (#17805) _(client)_
-- [`817450d`](https://github.com/yt-dlp/yt-dlp/commit/817450d28d72e12c9fbac6b4c435ee97e68083ef) [ie/youtube] Add `tv_samsung` client  (#17723) _(client)_
+- Nothing relevant since last week.
 
 ## metrolist (MetrolistGroup/Metrolist)
 _Releases and fix commits of the upstream Android app (file-level porting is handled by tools/upstream-sync.mjs)._
 
-
-Relevant commits (4 of 4):
-- [`76fa5a7`](https://github.com/MetrolistGroup/Metrolist/commit/76fa5a78b5110674442884b6f21c0cef51cdb782) fix(innertube): restore artist, owner and byline parsing regressions _(fix)_
-- [`ec8fa56`](https://github.com/MetrolistGroup/Metrolist/commit/ec8fa564e5ea28ab03d3027714205c9755428c09) fix(playback): let external controllers resume after task clear _(fix, playback)_
-- [`ecdae06`](https://github.com/MetrolistGroup/Metrolist/commit/ecdae06c89f12df1c6b51e209886b39062d77d98) fix(sync): propagate YouTube removals without dropping local-only items _(fix)_
-- [`b989947`](https://github.com/MetrolistGroup/Metrolist/commit/b98994745d2a995b92b175f3b3734f5ff8331844) fix(playback): bump InnerTubeX to v0.8.4 (#4436) _(fix, playback)_
+- Nothing relevant since last week.
