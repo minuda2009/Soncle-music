@@ -10,6 +10,8 @@ public sealed class OpusDecoder : IAudioDecoder
 {
     private readonly IOpusDecoderFactory _codec;
 
+    internal IOpusDecoderFactory Codec => _codec;
+
     public OpusDecoder() : this(new ConcentusOpusDecoderFactory()) { }
     public OpusDecoder(IOpusDecoderFactory codec) => _codec = codec;
 
