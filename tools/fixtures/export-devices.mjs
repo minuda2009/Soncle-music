@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { classifyOutput, DEVICE_INFO } from '../../renderer/devices.js';
+import { classifyOutput, androidOutputLabel, DEVICE_INFO } from '../../renderer/devices.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, '..', '..', 'fixtures', 'devices');
@@ -29,6 +29,16 @@ const cases = [
   ['Bluetooth audio (Nothing Ear (a) Stereo)', []],
 ];
 
+// androidOutputLabel({ type, name, bluetooth }): the label the phone builds for its output device.
+const androidCases = [
+  { type: 'speaker' }, { type: 'speaker', name: 'Pixel 8' }, { type: 'wired', name: 'Earpods' },
+  { type: 'usb', name: 'FiiO KA3' }, { type: 'usb' }, { type: 'usb', name: '   ' }, { type: 'hdmi', name: 'LG TV' },
+  { type: 'car', name: 'Toyota' }, { type: 'car' }, { type: 'bluetooth', name: 'Galaxy Buds2' }, { type: 'bluetooth' },
+  { type: 'other', bluetooth: true, name: 'WH-1000XM5' }, { type: 'other', name: 'Mystery DAC' }, { type: 'other' }, {}, { bluetooth: true },
+  { type: 'bluetooth', name: '  padded  ' }
+];
+const androidLabels = androidCases.map((input) => ({ input, label: androidOutputLabel(input) }));
+
 const results = cases.map(([label, bt]) => ({ label, bt, result: classifyOutput(label, bt) }));
-fs.writeFileSync(path.join(out, 'classify.json'), JSON.stringify({ cases: results, deviceInfo: DEVICE_INFO }, null, 1) + '\n');
+fs.writeFileSync(path.join(out, 'classify.json'), JSON.stringify({ cases: results, deviceInfo: DEVICE_INFO, androidLabels }, null, 1) + '\n');
 console.log('wrote fixtures/devices');

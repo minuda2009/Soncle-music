@@ -222,5 +222,118 @@
    "icon": "speaker",
    "preset": "Flat"
   }
- }
+ },
+ "androidLabels": [
+  {
+   "input": {
+    "type": "speaker"
+   },
+   "label": "Speakers (Phone speaker)"
+  },
+  {
+   "input": {
+    "type": "speaker",
+    "name": "Pixel 8"
+   },
+   "label": "Speakers (Phone speaker)"
+  },
+  {
+   "input": {
+    "type": "wired",
+    "name": "Earpods"
+   },
+   "label": "Headphones (Wired headphones)"
+  },
+  {
+   "input": {
+    "type": "usb",
+    "name": "FiiO KA3"
+   },
+   "label": "USB Audio (FiiO KA3)"
+  },
+  {
+   "input": {
+    "type": "usb"
+   },
+   "label": "USB Audio (USB Audio)"
+  },
+  {
+   "input": {
+    "type": "usb",
+    "name": "   "
+   },
+   "label": "USB Audio (USB Audio)"
+  },
+  {
+   "input": {
+    "type": "hdmi",
+    "name": "LG TV"
+   },
+   "label": "HDMI (TV)"
+  },
+  {
+   "input": {
+    "type": "car",
+    "name": "Toyota"
+   },
+   "label": "Car audio (Toyota)"
+  },
+  {
+   "input": {
+    "type": "car"
+   },
+   "label": "Car audio"
+  },
+  {
+   "input": {
+    "type": "bluetooth",
+    "name": "Galaxy Buds2"
+   },
+   "label": "Bluetooth audio (Galaxy Buds2)"
+  },
+  {
+   "input": {
+    "type": "bluetooth"
+   },
+   "label": "Bluetooth audio (Bluetooth)"
+  },
+  {
+   "input": {
+    "type": "other",
+    "bluetooth": true,
+    "name": "WH-1000XM5"
+   },
+   "label": "Bluetooth audio (WH-1000XM5)"
+  },
+  {
+   "input": {
+    "type": "other",
+    "name": "Mystery DAC"
+   },
+   "label": "Mystery DAC"
+  },
+  {
+   "input": {
+    "type": "other"
+   },
+   "label": "Audio output"
+  },
+  {
+   "input": {},
+   "label": "Audio output"
+  },
+  {
+   "input": {
+    "bluetooth": true
+   },
+   "label": "Audio output"
+  },
+  {
+   "input": {
+    "type": "bluetooth",
+    "name": "  padded  "
+   },
+   "label": "Bluetooth audio (padded)"
+  }
+ ]
 }

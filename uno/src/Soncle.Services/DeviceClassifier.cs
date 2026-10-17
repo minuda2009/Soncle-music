@@ -51,6 +51,25 @@ public static partial class DeviceClassifier
         ["unknown"] = new("Audio output", "speaker", "Flat"),
     };
 
+    /// <summary>
+    /// The label the phone builds for its output device, in the same "Kind (Product)" shape the
+    /// Windows labels have so <see cref="Classify"/> reads both alike. Port of <c>androidOutputLabel</c>.
+    /// </summary>
+    public static string AndroidOutputLabel(string? type, string? name, bool bluetooth)
+    {
+        var product = (name ?? string.Empty).Trim();
+        return type switch
+        {
+            "speaker" => "Speakers (Phone speaker)",
+            "wired" => "Headphones (Wired headphones)",
+            "usb" => product.Length > 0 ? $"USB Audio ({product})" : "USB Audio (USB Audio)",
+            "hdmi" => "HDMI (TV)",
+            "car" => product.Length > 0 ? $"Car audio ({product})" : "Car audio",
+            "bluetooth" => product.Length > 0 ? $"Bluetooth audio ({product})" : "Bluetooth audio (Bluetooth)",
+            _ => bluetooth && product.Length > 0 ? $"Bluetooth audio ({product})" : product.Length > 0 ? product : "Audio output",
+        };
+    }
+
     public static OutputInfo Classify(string? label, IReadOnlyList<string>? btNames = null)
     {
         btNames ??= Array.Empty<string>();
