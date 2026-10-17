@@ -24,7 +24,7 @@
     "knowledge": "node tools/project-knowledge.mjs"
   },
   "dependencies": {
-    "music-metadata": "^11.16.1",
+    "music-metadata": "^12.1.0",
     "youtubei.js": "18.1.0"
   },
   "build": {
