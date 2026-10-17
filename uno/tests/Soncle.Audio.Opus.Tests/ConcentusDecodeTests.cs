@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Soncle.Audio.Decode;
 using Soncle.Audio.Opus;
+using Soncle.Flow;
 using Soncle.TestKit;
 
 namespace Soncle.Audio.Opus.Tests;
@@ -49,5 +50,22 @@ public class ConcentusDecodeTests
         Assert.Equal(48_000, got.Frames);
         for (var i = 0; i < got.Frames; i += 97) Assert.Equal(got.InterleavedStereo[2 * i], got.InterleavedStereo[2 * i + 1]);
         Assert.Contains(got.InterleavedStereo, s => Math.Abs(s) > 0.1f);
+    }
+
+    [Fact]
+    public void TheWholeAnalysisPathAgreesWithTheJs()
+    {
+        // fixtures/flow/sample-analysis.json: analyze.js on ffmpeg's mono 22.05 kHz decode of the same file
+        var want = JsonDocument.Parse(File.ReadAllText(Fixtures.Path("flow/sample-analysis.json"))).RootElement.GetProperty("result");
+        var audio = OpusWebmDecoder.Decode(File.ReadAllBytes(Fixtures.Path("flow/sample.webm")), new ConcentusOpusDecoderFactory());
+        var mono = Resampler.Resample(Resampler.MonoFromStereo(audio.InterleavedStereo), audio.SampleRate, Sampler.SampleRate);
+        var got = Analyzer.Analyze(mono, Sampler.SampleRate);
+
+        Assert.NotNull(got);
+        Assert.Equal(want.GetProperty("key").GetString(), got!.Key);
+        Assert.Equal(want.GetProperty("camelot").GetString(), got.Camelot);
+        Assert.InRange(got.Bpm!.Value, want.GetProperty("bpm").GetDouble() - 1.0, want.GetProperty("bpm").GetDouble() + 1.0);
+        Assert.InRange(got.Energy, want.GetProperty("energy").GetDouble() - 0.02, want.GetProperty("energy").GetDouble() + 0.02);
+        Assert.InRange(got.RmsDb, want.GetProperty("rmsDb").GetDouble() - 0.3, want.GetProperty("rmsDb").GetDouble() + 0.3);
     }
 }
