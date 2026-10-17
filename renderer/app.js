@@ -4,6 +4,7 @@ import { Engine, EQ_BANDS, EQ_PRESETS, PRESET_PREAMP } from './engine.js';
 import { classifyOutput, androidOutputLabel, DEVICE_INFO } from './devices.js';
 import { planFlow, transition, featLabel, contextFor, flowCoverage, analysisOrder, afterFailure, pickNext } from './flow/flow.js';
 import { parseLrc } from './lrc.js';
+import { hexToHsl, themeVars, dominantHue } from './palette.js';
 import { sample as sampleAudio, SR as SAMPLE_RATE } from './flow/sampler.js';
 // "1 song" / "2 songs"
 const nOf = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -185,26 +186,6 @@ function dlMark(id) {
 
 // ================= theming =================
 const DEFAULT_ACCENT = '#bfc2f0';
-function rgbToHsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let hh = 0, s = 0; const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    hh = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    hh *= 60;
-  }
-  return [hh, s * 100, l * 100];
-}
-function hslToRgb(hh, s, l) {
-  s /= 100; l /= 100;
-  const k = (n) => (n + hh / 30) % 12, a = s * Math.min(l, 1 - l);
-  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
-}
-const hexToHsl = (hex) => rgbToHsl(parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16));
-const hsl = (hh, s, l) => `hsl(${hh.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`;
 const systemDark = matchMedia('(prefers-color-scheme: dark)');
 function themeMode() {
   const t = S().theme;
@@ -216,53 +197,8 @@ function applyTheme(hue, sat) {
   lastHue = [hue, sat];
   const mode = themeMode();
   const r = document.documentElement;
-  const st = r.style;
-  const set = (k, v) => st.setProperty(k, v);
-  const s = Math.min(sat, 80);
   r.classList.toggle('light', mode === 'light');
-  if (mode === 'light') {
-    set('--primary', hsl(hue, Math.max(Math.min(s, 70), 35), 40));
-    set('--on-primary', '#ffffff');
-    set('--primary-container', hsl(hue, Math.max(Math.min(s, 80), 40), 88));
-    set('--on-primary-container', hsl(hue, Math.max(s, 40), 14));
-    const ts = Math.min(s, 28);
-    set('--bg', hsl(hue, ts, 94));
-    set('--surface', hsl(hue, ts, 98.5));
-    set('--surface-rgb', hslToRgb(hue, ts, 98.5).join(' '));
-    set('--surface-1', hsl(hue, ts, 95.5));
-    set('--surface-2', hsl(hue, ts, 93.5));
-    set('--surface-3', hsl(hue, ts, 91));
-    set('--surface-4', hsl(hue, ts, 86));
-    set('--on-surface', hsl(hue, 12, 11));
-    set('--on-surface-var', hsl(hue, 8, 32));
-    set('--outline', hsl(hue, 6, 48));
-    set('--outline-var', hsl(hue, 10, 80));
-    set('--error', '#ba1a1a');
-    set('--ov', '0 0 0');
-    set('--scrim', '60 60 80');
-  } else {
-    const black = mode === 'black';
-    set('--primary', hsl(hue, Math.max(s, 35), 80));
-    set('--on-primary', hsl(hue, Math.max(s, 30), 18));
-    set('--primary-container', hsl(hue, Math.min(s, 42), 28));
-    set('--on-primary-container', hsl(hue, Math.max(s, 40), 90));
-    const ts = Math.min(s, 22);
-    const L = black ? [0, 3.5, 7, 9, 12.5, 17] : [5.5, 8, 11, 13, 17, 22];
-    set('--bg', black ? '#000' : hsl(hue, ts, L[0]));
-    set('--surface', hsl(hue, ts, L[1]));
-    set('--surface-rgb', hslToRgb(hue, ts, L[1]).join(' '));
-    set('--surface-1', hsl(hue, ts, L[2]));
-    set('--surface-2', hsl(hue, ts, L[3]));
-    set('--surface-3', hsl(hue, ts, L[4]));
-    set('--surface-4', hsl(hue, ts, L[5]));
-    set('--on-surface', hsl(hue, 12, 90));
-    set('--on-surface-var', hsl(hue, 10, 79));
-    set('--outline', hsl(hue, 6, 58));
-    set('--outline-var', hsl(hue, Math.min(s, 10), 29));
-    set('--error', '#ffb4ab');
-    set('--ov', '255 255 255');
-    set('--scrim', '0 0 0');
-  }
+  for (const [k, v] of Object.entries(themeVars(hue, sat, mode))) r.style.setProperty(k, v);
   syncTitlebar();
 }
 function syncTitlebar() {
@@ -305,20 +241,7 @@ async function extractColor(url) {
   c.width = c.height = 48;
   const ctx = c.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(im, 0, 0, 48, 48);
-  const d = ctx.getImageData(0, 0, 48, 48).data;
-  const buckets = new Map();
-  for (let i = 0; i < d.length; i += 4) {
-    const [hh, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
-    if (l < 12 || l > 92) continue;
-    const key = Math.round(hh / 15);
-    const w = (s / 100) ** 1.5 * (1 - Math.abs(l - 50) / 60);
-    const b = buckets.get(key) || { w: 0, h: 0, s: 0 };
-    b.w += w; b.h += hh * w; b.s += s * w;
-    buckets.set(key, b);
-  }
-  let best = null;
-  for (const b of buckets.values()) if (!best || b.w > best.w) best = b;
-  const res = best && best.w > 2 ? [best.h / best.w, best.s / best.w] : null;
+  const res = dominantHue(ctx.getImageData(0, 0, 48, 48).data);
   colorCache.set(url, res);
   return res;
 }

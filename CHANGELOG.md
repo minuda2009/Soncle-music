@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased: Soncle's look for YouTube Music (extension 0.2)
+
+- The extension recolours music.youtube.com with Soncle's palette: dark, black, light or system theme, nine
+  accents, or colours taken from the cover of the current song, with rounded cards and covers. It points the
+  site's own colour variables at Soncle's (so it survives markup changes) and only recolours and rounds: it
+  hides and blocks nothing, ads included. Settings under **Style** in the panel. Checked on a mock page, not
+  the live site.
+- The palette code moved out of `renderer/app.js` into `renderer/palette.js` (shared with the extension). A
+  golden test (`fixtures/palette/golden.json`, made from the old code) proves the colours are unchanged.
+
 ## Unreleased: Soncle Companion, a browser extension (first slice)
 
 - **`extension/`**: an unofficial extension for music.youtube.com that adds synced lyrics (LRCLIB), a per-song
