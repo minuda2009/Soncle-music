@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keyCompat, tempoCompat, transition, planFlow } from '../renderer/flow/flow.js';
+import { keyCompat, tempoCompat, transition, planFlow, flowCoverage, analysisOrder, afterFailure, pickNext } from '../renderer/flow/flow.js';
 import { analyze, camelotOf } from '../renderer/flow/analyze.js';
 
 test('camelot compatibility', () => {
@@ -69,4 +69,75 @@ test('time of day and taste shape the radio', async () => {
   // skipped / just-played songs sink, loved artists rise
   const taste = { artist: (n) => (n === 'y' ? 1 : 0), liked: () => false, skips: (id) => (id === 'hype' ? 3 : 0), recent: () => 0 };
   assert.deepEqual(known(planFlow(T('s', 'Z'), pool, feat, { taste })), ['calm', 'hype']);
+});
+
+// ---- whole-pool measuring (roadmap item 8) ----
+const radioPool = (n) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, title: 'Song ' + i, artists: [{ name: 'Artist ' + i }], duration: 200 }));
+const camelots = ['8A', '9A', '8B', '10A', '7A', '3B'];
+const featFor = (i) => ({ v: 2, bpm: 120 + (i % 5), bpmConf: 0.8, camelot: camelots[i % camelots.length], keyConf: 0.7, energy: 0.3 + (i % 7) / 10 });
+
+test('coverage counts known, given-up and pending songs', () => {
+  const pool = radioPool(10);
+  const feats = new Map(pool.slice(0, 4).map((t, i) => [t.id, featFor(i)]));
+  const c = flowCoverage(pool, (id) => feats.get(id) || null, new Set(['s9']));
+  assert.deepEqual([c.total, c.known, c.failed, c.pending, c.partial, c.done], [10, 4, 1, 5, true, false]);
+  const all = flowCoverage(pool, () => featFor(0));
+  assert.deepEqual([all.known, all.pending, all.partial, all.done], [10, 0, false, true]);
+});
+
+test('measuring order: the next slots first, then the rest, never known or given-up songs', () => {
+  const pool = radioPool(8);
+  const known = new Set(['s0']);
+  const order = analysisOrder(pool, (id) => (known.has(id) ? {} : null), { next: [pool[5], pool[2], pool[0]], failed: new Set(['s7']) });
+  assert.deepEqual(order.map((t) => t.id), ['s5', 's2', 's1', 's3', 's4', 's6']);
+});
+
+test('a song that fails is retried once, then given up on', () => {
+  const tries = new Map();
+  assert.equal(afterFailure(tries, 'a'), 'retry');
+  assert.equal(afterFailure(tries, 'a'), 'give-up');
+  assert.equal(afterFailure(tries, 'b'), 'retry');
+});
+
+test('an unmeasured song never wins on YouTube position alone', () => {
+  const pool = radioPool(50);
+  const seed = { id: 'seed', title: 'Seed', duration: 200 };
+  // only the LAST ten songs are measured; YouTube lists them as the least relevant
+  const feats = new Map(pool.slice(40).map((t, i) => [t.id, featFor(i)]));
+  feats.set('seed', featFor(0));
+  const feat = (id) => feats.get(id) || null;
+  const held = planFlow(seed, pool, feat, { holdUnmeasured: true });
+  assert.ok(held.slice(0, 10).every((x) => feats.has(x.track.id)), 'the ten measured songs come before any unmeasured one');
+  const pick = pickNext(seed, pool, feat);
+  assert.ok(feats.has(pick.track.id));
+  assert.equal(pick.known, 10);
+  assert.equal(pick.total, 50);
+  assert.equal(pick.partial, true);
+});
+
+test('50-song radio: measured one by one in order, every pick sees the whole pool at the end', () => {
+  const pool = radioPool(50);
+  const seed = { id: 'seed', title: 'Seed', duration: 200 };
+  const feats = new Map([['seed', featFor(0)]]);
+  const feat = (id) => feats.get(id) || null;
+  const failed = new Set();
+  const log = [];
+  let queue = analysisOrder(pool, feat, { next: pool.slice(0, 3), failed });
+  assert.equal(queue.length, 50);
+  let measured = 0;
+  while (queue.length) {
+    const t = queue.shift();
+    feats.set(t.id, featFor(Number(t.id.slice(1))));
+    measured++;
+    // after each measurement the next pick comes only from measured songs while any exist
+    const pick = pickNext(seed, pool, feat, { failed });
+    assert.ok(feats.has(pick.track.id), 'pick is a measured song');
+    assert.equal(pick.known, measured);
+    log.push(pick.partial);
+    queue = analysisOrder(pool, feat, { next: [], failed });
+  }
+  assert.equal(measured, 50);
+  assert.equal(log[48], true);    // 49 of 50: still honest about it
+  assert.equal(log[49], false);   // 50 of 50: the pick used the whole pool
+  assert.equal(flowCoverage(pool, feat, failed).done, true);
 });
