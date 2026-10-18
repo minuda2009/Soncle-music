@@ -1,6 +1,6 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 // Turns a lyric card into a PNG or a silent video, and hands the file to the person. The video has
-// no audio on purpose: add the song in Instagram's own music picker, so the artist is still paid.
+// no audio on purpose: add the song in the platform's own music picker, so the artist is still paid.
 
 export function renderPng(card) {
   const c = Object.assign(document.createElement('canvas'), { width: card.W, height: card.H });
@@ -21,10 +21,13 @@ export function recordVideo(card, { fps = 30, onProgress, signal } = {}) {
   const stream = c.captureStream(fps);
   const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 6_000_000 });
   const chunks = [];
+  let lock = null;   // a long clip records in real time: keep the screen on until it is done
+  try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }, () => {}); } catch { /* not offered */ }
+  const release = () => { try { lock?.release(); } catch { /* already released */ } };
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
   return new Promise((resolve, reject) => {
-    rec.onerror = (e) => reject(e.error || new Error('Recording failed'));
-    rec.onstop = () => (signal?.aborted ? reject(new Error('Cancelled')) : resolve(new Blob(chunks, { type: type.split(';')[0] })));
+    rec.onerror = (e) => { release(); reject(e.error || new Error('Recording failed')); };
+    rec.onstop = () => release() || (signal?.aborted ? reject(new Error('Cancelled')) : resolve(new Blob(chunks, { type: type.split(';')[0] })));
     rec.start(250);
     const t0 = performance.now();
     const tick = () => {
@@ -37,6 +40,9 @@ export function recordVideo(card, { fps = 30, onProgress, signal } = {}) {
     requestAnimationFrame(tick);
   });
 }
+
+// True when the system share sheet takes video files (phones): the button then says "Share".
+export const canShareFiles = () => { try { return !!navigator.canShare?.({ files: [new File([], 'a.mp4', { type: 'video/mp4' })] }); } catch { return false; } };
 
 const b64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
 

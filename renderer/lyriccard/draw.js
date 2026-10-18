@@ -28,13 +28,14 @@ function paintBackground(ctx, W, H, kind, { cover, hue = 235, sat = 55 }) {
   }
 }
 
-// opts: { lines, format, background, align, upper, showTitle, title, artist, cover, hue, sat, accent }
+// opts: { lines, format, background, align, upper, showTitle, title, artist, cover, hue, sat, accent, startAt?, endAt? }
+// startAt/endAt (seconds into the song) make a clip whose video time 0 is startAt; see buildTimeline.
 // `ctxForMeasure` is any 2D context (only measureText is used).
 export function createCard(opts, ctxForMeasure) {
   const fmt = FORMATS[opts.format] || FORMATS.story;
   const { w: W, h: H } = fmt;
   const measure = (text, px, weight) => { ctxForMeasure.font = `${weight} ${px}px ${FONT}`; return ctxForMeasure.measureText(text).width; };
-  const lo = { align: opts.align || 'center', upper: opts.upper !== false };
+  const lo = { align: opts.align || 'center', upper: opts.upper !== false, startAt: opts.startAt, endAt: opts.endAt };
   const timeline = opts.still ? null : buildTimeline(opts.lines, fmt, measure, lo);
   const stillItems = opts.still ? buildStill(opts.lines, fmt, measure, lo) : null;
   const bg = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });

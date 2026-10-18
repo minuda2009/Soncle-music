@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased: Companion extension 0.4.1 — whole-song lyric videos
+
+- The extension's lyric card gets what the app already had: **Video from → Part of the song**, with a start
+  point, a length (15 s, 30 s, 60 s or the whole song, up to 6 min) and a share button on phones. The video is
+  silent and says where to start the song in Instagram's, TikTok's or YouTube Shorts' music picker so the words
+  match and the artist is paid through the platform. Song name can be hidden.
+- Still no audio in the video: the extension does not copy the song.
+
 ## Unreleased: Companion extension 0.4 — settings page, lyrics cache, shortcuts
 
 - **Settings page** in the panel listing every Soncle function. What works has its control; the rest says

@@ -5,7 +5,7 @@
   if (window.__soncleCompanion) return;
   window.__soncleCompanion = true;
   const url = (p) => chrome.runtime.getURL(p);
-  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType }, { FORMATS, untimed }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }] = await Promise.all([
+  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, untimed, clipLines }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }] = await Promise.all([
     import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js')),
     import(url('shared/palette.js')), import(url('shared/theme.js')), import(url('shared/features.js'))
   ]);
@@ -251,13 +251,18 @@
     const synced = !!lyr?.lines?.length;
     const rows = synced ? lyr.lines.filter((l) => l.text) : (lyr?.plain || '').split(/\n/).map((x) => x.trim()).filter(Boolean).map((text) => ({ text }));
     if (!track || !rows.length) return;
-    const st = { start: Math.max(0, rows.indexOf(lyr.lines?.[Math.max(0, active)])), count: 3, format: 'story', background: 'cover', align: 'center' };
+    const st = { start: Math.max(0, rows.indexOf(lyr.lines?.[Math.max(0, active)])), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true, mode: 'lines', startAt: 0, len: 30 };
     const cover = await new Promise((res) => { if (!track.thumb) return res(null); const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = track.thumb; });
-    const canRecord = synced && !!videoType(), MAX_S = 60;
+    const canRecord = synced && !!videoType(), MAX_S = 60, MAX_CLIP_S = 360;
+    const songLen = Math.round(track.duration || (synced ? (lyr.lines[lyr.lines.length - 1].end || lyr.lines[lyr.lines.length - 1].t + 5) : 0));
+    if (synced) st.startAt = Math.max(0, Math.floor(rows[st.start]?.t ?? 0));
+    const mmss = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
+    const clipEnd = () => Math.min(songLen, st.len ? st.startAt + st.len : songLen);
+    const clipRows = [];
     const mctx = document.createElement('canvas').getContext('2d'), pv = document.createElement('canvas'), pctx = pv.getContext('2d');
     let card = null, t0 = performance.now(), busy = null;
     const picked = () => rows.slice(st.start, st.start + st.count);
-    const base = () => ({ format: st.format, background: st.background, align: st.align, title: track.title, artist: names(track), cover });
+    const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: track.title, artist: names(track), cover });
     const still = () => createCard({ lines: synced ? picked() : untimed(picked().map((r) => r.text)), still: true, ...base() }, mctx);
     const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids.filter(Boolean)); return e; };
     const status = el('div', { className: 'st' });
@@ -267,19 +272,29 @@
     const rebuild = () => {
       if (busy) return;
       const f = FORMATS[st.format]; pv.width = Math.round(f.w * 0.2); pv.height = Math.round(f.h * 0.2);
-      card = synced ? createCard({ lines: picked(), ...base() }, mctx) : still(); t0 = performance.now();
-      const long = synced && card.duration > MAX_S;
-      saveVid.hidden = !canRecord; saveVid.disabled = long || !card.duration;
-      status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This browser cannot record video; the image still works.' : long ? `That is ${Math.round(card.duration)} s: pick fewer lines (up to ${MAX_S} s).` : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in Instagram’s music picker so the artist is still paid.`;
+      const clip = synced && st.mode === 'clip';
+      clipRows.forEach((e) => { e.hidden = !clip; });
+      card = !synced ? still() : clip ? createCard({ lines: clipLines(lyr.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, mctx) : createCard({ lines: picked(), ...base() }, mctx);
+      t0 = performance.now();
+      const long = synced && card.duration > (clip ? MAX_CLIP_S : MAX_S);
+      saveVid.hidden = !canRecord; saveVid.textContent = canShareFiles() ? 'Share video' : 'Save video'; saveVid.disabled = long || !card.duration;
+      status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This browser cannot record video; the image still works.'
+        : long ? `That is ${Math.round(card.duration)} s: ${clip ? `pick a shorter length (up to ${MAX_CLIP_S / 60} min)` : `pick fewer lines (up to ${MAX_S} s)`}.`
+        : !card.duration ? 'There are no lyrics in that part of the song.'
+        : clip ? `Video: ${mmss(card.duration)}, silent, from ${mmss(st.startAt)} of the song. It records in real time, so keep this tab open. In the music picker of Instagram, TikTok or YouTube Shorts, start the song at ${mmss(st.startAt)} so the words match; the artist is paid through the platform.${videoType().includes('mp4') ? '' : ' This browser saves WebM; some apps want MP4.'}`
+        : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in the platform’s music picker so the artist is still paid.`;
     };
     async function video() {
       if (busy) { busy.abort(); return; }
       busy = new AbortController(); saveImg.disabled = true; saveVid.textContent = 'Cancel';
       try { const b = await recordVideo(card, { signal: busy.signal, onProgress: (p) => { status.textContent = `Recording ${Math.round(p * 100)}%…`; } }); await saveBlob(b, file(b.type.includes('mp4') ? 'mp4' : 'webm')); toast('Video saved'); }
       catch (e) { if (e.message !== 'Cancelled') status.textContent = 'Could not make the video'; }
-      busy = null; saveImg.disabled = false; saveVid.textContent = 'Save video'; rebuild();
+      busy = null; saveImg.disabled = false; rebuild();
     }
     const chips = (key, options) => { const box = el('div', { className: 'row' }); const draw = () => box.replaceChildren(...options.map(([v, l]) => el('button', { className: 'chip' + (st[key] === v ? ' on' : ''), textContent: l, onclick: () => { if (busy) return; st[key] = v; draw(); rebuild(); } }))); draw(); return box; };
+    const startOut = el('span', { textContent: mmss(st.startAt) });
+    const startRange = el('input', { type: 'range', min: 0, max: Math.max(1, songLen - 1), step: 1, value: st.startAt, 'aria-label': 'Start of the video in the song', oninput: () => { st.startAt = Number(startRange.value); startOut.textContent = mmss(st.startAt); }, onchange: () => rebuild() });
+    startRange.style.flex = '1';
     const list = el('div', { className: 'pick' });
     const drawList = () => list.replaceChildren(...rows.map((r, i) => el('div', { className: i >= st.start && i < st.start + st.count ? 'on' : '', textContent: r.text, onclick: () => { if (busy) return; st.start = i; drawList(); rebuild(); } })));
     const count = el('span', { textContent: String(st.count) });
@@ -290,9 +305,13 @@
       el('div', { className: 'body' }, pv, el('div', { className: 'opts' },
         el('div', { className: 'row' }, el('label', { textContent: 'Lines' }), el('button', { className: 'chip', textContent: '−', onclick: () => step(-1) }), count, el('button', { className: 'chip', textContent: '+', onclick: () => step(1) })),
         list,
+        synced && el('div', { className: 'row' }, el('label', { textContent: 'Video from' }), chips('mode', [['lines', 'Chosen lines'], ['clip', 'Part of the song']])),
+        synced && clipRows[clipRows.push(el('div', { className: 'row' }, el('label', { textContent: 'Starts at' }), startRange, startOut)) - 1],
+        synced && clipRows[clipRows.push(el('div', { className: 'row' }, el('label', { textContent: 'Length' }), chips('len', [[15, '15 s'], [30, '30 s'], [60, '60 s'], [0, 'Whole song']]))) - 1],
         el('div', { className: 'row' }, el('label', { textContent: 'Size' }), chips('format', [['story', '9:16'], ['portrait', '4:5'], ['square', '1:1']])),
         el('div', { className: 'row' }, el('label', { textContent: 'Background' }), chips('background', BACKGROUNDS)),
-        el('div', { className: 'row' }, el('label', { textContent: 'Text' }), chips('align', [['center', 'Centre'], ['left', 'Left']])))),
+        el('div', { className: 'row' }, el('label', { textContent: 'Text' }), chips('align', [['center', 'Centre'], ['left', 'Left']])),
+        el('div', { className: 'row' }, el('label', { textContent: 'Song name' }), chips('showTitle', [[true, 'Show'], [false, 'Hide']])))),
       status, el('div', { className: 'act' }, el('button', { className: 'btn text', textContent: 'Close', onclick: close }), saveImg, saveVid)));
     modal.hidden = false;
     modal.onmousedown = (e) => { if (e.target === modal) close(); };
