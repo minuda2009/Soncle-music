@@ -141,7 +141,7 @@ public static class Backup
         LegacyUpgrade.Apply(data["settings"] as JsonObject);
         foreach (var k in new[] { "liked", "playlists", "savedAlbums", "savedPlaylists", "followedArtists", "history", "searchHistory", "eqPresets" })
             if (data[k] is JsonArray) store.Set(k, data[k]);
-        foreach (var k in new[] { "lyricsOffsets", "deviceProfiles" })
+        foreach (var k in new[] { "lyricsOffsets", "lyricsChoice", "deviceProfiles" })
             if (data[k] is JsonObject) store.Set(k, data[k]);
         if (data["settings"] is JsonObject rawSettings)
         {

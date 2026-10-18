@@ -173,6 +173,7 @@
   "cookie": "",
   "session": null,
   "lyricsOffsets": {},
+  "lyricsChoice": {},
   "eqPresets": [],
   "deviceProfiles": {},
   "skips": {}

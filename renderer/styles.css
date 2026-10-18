@@ -981,6 +981,17 @@ body.mac .wl-skip { right: 20px; }
 .lc-line:hover { background: rgb(var(--ov) / .07); }
 .lc-line.on { background: var(--primary-container); color: var(--on-primary-container); }
 .lc-status { margin-top: 12px; font-size: 12.5px; color: var(--on-surface-var); min-height: 18px; }
-.ly-share { display: inline-flex; align-items: center; gap: 6px; }
-.ly-share .ic { width: 16px; height: 16px; }
+.ly-share, .ly-versions { display: inline-flex; align-items: center; gap: 6px; }
+.ly-share .ic, .ly-versions .ic { width: 16px; height: 16px; }
 @media (max-width: 560px) { .lc-body { flex-direction: column; align-items: center; } .lc-body canvas { max-height: 30vh; } }
+
+/* lyric versions */
+.ly-btn.hint { background: var(--primary-container); color: var(--on-primary-container); }
+.lv-dialog { width: 520px; max-width: 94vw; }
+.lv-note { color: var(--on-surface-var); font-size: 13px; line-height: 1.45; margin-bottom: 12px; }
+.lv-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; }
+.lv-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; border: 1px solid var(--outline-var); border-radius: 14px; background: none; color: inherit; padding: 10px 14px; cursor: pointer; font: inherit; }
+.lv-row:hover { background: rgb(var(--ov) / .07); } .lv-row.on { background: var(--primary-container); color: var(--on-primary-container); border-color: transparent; }
+.lv-main { min-width: 0; } .lv-main b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .lv-main span { font-size: 12px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.lv-side { display: flex; align-items: center; gap: 10px; font-size: 12px; flex: none; }
+.lv-tag { border: 1px solid var(--outline-var); border-radius: 999px; padding: 2px 8px; font-size: 11px; } .lv-tag.on { background: rgb(var(--ov) / .12); }
