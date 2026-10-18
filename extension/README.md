@@ -5,7 +5,7 @@ as usual: this is for people who want some of Soncle's features while staying on
 
 Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later. Written with AI coding agents.
 
-## What it does (version 0.3.0)
+## What it does (version 0.4.0)
 
 - **Soncle's look on YouTube Music (deeper)**: full-page palette from the apps (dark / black / light /
   system; nine accents; or cover-art colours that change per song). Maps a wider set of YTM and yt-spec
@@ -31,20 +31,26 @@ Then open `chrome://extensions`, switch on **Developer mode**, choose **Load unp
 `extension/dist`. Open https://music.youtube.com, play a song and press the **Soncle** button at the
 bottom right.
 
-## Features
+## Settings (the **Settings** button in the panel)
 
-| Feature | Status |
+One page lists every Soncle function and where it stands: what works now has its control, the rest says
+**Coming soon**, **In the Soncle app** (with the reason) or **On YouTube Music** (the site already has it).
+The list is `extension/src/features.js`; a test fails if the app gains a settings group it does not cover.
+
+| Works now | Where |
 |---|---|
-| Soncle look (theme, accent, cover colours) | **On** |
-| Synced lyrics (LRCLIB) + timing nudge | **On** |
-| Lyric cards (image / silent video) | **On** |
-| Equaliser | Coming soon |
-| Loudness (LUFS) | Coming soon |
-| True-peak limiter | Coming soon |
-| Gapless / crossfade | Coming soon |
-| AutoEq headphones | Coming soon |
-| Keyboard shortcuts | Coming soon |
-| Flow radio | Coming soon |
+| Soncle style, theme, accent, colours from the cover | Appearance |
+| Lyrics: text size, alignment, auto-scroll, glow, delay for all songs, per-song nudge, lyric cards, clear cache | Lyrics |
+| Sleep timer (pauses the page's player) | Sleep timer |
+| Keyboard: **Alt+L** panel, **Alt+[** / **Alt+]** lyrics 0.1 s earlier/later (Shift: 0.5 s), **Esc** closes | Keyboard shortcuts |
+
+Coming soon: equaliser, AutoEq headphones, normalisation, crossfade/gapless, tempo and pitch, skip silence,
+per-device profiles, word-by-word lyrics, queue options, listening stats, Spotify import, a Soncle Now Playing
+page. Staying in the app because they need the audio stream or the desktop: Flow radio, smart crossfade,
+tempo/key analysis, downloads, local files, Discord presence.
+
+Lyrics are kept in this browser for 30 days (a "not found" for a day) so they appear instantly; a failed
+request is tried again twice. Settings has a **Clear cache** button. Nothing else is stored or sent anywhere.
 
 ## Honest status
 
@@ -54,8 +60,9 @@ bottom right.
   button shows "No lyrics" on every song, those selectors are the first thing to check.
 - Not on any extension store yet. Firefox is untested.
 - The style rules use the colour variables public YouTube Music themes are known to use (general background a/b/c, brand background, player bar, text colours) and a few element names; checked here on a mock page, not the live site. Some surfaces may keep their own colours until the variables are checked against the real page.
-- Planned next: equaliser and loudness through Web Audio on the page's own player, keyboard shortcuts,
-  a denser Now Playing layout if the live site still leaves hard-coded surfaces.
+- Planned next: sound controls (equaliser, loudness). They would process the page's own player output inside
+  the browser, never save or send it, and that changes the "never reads the audio" line above, so it is a
+  decision for minuda2009 before it is built. A denser Now Playing layout if the live site still leaves hard-coded surfaces.
 
 ## How it shares code
 

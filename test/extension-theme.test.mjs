@@ -1,15 +1,15 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
 // theme.js imports ./palette.js — load from shared paths via a tiny shim dir
-const tmp = path.join(root, '.tmp', 'ext-theme-test');
-mkdirSync(tmp, { recursive: true });
+const tmp = mkdtempSync(path.join(os.tmpdir(), 'soncle-ext-theme-'));
 writeFileSync(path.join(tmp, 'palette.js'), readFileSync(path.join(root, 'renderer', 'palette.js')));
 writeFileSync(path.join(tmp, 'theme.js'), readFileSync(path.join(root, 'extension', 'src', 'theme.js')));
 

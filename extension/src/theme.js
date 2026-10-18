@@ -5,7 +5,7 @@
 import { themeVars, hexToHsl } from './palette.js';
 
 export const ACCENTS = ['#bfc2f0', '#ffb3b5', '#ffb77c', '#e3c46d', '#a6d38d', '#7fd6c9', '#9ecaff', '#d5baff', '#ff8fc7'];
-export const DEFAULTS = { on: true, mode: 'dark', accent: ACCENTS[0], dynamic: true };
+export const DEFAULTS = { on: true, mode: 'dark', accent: ACCENTS[0], dynamic: true, lySize: 22, lyAlign: 'left', lyAuto: true, lyGlow: false, lyDelay: 0, keys: true };
 
 export const resolveMode = (mode, prefersDark) => (mode === 'system' ? (prefersDark ? 'dark' : 'light') : ['dark', 'black', 'light'].includes(mode) ? mode : 'dark');
 export const accentHs = (hex) => { const [h, s] = hexToHsl(/^#[0-9a-f]{6}$/i.test(hex) ? hex : ACCENTS[0]); return [h, s]; };

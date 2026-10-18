@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased: Companion extension 0.4 — settings page, lyrics cache, shortcuts
+
+- **Settings page** in the panel listing every Soncle function. What works has its control; the rest says
+  **Coming soon**, **In the Soncle app** (with the reason) or **On YouTube Music**. A test keeps it in step
+  with the app's settings groups.
+- New working options: lyrics text size, alignment, auto-scroll, glow, a delay for all songs, a sleep timer
+  (pauses the page's player), keyboard shortcuts (Alt+L, Alt+[ / Alt+], Esc) and small confirmation toasts.
+- Lyrics are cached in the browser (30 days; "not found" 1 day), failed requests are retried, and there is a
+  **Clear cache** button. Being offline is never remembered as "no lyrics".
+- The page now reacts to song changes (MutationObserver) instead of checking every 0.7 s.
+- Still strictly not an ad blocker, and the lyric video stays silent: the extension does not read, record or
+  save the song's audio. (Ideas that would have: audio in lyric videos, full-song recording, uploads, usage
+  reporting — left out on purpose.)
+- The extension's build is also published as a single `soncle-companion-<version>.zip` from the Build extension workflow.
+- Version **0.4.0**.
+
 ## Unreleased: Companion extension 0.3 — deeper look + feature panel
 
 - **Deeper Soncle theming** of music.youtube.com (more YTM / yt-spec variables, nav, player bar, cards, chips).
