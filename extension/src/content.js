@@ -5,9 +5,9 @@
   if (window.__soncleCompanion) return;
   window.__soncleCompanion = true;
   const url = (p) => chrome.runtime.getURL(p);
-  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, untimed, clipLines }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }] = await Promise.all([
+  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, untimed, clipLines }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }, { createNowPlaying }] = await Promise.all([
     import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js')),
-    import(url('shared/palette.js')), import(url('shared/theme.js')), import(url('shared/features.js'))
+    import(url('shared/palette.js')), import(url('shared/theme.js')), import(url('shared/features.js')), import(url('shared/nowplaying.js'))
   ]);
 
   // ---------- reading the page ----------
@@ -66,7 +66,7 @@
     .hint { font-size: 11.5px; color: var(--on-surface-var, #c8c5d0); line-height: 1.4; }
     .tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--primary, #bfc2f0); border: 1px solid var(--outline-var, #47464f); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
     .item input[type=range] { flex: 1; min-width: 120px; accent-color: var(--primary, #bfc2f0); } .val { font-size: 12px; min-width: 52px; color: var(--on-surface-var, #c8c5d0); }
-    .toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(8px); background: var(--surface-3, #2a292f); color: var(--on-surface, #e4e1e9); padding: 10px 18px; border-radius: 16px; font-size: 13px; box-shadow: 0 6px 24px #0008; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; }
+    .toast { z-index: 20; position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(8px); background: var(--surface-3, #2a292f); color: var(--on-surface, #e4e1e9); padding: 10px 18px; border-radius: 16px; font-size: 13px; box-shadow: 0 6px 24px #0008; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; }
     .toast.show { opacity: 1; transform: translateX(-50%); }
     button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--primary, #bfc2f0); outline-offset: 2px; }
     .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; } .sw.on { border-color: var(--on-surface, #fff); }
@@ -76,7 +76,7 @@
     .chip { background: transparent; border: 1px solid var(--outline-var, #47464f); border-radius: 14px; padding: 4px 10px; font-size: 12px; }
     .chip:hover, .x:hover { background: rgb(var(--ov, 255 255 255) / .1); }
     .x { background: none; border: 0; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; }
-    .modal { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; }
+    .modal { position: fixed; z-index: 10; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; }
     .dlg { background: var(--surface-3, #2a292f); border-radius: 28px; padding: 22px; width: 640px; max-width: 94vw; max-height: 94vh; overflow: auto; }
     .dlg h3 { margin: 0 0 14px; font-weight: 500; font-size: 22px; }
     .body { display: flex; gap: 16px; align-items: flex-start; } .body canvas { flex: none; background: #000; border-radius: 12px; max-height: 52vh; }
@@ -92,7 +92,7 @@
   </style>
   <button class="fab" title="Lyrics and lyric cards">Soncle</button>
   <div class="panel" hidden><header><div class="t"><b class="ti"></b><span class="ar"></span></div><button class="x" title="Close" aria-label="Close">×</button></header><div class="set" hidden></div><div class="lines"></div>
-    <footer><span class="src"></span><span class="sp"></span><button class="chip look" title="Settings and every Soncle feature">Settings</button><button class="chip card">Lyric card</button><span class="adj"></span></footer></div>
+    <footer><span class="src"></span><span class="sp"></span><button class="chip look" title="Settings and every Soncle feature">Settings</button><button class="chip full" title="Full-screen Soncle Now Playing (Alt+N)">Full screen</button><button class="chip card">Lyric card</button><span class="adj"></span></footer></div>
   <div class="modal" hidden></div><div class="toast" role="status" aria-live="polite"></div>`;
   document.documentElement.append(host);
   const fab = $('.fab', root), panel = $('.panel', root), linesBox = $('.lines', root), modal = $('.modal', root), toastEl = $('.toast', root);
@@ -150,7 +150,7 @@
     let r = null; try { r = await chrome.runtime.sendMessage({ type: 'clearCache' }); } catch { /* worker asleep */ }
     toast(r ? `Lyrics cache cleared (${r.cleared})` : 'Could not clear the cache');
   }
-  const ACTIONS = { card: () => { panel.hidden = false; cardDialog(); }, clearCache };
+  const ACTIONS = { card: () => { panel.hidden = false; cardDialog(); }, clearCache, nowplaying: () => np.open(track) };
   function drawSettings() {
     const mk = (tag, props, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids.filter(Boolean)); return e; };
     const seg = (cur, opts, pick) => mk('div', { className: 'row' }, ...opts.map(([v, l]) => mk('button', { className: 'chip' + (cur === v ? ' on' : ''), textContent: l, onclick: () => pick(v) })));
@@ -191,6 +191,19 @@
   $('.look', root).onclick = () => toggleSettings();
   applyLook(); applyStyle();
 
+  // ---------- Soncle Now Playing (full screen, drives the page's own player) ----------
+  const np = createNowPlaying({
+    root, linesBox, video: () => $('video'), toast,
+    restoreLines: () => { setBox.after(linesBox); linesBox.hidden = !setBox.hidden; follow(true); },
+    openSettings: () => { panel.hidden = false; toggleSettings(true); },
+    openCard: () => cardDialog(),
+    siteClick: (labels) => {   // the site's own tab bar (Home / Explore / Library), found by its label
+      const tab = [...document.querySelectorAll('ytmusic-pivot-bar-item-renderer')].find((e) => labels?.includes(e.textContent.trim()));
+      if (tab) { tab.click(); return true; } return false;
+    }
+  });
+  $('.full', root).onclick = () => np.toggle(track);
+
   // ---------- lyrics ----------
   let track = null, lyr = null, lineEls = [], active = -2, userScroll = 0;
   const off = () => (track ? offsets[track.key] || 0 : 0) + (settings.lyDelay || 0) / 1000;   // per-song nudge + the all-songs delay
@@ -222,7 +235,7 @@
     linesBox.replaceChildren(...lineEls);
   }
   async function load(t) {
-    track = t; lyr = null; active = -2; coverColour(t); $('.ti', root).textContent = t.title; $('.ar', root).textContent = names(t); $('.src', root).textContent = '';
+    track = t; lyr = null; active = -2; coverColour(t); if (np.isOpen) np.update(t); $('.ti', root).textContent = t.title; $('.ar', root).textContent = names(t); $('.src', root).textContent = '';
     show('Looking for lyrics…');
     let res = null;
     try { res = await chrome.runtime.sendMessage({ type: 'lyrics', track: { title: t.title, artists: t.artists, album: t.album, duration: t.duration } }); } catch { /* worker asleep or gone */ }
@@ -233,7 +246,7 @@
   }
   function follow(force) {
     const v = $('video');
-    if (!v || !lyr?.lines?.length || panel.hidden && !force) return;
+    if (!v || !lyr?.lines?.length || (panel.hidden && !np.isOpen && !force)) return;
     const now = v.currentTime - off();
     let i = -1;
     for (let k = 0; k < lyr.lines.length && lyr.lines[k].t <= now; k++) i = k;
@@ -324,10 +337,11 @@
     if (!settings.keys) return;
     const el = e.composedPath()[0];
     if (el?.isContentEditable || /^(input|textarea|select)$/i.test(el?.tagName || '')) return;
-    if (e.key === 'Escape') { if (!modal.hidden) { modal.hidden = true; modal.replaceChildren(); } else if (!panel.hidden) panel.hidden = true; return; }
+    if (e.key === 'Escape') { if (!modal.hidden) { modal.hidden = true; modal.replaceChildren(); } else if (np.isOpen) np.close(); else if (!panel.hidden) panel.hidden = true; return; }
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const step = e.shiftKey ? 0.5 : 0.1;
     if (e.code === 'KeyL') { fab.click(); e.preventDefault(); }
+    else if (e.code === 'KeyN') { np.toggle(track); e.preventDefault(); }
     else if (e.code === 'BracketLeft') { nudge(-step); toast(`Lyrics ${step} s earlier`); e.preventDefault(); }
     else if (e.code === 'BracketRight') { nudge(step); toast(`Lyrics ${step} s later`); e.preventDefault(); }
   });

@@ -18,6 +18,7 @@ fs.copyFileSync(path.join(here, 'src', 'background.js'), path.join(out, 'backgro
 fs.copyFileSync(path.join(here, 'src', 'content.js'), path.join(out, 'content.js'));
 fs.copyFileSync(path.join(here, 'src', 'lyrics.js'), path.join(out, 'shared', 'lyrics.js'));
 fs.copyFileSync(path.join(here, 'src', 'features.js'), path.join(out, 'shared', 'features.js'));
+fs.copyFileSync(path.join(here, 'src', 'nowplaying.js'), path.join(out, 'shared', 'nowplaying.js'));
 fs.copyFileSync(path.join(root, 'renderer', 'lrc.js'), path.join(out, 'shared', 'lrc.js'));
 fs.copyFileSync(path.join(root, 'renderer', 'palette.js'), path.join(out, 'shared', 'palette.js'));
 fs.copyFileSync(path.join(here, 'src', 'theme.js'), path.join(out, 'shared', 'theme.js'));

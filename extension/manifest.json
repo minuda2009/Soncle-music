@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Soncle Companion (unofficial, for YouTube Music)",
   "short_name": "Soncle Companion",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Soncle look, synced lyrics and lyric cards for YouTube Music. Unofficial and not affiliated with YouTube or Google. Strictly not an ad blocker: it does not block ads, so artists are paid as usual.",
   "icons": { "128": "icon.png" },
   "permissions": ["storage"],

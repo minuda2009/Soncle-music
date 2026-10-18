@@ -5,7 +5,7 @@ as usual: this is for people who want some of Soncle's features while staying on
 
 Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later. Written with AI coding agents.
 
-## What it does (version 0.4.1)
+## What it does (version 0.5.0)
 
 - **Soncle's look on YouTube Music (deeper)**: full-page palette from the apps (dark / black / light /
   system; nine accents; or cover-art colours that change per song). Maps a wider set of YTM and yt-spec
@@ -31,6 +31,14 @@ node extension/build.mjs          # writes extension/dist/
 Then open `chrome://extensions`, switch on **Developer mode**, choose **Load unpacked** and pick
 `extension/dist`. Open https://music.youtube.com, play a song and press the **Soncle** button at the
 bottom right.
+
+## Soncle Now Playing (Alt+N)
+
+A full-screen player in the app's design over music.youtube.com: large artwork on a soft wash of its colours,
+the synced lyrics beside it, a rail (Home, Search, Library, Sound soon, Settings) and Soncle's controls. It
+drives the page's own player and tabs and hides nothing, so ads the site plays still play. Its button and tab
+lookups are guesses from the site's structure (tested on a mock, not the live site); if one does nothing, the
+site's own control still works under it.
 
 ## Settings (the **Settings** button in the panel)
 

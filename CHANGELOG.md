@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased: Companion extension 0.5 — Soncle Now Playing
+
+- **Soncle Now Playing** (Alt+N, or Full screen in the panel, or Settings → Appearance): a full-screen player in
+  the app's design: big artwork over a soft wash of its colours, the synced lyrics beside it, Soncle's controls
+  (play/pause, previous/next, seek, volume), a rail with Home / Search / Library / Sound (coming soon) /
+  Settings, and a Lyric card button. On a phone the rail becomes a bottom bar.
+- It only drives YouTube Music's own player and tabs and hides nothing: ads the site plays still play, artists
+  are paid as usual, Esc brings the site back. It never reads or records the audio.
+- Not yet on the live site: the page's own button/tab names are guessed from how it is built (tested on a mock).
+  If previous/next or the rail tabs do nothing, tell me.
+- Still to come toward the app's full look: Home, Library, search and album pages redrawn (colours and shapes
+  are already done), a queue view, the Sound page.
+
 ## Unreleased: Companion extension 0.4.1 — whole-song lyric videos
 
 - The extension's lyric card gets what the app already had: **Video from → Part of the song**, with a start
