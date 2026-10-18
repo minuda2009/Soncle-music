@@ -25,6 +25,18 @@ jobs:
       - name: Build extension
         run: node extension/build.mjs
 
+      - name: Zip the extension
+        run: |
+          V=$(node -p "require('./extension/manifest.json').version")
+          (cd extension/dist && zip -qr "../soncle-companion-$V.zip" .)
+          echo "ZIP=extension/soncle-companion-$V.zip" >> "$GITHUB_ENV"
+
+      - name: Upload the zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: soncle-companion-zip
+          path: ${{ env.ZIP }}
+
       - name: Upload extension artifact
         uses: actions/upload-artifact@v4
         with:
