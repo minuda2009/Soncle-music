@@ -105,11 +105,19 @@ export function layoutWords(words, sizes, box, measure, { align = 'center', uppe
   return { items, base: B };
 }
 
-// The whole timeline: scenes laid out and moved so the video starts at 0 (after a short lead-in).
+// The lines that fall inside a clip of the song: from `startAt` seconds, `len` seconds long (0 = to the end).
+// A line already under way at `startAt` is kept, so the clip never opens on a gap in the middle of a phrase.
+export const clipLines = (lines, startAt, len = 0) => lines.filter((l) => l.text && (l.end ?? l.t + 4) > startAt && (!len || l.t < startAt + len));
+
+// The whole timeline: scenes laid out and moved so the video starts at 0.
+// Without `opts.startAt` the video opens 0.5 s before the first word. With it, video time 0 is exactly
+// that second of the song (so the clip lines up with the same song started at that second in a platform's
+// own music picker) and, with `opts.endAt`, the video is exactly as long as the clip.
 export function buildTimeline(lines, fmt, measure, opts = {}) {
   const scenes = buildScenes(lines, opts);
   if (!scenes.length) return { scenes: [], duration: 0 };
-  const lead = 0.5, origin = scenes[0].t0 - lead;
+  const clip = Number.isFinite(opts.startAt);
+  const origin = clip ? opts.startAt : scenes[0].t0 - 0.5;
   const margin = fmt.w * 0.08;
   const box = { x: margin, y: fmt.h * 0.12, w: fmt.w - margin * 2, h: fmt.h * 0.68 };
   const out = scenes.map((s) => {
@@ -117,7 +125,8 @@ export function buildTimeline(lines, fmt, measure, opts = {}) {
     for (const it of items) { it.t -= origin; it.end -= origin; }
     return { t0: s.t0 - origin, t1: s.t1 - origin, items };
   });
-  return { scenes: out, duration: out[out.length - 1].t1 + 0.6 };
+  const natural = out[out.length - 1].t1 + 0.6;
+  return { scenes: out, duration: clip && Number.isFinite(opts.endAt) ? Math.max(0, opts.endAt - origin) : natural };
 }
 
 // Every selected word in one image, for the still picture.

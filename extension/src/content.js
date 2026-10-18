@@ -5,9 +5,9 @@
   if (window.__soncleCompanion) return;
   window.__soncleCompanion = true;
   const url = (p) => chrome.runtime.getURL(p);
-  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType }, { FORMATS, untimed }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }] = await Promise.all([
+  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, untimed, clipLines }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }, { createNowPlaying }] = await Promise.all([
     import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js')),
-    import(url('shared/palette.js')), import(url('shared/theme.js')), import(url('shared/features.js'))
+    import(url('shared/palette.js')), import(url('shared/theme.js')), import(url('shared/features.js')), import(url('shared/nowplaying.js'))
   ]);
 
   // ---------- reading the page ----------
@@ -66,7 +66,7 @@
     .hint { font-size: 11.5px; color: var(--on-surface-var, #c8c5d0); line-height: 1.4; }
     .tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--primary, #bfc2f0); border: 1px solid var(--outline-var, #47464f); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
     .item input[type=range] { flex: 1; min-width: 120px; accent-color: var(--primary, #bfc2f0); } .val { font-size: 12px; min-width: 52px; color: var(--on-surface-var, #c8c5d0); }
-    .toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(8px); background: var(--surface-3, #2a292f); color: var(--on-surface, #e4e1e9); padding: 10px 18px; border-radius: 16px; font-size: 13px; box-shadow: 0 6px 24px #0008; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; }
+    .toast { z-index: 20; position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(8px); background: var(--surface-3, #2a292f); color: var(--on-surface, #e4e1e9); padding: 10px 18px; border-radius: 16px; font-size: 13px; box-shadow: 0 6px 24px #0008; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; }
     .toast.show { opacity: 1; transform: translateX(-50%); }
     button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--primary, #bfc2f0); outline-offset: 2px; }
     .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; } .sw.on { border-color: var(--on-surface, #fff); }
@@ -76,7 +76,7 @@
     .chip { background: transparent; border: 1px solid var(--outline-var, #47464f); border-radius: 14px; padding: 4px 10px; font-size: 12px; }
     .chip:hover, .x:hover { background: rgb(var(--ov, 255 255 255) / .1); }
     .x { background: none; border: 0; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; }
-    .modal { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; }
+    .modal { position: fixed; z-index: 10; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; }
     .dlg { background: var(--surface-3, #2a292f); border-radius: 28px; padding: 22px; width: 640px; max-width: 94vw; max-height: 94vh; overflow: auto; }
     .dlg h3 { margin: 0 0 14px; font-weight: 500; font-size: 22px; }
     .body { display: flex; gap: 16px; align-items: flex-start; } .body canvas { flex: none; background: #000; border-radius: 12px; max-height: 52vh; }
@@ -92,7 +92,7 @@
   </style>
   <button class="fab" title="Lyrics and lyric cards">Soncle</button>
   <div class="panel" hidden><header><div class="t"><b class="ti"></b><span class="ar"></span></div><button class="x" title="Close" aria-label="Close">×</button></header><div class="set" hidden></div><div class="lines"></div>
-    <footer><span class="src"></span><span class="sp"></span><button class="chip look" title="Settings and every Soncle feature">Settings</button><button class="chip card">Lyric card</button><span class="adj"></span></footer></div>
+    <footer><span class="src"></span><span class="sp"></span><button class="chip look" title="Settings and every Soncle feature">Settings</button><button class="chip full" title="Full-screen Soncle Now Playing (Alt+N)">Full screen</button><button class="chip card">Lyric card</button><span class="adj"></span></footer></div>
   <div class="modal" hidden></div><div class="toast" role="status" aria-live="polite"></div>`;
   document.documentElement.append(host);
   const fab = $('.fab', root), panel = $('.panel', root), linesBox = $('.lines', root), modal = $('.modal', root), toastEl = $('.toast', root);
@@ -150,7 +150,7 @@
     let r = null; try { r = await chrome.runtime.sendMessage({ type: 'clearCache' }); } catch { /* worker asleep */ }
     toast(r ? `Lyrics cache cleared (${r.cleared})` : 'Could not clear the cache');
   }
-  const ACTIONS = { card: () => { panel.hidden = false; cardDialog(); }, clearCache };
+  const ACTIONS = { card: () => { panel.hidden = false; cardDialog(); }, clearCache, nowplaying: () => np.open(track) };
   function drawSettings() {
     const mk = (tag, props, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids.filter(Boolean)); return e; };
     const seg = (cur, opts, pick) => mk('div', { className: 'row' }, ...opts.map(([v, l]) => mk('button', { className: 'chip' + (cur === v ? ' on' : ''), textContent: l, onclick: () => pick(v) })));
@@ -191,6 +191,19 @@
   $('.look', root).onclick = () => toggleSettings();
   applyLook(); applyStyle();
 
+  // ---------- Soncle Now Playing (full screen, drives the page's own player) ----------
+  const np = createNowPlaying({
+    root, linesBox, video: () => $('video'), toast,
+    restoreLines: () => { setBox.after(linesBox); linesBox.hidden = !setBox.hidden; follow(true); },
+    openSettings: () => { panel.hidden = false; toggleSettings(true); },
+    openCard: () => cardDialog(),
+    siteClick: (labels) => {   // the site's own tab bar (Home / Explore / Library), found by its label
+      const tab = [...document.querySelectorAll('ytmusic-pivot-bar-item-renderer')].find((e) => labels?.includes(e.textContent.trim()));
+      if (tab) { tab.click(); return true; } return false;
+    }
+  });
+  $('.full', root).onclick = () => np.toggle(track);
+
   // ---------- lyrics ----------
   let track = null, lyr = null, lineEls = [], active = -2, userScroll = 0;
   const off = () => (track ? offsets[track.key] || 0 : 0) + (settings.lyDelay || 0) / 1000;   // per-song nudge + the all-songs delay
@@ -222,7 +235,7 @@
     linesBox.replaceChildren(...lineEls);
   }
   async function load(t) {
-    track = t; lyr = null; active = -2; coverColour(t); $('.ti', root).textContent = t.title; $('.ar', root).textContent = names(t); $('.src', root).textContent = '';
+    track = t; lyr = null; active = -2; coverColour(t); if (np.isOpen) np.update(t); $('.ti', root).textContent = t.title; $('.ar', root).textContent = names(t); $('.src', root).textContent = '';
     show('Looking for lyrics…');
     let res = null;
     try { res = await chrome.runtime.sendMessage({ type: 'lyrics', track: { title: t.title, artists: t.artists, album: t.album, duration: t.duration } }); } catch { /* worker asleep or gone */ }
@@ -233,7 +246,7 @@
   }
   function follow(force) {
     const v = $('video');
-    if (!v || !lyr?.lines?.length || panel.hidden && !force) return;
+    if (!v || !lyr?.lines?.length || (panel.hidden && !np.isOpen && !force)) return;
     const now = v.currentTime - off();
     let i = -1;
     for (let k = 0; k < lyr.lines.length && lyr.lines[k].t <= now; k++) i = k;
@@ -251,13 +264,18 @@
     const synced = !!lyr?.lines?.length;
     const rows = synced ? lyr.lines.filter((l) => l.text) : (lyr?.plain || '').split(/\n/).map((x) => x.trim()).filter(Boolean).map((text) => ({ text }));
     if (!track || !rows.length) return;
-    const st = { start: Math.max(0, rows.indexOf(lyr.lines?.[Math.max(0, active)])), count: 3, format: 'story', background: 'cover', align: 'center' };
+    const st = { start: Math.max(0, rows.indexOf(lyr.lines?.[Math.max(0, active)])), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true, mode: 'lines', startAt: 0, len: 30 };
     const cover = await new Promise((res) => { if (!track.thumb) return res(null); const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = track.thumb; });
-    const canRecord = synced && !!videoType(), MAX_S = 60;
+    const canRecord = synced && !!videoType(), MAX_S = 60, MAX_CLIP_S = 360;
+    const songLen = Math.round(track.duration || (synced ? (lyr.lines[lyr.lines.length - 1].end || lyr.lines[lyr.lines.length - 1].t + 5) : 0));
+    if (synced) st.startAt = Math.max(0, Math.floor(rows[st.start]?.t ?? 0));
+    const mmss = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
+    const clipEnd = () => Math.min(songLen, st.len ? st.startAt + st.len : songLen);
+    const clipRows = [];
     const mctx = document.createElement('canvas').getContext('2d'), pv = document.createElement('canvas'), pctx = pv.getContext('2d');
     let card = null, t0 = performance.now(), busy = null;
     const picked = () => rows.slice(st.start, st.start + st.count);
-    const base = () => ({ format: st.format, background: st.background, align: st.align, title: track.title, artist: names(track), cover });
+    const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: track.title, artist: names(track), cover });
     const still = () => createCard({ lines: synced ? picked() : untimed(picked().map((r) => r.text)), still: true, ...base() }, mctx);
     const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids.filter(Boolean)); return e; };
     const status = el('div', { className: 'st' });
@@ -267,19 +285,29 @@
     const rebuild = () => {
       if (busy) return;
       const f = FORMATS[st.format]; pv.width = Math.round(f.w * 0.2); pv.height = Math.round(f.h * 0.2);
-      card = synced ? createCard({ lines: picked(), ...base() }, mctx) : still(); t0 = performance.now();
-      const long = synced && card.duration > MAX_S;
-      saveVid.hidden = !canRecord; saveVid.disabled = long || !card.duration;
-      status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This browser cannot record video; the image still works.' : long ? `That is ${Math.round(card.duration)} s: pick fewer lines (up to ${MAX_S} s).` : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in Instagram’s music picker so the artist is still paid.`;
+      const clip = synced && st.mode === 'clip';
+      clipRows.forEach((e) => { e.hidden = !clip; });
+      card = !synced ? still() : clip ? createCard({ lines: clipLines(lyr.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, mctx) : createCard({ lines: picked(), ...base() }, mctx);
+      t0 = performance.now();
+      const long = synced && card.duration > (clip ? MAX_CLIP_S : MAX_S);
+      saveVid.hidden = !canRecord; saveVid.textContent = canShareFiles() ? 'Share video' : 'Save video'; saveVid.disabled = long || !card.duration;
+      status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This browser cannot record video; the image still works.'
+        : long ? `That is ${Math.round(card.duration)} s: ${clip ? `pick a shorter length (up to ${MAX_CLIP_S / 60} min)` : `pick fewer lines (up to ${MAX_S} s)`}.`
+        : !card.duration ? 'There are no lyrics in that part of the song.'
+        : clip ? `Video: ${mmss(card.duration)}, silent, from ${mmss(st.startAt)} of the song. It records in real time, so keep this tab open. In the music picker of Instagram, TikTok or YouTube Shorts, start the song at ${mmss(st.startAt)} so the words match; the artist is paid through the platform.${videoType().includes('mp4') ? '' : ' This browser saves WebM; some apps want MP4.'}`
+        : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in the platform’s music picker so the artist is still paid.`;
     };
     async function video() {
       if (busy) { busy.abort(); return; }
       busy = new AbortController(); saveImg.disabled = true; saveVid.textContent = 'Cancel';
       try { const b = await recordVideo(card, { signal: busy.signal, onProgress: (p) => { status.textContent = `Recording ${Math.round(p * 100)}%…`; } }); await saveBlob(b, file(b.type.includes('mp4') ? 'mp4' : 'webm')); toast('Video saved'); }
       catch (e) { if (e.message !== 'Cancelled') status.textContent = 'Could not make the video'; }
-      busy = null; saveImg.disabled = false; saveVid.textContent = 'Save video'; rebuild();
+      busy = null; saveImg.disabled = false; rebuild();
     }
     const chips = (key, options) => { const box = el('div', { className: 'row' }); const draw = () => box.replaceChildren(...options.map(([v, l]) => el('button', { className: 'chip' + (st[key] === v ? ' on' : ''), textContent: l, onclick: () => { if (busy) return; st[key] = v; draw(); rebuild(); } }))); draw(); return box; };
+    const startOut = el('span', { textContent: mmss(st.startAt) });
+    const startRange = el('input', { type: 'range', min: 0, max: Math.max(1, songLen - 1), step: 1, value: st.startAt, 'aria-label': 'Start of the video in the song', oninput: () => { st.startAt = Number(startRange.value); startOut.textContent = mmss(st.startAt); }, onchange: () => rebuild() });
+    startRange.style.flex = '1';
     const list = el('div', { className: 'pick' });
     const drawList = () => list.replaceChildren(...rows.map((r, i) => el('div', { className: i >= st.start && i < st.start + st.count ? 'on' : '', textContent: r.text, onclick: () => { if (busy) return; st.start = i; drawList(); rebuild(); } })));
     const count = el('span', { textContent: String(st.count) });
@@ -290,9 +318,13 @@
       el('div', { className: 'body' }, pv, el('div', { className: 'opts' },
         el('div', { className: 'row' }, el('label', { textContent: 'Lines' }), el('button', { className: 'chip', textContent: '−', onclick: () => step(-1) }), count, el('button', { className: 'chip', textContent: '+', onclick: () => step(1) })),
         list,
+        synced && el('div', { className: 'row' }, el('label', { textContent: 'Video from' }), chips('mode', [['lines', 'Chosen lines'], ['clip', 'Part of the song']])),
+        synced && clipRows[clipRows.push(el('div', { className: 'row' }, el('label', { textContent: 'Starts at' }), startRange, startOut)) - 1],
+        synced && clipRows[clipRows.push(el('div', { className: 'row' }, el('label', { textContent: 'Length' }), chips('len', [[15, '15 s'], [30, '30 s'], [60, '60 s'], [0, 'Whole song']]))) - 1],
         el('div', { className: 'row' }, el('label', { textContent: 'Size' }), chips('format', [['story', '9:16'], ['portrait', '4:5'], ['square', '1:1']])),
         el('div', { className: 'row' }, el('label', { textContent: 'Background' }), chips('background', BACKGROUNDS)),
-        el('div', { className: 'row' }, el('label', { textContent: 'Text' }), chips('align', [['center', 'Centre'], ['left', 'Left']])))),
+        el('div', { className: 'row' }, el('label', { textContent: 'Text' }), chips('align', [['center', 'Centre'], ['left', 'Left']])),
+        el('div', { className: 'row' }, el('label', { textContent: 'Song name' }), chips('showTitle', [[true, 'Show'], [false, 'Hide']])))),
       status, el('div', { className: 'act' }, el('button', { className: 'btn text', textContent: 'Close', onclick: close }), saveImg, saveVid)));
     modal.hidden = false;
     modal.onmousedown = (e) => { if (e.target === modal) close(); };
@@ -305,10 +337,11 @@
     if (!settings.keys) return;
     const el = e.composedPath()[0];
     if (el?.isContentEditable || /^(input|textarea|select)$/i.test(el?.tagName || '')) return;
-    if (e.key === 'Escape') { if (!modal.hidden) { modal.hidden = true; modal.replaceChildren(); } else if (!panel.hidden) panel.hidden = true; return; }
+    if (e.key === 'Escape') { if (!modal.hidden) { modal.hidden = true; modal.replaceChildren(); } else if (np.isOpen) np.close(); else if (!panel.hidden) panel.hidden = true; return; }
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const step = e.shiftKey ? 0.5 : 0.1;
     if (e.code === 'KeyL') { fab.click(); e.preventDefault(); }
+    else if (e.code === 'KeyN') { np.toggle(track); e.preventDefault(); }
     else if (e.code === 'BracketLeft') { nudge(-step); toast(`Lyrics ${step} s earlier`); e.preventDefault(); }
     else if (e.code === 'BracketRight') { nudge(step); toast(`Lyrics ${step} s later`); e.preventDefault(); }
   });

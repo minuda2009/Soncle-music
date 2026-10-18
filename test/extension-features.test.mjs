@@ -120,3 +120,17 @@ test('cache: it never holds more than the limit and drops the oldest first', asy
 test('lookups still return null for an empty title', async () => {
   assert.equal(await lookupLyrics({ title: ' ', artists: [] }, async () => assert.fail('no request')), null);
 });
+
+test('Soncle Now Playing: formats time, has the four destinations, and only drives the page\'s own player', async () => {
+  const { fmtTime, RAIL } = await import('../extension/src/nowplaying.js');
+  assert.deepEqual([fmtTime(0), fmtTime(65), fmtTime(3601), fmtTime(NaN)], ['0:00', '1:05', '60:01', '0:00']);
+  assert.deepEqual(['home', 'library', 'sound', 'settings'].filter((id) => !RAIL.some((r) => r.id === id)), []);   // docs/DESIGN.md §3.1
+  const src = read('extension/src/nowplaying.js');
+  for (const bad of ['captureStream', 'MediaRecorder', 'AudioContext', 'createMediaElementSource', 'document.cookie', 'ytmusic-ad', 'skip']) assert.ok(!src.includes(bad), bad);
+  // its stylesheet only styles its own elements, never the site's
+  const { CSS } = await import('../extension/src/nowplaying.js');
+  const selectors = [...CSS.matchAll(/(^|[}{])\s*([^{}@]+)\{/g)].map((m) => m[2].trim()).filter(Boolean);
+  assert.ok(selectors.length > 20);
+  for (const sel of selectors) assert.ok(sel.split(',').every((x) => x.trim().startsWith('.np')), sel);
+  assert.match(src, /hides nothing/);
+});

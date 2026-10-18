@@ -20,7 +20,8 @@ export const GROUPS = [
     { id: 'dynamic', title: 'Colours from the cover', desc: 'Tint the page with the colours of the current song’s artwork.', status: 'on', control: onOff('dynamic') },
     { id: 'motion', title: 'Motion style', desc: 'Classic (smooth and glowy) or expressive Material 3 motion.', status: 'soon' },
     { id: 'density', title: 'List density', desc: 'Compact or comfortable rows.', status: 'soon' },
-    { id: 'nowplaying', title: 'Soncle Now Playing page', desc: 'Large artwork with the lyrics beside it, like the app.', status: 'soon' },
+    { id: 'nowplaying', title: 'Soncle Now Playing', desc: 'A full-screen player in Soncle’s design: large artwork, the lyrics beside it, a rail and Soncle’s controls (Alt+N). It drives YouTube Music’s own player and hides nothing, so ads the site plays still play and artists are paid as usual.', status: 'on', control: { type: 'action', action: 'nowplaying', label: 'Open' } },
+    { id: 'fullshell', title: 'Soncle look for every YouTube Music page', desc: 'Home, Library, search and album pages redrawn like the app. The colours and shapes are done; the new layouts are coming.', status: 'soon' },
     { id: 'mica', title: 'Window backdrop (Mica)', desc: 'A Windows window effect.', status: 'app', why: 'Browsers do not offer it to pages.' }
   ] },
   { id: 'lyrics', title: 'Lyrics', from: ['Lyrics'], items: [
@@ -40,7 +41,7 @@ export const GROUPS = [
     { id: 'sleepfade', title: 'Fade out before stopping', status: 'soon' }
   ] },
   { id: 'shortcuts', title: 'Keyboard shortcuts', from: [], items: [
-    { id: 'keys', title: 'Shortcuts', desc: 'Alt+L opens or closes the panel. Alt+[ and Alt+] move the lyrics 0.1 s earlier or later (add Shift for 0.5 s). Esc closes the panel.', status: 'on', control: onOff('keys') },
+    { id: 'keys', title: 'Shortcuts', desc: 'Alt+L opens or closes the panel, Alt+N the full-screen Now Playing. Alt+[ and Alt+] move the lyrics 0.1 s earlier or later (add Shift for 0.5 s). Esc closes the panel.', status: 'on', control: onOff('keys') },
     { id: 'palette', title: 'Command bar (Ctrl+K)', status: 'soon' }
   ] },
   { id: 'sound', title: 'Sound', from: ['Player & audio', 'Audio output & devices'], items: [
