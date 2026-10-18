@@ -54,3 +54,28 @@ Bug fix for lyrics that were the wrong version or out of time.
   reporting — left out on purpose.)
 - The extension's build is also published as a single `soncle-companion-<version>.zip` from the Build extension workflow.
 - Version **0.4.0**.
+
+## Unreleased: Companion extension 0.3 — deeper look + feature panel
+
+- **Deeper Soncle theming** of music.youtube.com (more YTM / yt-spec variables, nav, player bar, cards, chips).
+- **Feature panel** lists every Soncle capability; unfinished items show **Coming soon**.
+- Stated clearly: the extension is **strictly not an ad blocker** — ads stay.
+- Version **0.3.0**.
+
+## Unreleased: Soncle's look for YouTube Music (extension 0.2)
+
+- The extension recolours music.youtube.com with Soncle's palette: dark, black, light or system theme, nine
+  accents, or colours taken from the cover of the current song, with rounded cards and covers. It points the
+  site's own colour variables at Soncle's (so it survives markup changes) and only recolours and rounds: it
+  hides and blocks nothing, ads included. Settings under **Style** in the panel. Checked on a mock page, not
+  the live site.
+- The palette code moved out of `renderer/app.js` into `renderer/palette.js` (shared with the extension). A
+  golden test (`fixtures/palette/golden.json`, made from the old code) proves the colours are unchanged.
+
+## Unreleased: Soncle Companion, a browser extension (first slice)
+
+- **`extension/`**: an unofficial extension for music.youtube.com that adds synced lyrics (LRCLIB), a per-song
+  timing nudge and the lyric cards, while leaving the real YouTube Music as it is. It does not block
+  ads, so artists are paid as usual. Build with `node extension/build.mjs`, load `extension/dist` unpacked
+  (see `extension/README.md`). Tested here against a copy of the page structure, not the live site.
+- `parseLrc` moved from `renderer/app.js` to `renderer/lrc.js` so the apps and the extension share one parser.
