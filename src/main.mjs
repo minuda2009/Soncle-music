@@ -1,4 +1,5 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
+import { getLyrics } from './lyrics-engine.mjs';
 import { app, powerMonitor, BrowserWindow, ipcMain, protocol, net, session, shell, nativeImage, nativeTheme, Menu, Tray, dialog, powerSaveBlocker, safeStorage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -383,31 +384,7 @@ async function handleStream(request) {
 }
 
 // ---------- lyrics ----------
-const UA_LYRICS = { 'User-Agent': 'Soncle (https://github.com/minuda2009)' };
-const cleanTitle = (s) => (s || '').replace(/\s*[\(\[](official|lyric|audio|video|visualizer|hd|4k|mv|remaster|feat\.?|ft\.)[^\)\]]*[\)\]]/gi, '').trim();
-async function lrclib(t) {
-  const artist = (t.artists || []).map((a) => a.name).filter(Boolean)[0] || '';
-  const title = cleanTitle(t.title);
-  const q = new URLSearchParams({ track_name: title, artist_name: artist });
-  if (t.album?.name) q.set('album_name', t.album.name);
-  if (t.duration) q.set('duration', String(Math.round(t.duration)));
-  try {
-    const r = await net.fetch('https://lrclib.net/api/get?' + q, { headers: UA_LYRICS });
-    if (r.ok) {
-      const j = await r.json();
-      if (j.syncedLyrics || j.plainLyrics) return { synced: j.syncedLyrics || null, plain: j.plainLyrics || null, source: 'LRCLIB' };
-    }
-  } catch {}
-  try {
-    const r = await net.fetch('https://lrclib.net/api/search?' + new URLSearchParams({ track_name: title, artist_name: artist }), { headers: UA_LYRICS });
-    if (r.ok) {
-      const arr = await r.json();
-      const best = arr.find((x) => x.syncedLyrics && (!t.duration || Math.abs(x.duration - t.duration) < 5)) || arr.find((x) => x.syncedLyrics) || arr[0];
-      if (best) return { synced: best.syncedLyrics || null, plain: best.plainLyrics || null, source: 'LRCLIB' };
-    }
-  } catch {}
-  return null;
-}
+const lrclib = (t) => getLyrics(t, { fetchImpl: net.fetch, preferId: t.lyricsId }).catch(() => null);
 async function lyrics(t) {
   if (process.env.SONCLE_MOCK) return { synced: Array.from({ length: 14 }, (_, i) => `[00:${String(i * 2).padStart(2, '0')}.00] Line ${i + 1} of the song, la la la`).join('\n'), plain: null, source: 'LRCLIB (mock)' };
   if (local.isLocalId(t.id)) {
@@ -502,7 +479,7 @@ async function restore() {
   if (!isBackupMarker(data.app)) throw new Error('Not a Soncle backup file');   // backups from before the rename are accepted too
   upgradeSettings(data.settings);
   for (const k of ['liked', 'playlists', 'savedAlbums', 'savedPlaylists', 'followedArtists', 'history', 'searchHistory', 'eqPresets']) if (Array.isArray(data[k])) store[k] = data[k];
-  for (const k of ['lyricsOffsets', 'deviceProfiles']) if (data[k] && typeof data[k] === 'object') store[k] = data[k];
+  for (const k of ['lyricsOffsets', 'lyricsChoice', 'deviceProfiles']) if (data[k] && typeof data[k] === 'object') store[k] = data[k];
   if (data.settings) store.settings = { ...defaultSettings, ...data.settings, eq: { ...defaultSettings.eq, ...(data.settings.eq || {}) } };
   applySettings(store.settings);
   save(true);
