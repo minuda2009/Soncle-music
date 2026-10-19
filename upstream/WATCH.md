@@ -1,4 +1,4 @@
-# Upstream watch · 2026-10-17
+# Upstream watch · 2026-10-19
 
 New releases and relevant changes in projects Soncle learns from. Nothing here is applied automatically.
 
@@ -10,14 +10,15 @@ _YouTube Music desktop app (Electron; formerly th-ch/youtube-music). Same platfo
 ## youtubei.js (LuanRT/YouTube.js)
 _The library Soncle uses for every YouTube request. Most 'YouTube changed something' fixes land here first (Dependabot also opens the version bump)._
 
+- Release **v18.2.0**, 2026-10-18: https://github.com/LuanRT/YouTube.js/releases/tag/v18.2.0
 
-Relevant commits (6 of 19):
-- [`cb4a44e`](https://github.com/LuanRT/YouTube.js/commit/cb4a44e508cbc04d30cb9b774da86fa884917743) fix(LockupView): `duration` getter not working with very long videos (#1306) _(fix)_
-- [`02c5c8d`](https://github.com/LuanRT/YouTube.js/commit/02c5c8d4c48fd9d9e87be6337ae99833e9a9c879) fix(parser): Add `ToggleableListItemView` class (#1282) _(fix)_
-- [`710900a`](https://github.com/LuanRT/YouTube.js/commit/710900af6c76f469d4be522e5e19cd1debd6baf6) fix: Handle missing session config and import `Text` in `ToggleFormField` (#1276) _(fix)_
-- [`f268ba1`](https://github.com/LuanRT/YouTube.js/commit/f268ba1f57995cc3bc751af2c824a0b87b917a68) fix(LockupMetadataView): Handle missing titles (#1278) _(fix)_
-- [`935364f`](https://github.com/LuanRT/YouTube.js/commit/935364fed3fd042213231d08bd544fa6f42d2165) fix(Video): `is_live` getter not working (#1291) _(fix)_
-- [`ae4e655`](https://github.com/LuanRT/YouTube.js/commit/ae4e655587f839bf732ff2ddc93cc4258de79c7c) fix(LockupView): Parser error when `content_type` is `undefined` (#1297) _(fix)_
+Relevant commits (6 of 17):
+- [`32323cd`](https://github.com/LuanRT/YouTube.js/commit/32323cdda631b5e4351fffdf49a9509e4fba1abd) fix(parser): Improve storyboard data parsing _(fix)_
+- [`6dec600`](https://github.com/LuanRT/YouTube.js/commit/6dec600dadc02b30480b63b3a9791f18ac974d3b) chore(Feed): Fix `page_contents` return type _(fix)_
+- [`20e3251`](https://github.com/LuanRT/YouTube.js/commit/20e32519fde1ac0d106edc72e4435aca4543c0cb) fix(StructuredDescriptionContent): Add `VideoTitleHeaderView` type to `items` _(fix)_
+- [`fb801f9`](https://github.com/LuanRT/YouTube.js/commit/fb801f9ea0cbe9445ab698be1b810373d65b5315) fix(StructuredDescriptionContent): Add `ItemSection` type to `items` _(fix)_
+- [`3048496`](https://github.com/LuanRT/YouTube.js/commit/3048496b5f99a8040ebf4ce02be9710f2df88991) fix(Tab): Add `Message` type to `content` _(fix)_
+- [`b95ee26`](https://github.com/LuanRT/YouTube.js/commit/b95ee26f2d63f9eb210e64cde11675850fabc8a1) fix(LockupView): `duration` parsing large values incorrectly (#1308) _(fix)_
 
 ## yt-dlp (yt-dlp/yt-dlp)
 _Early warning: yt-dlp usually reacts within hours when YouTube changes stream clients, client versions or PO token rules._
