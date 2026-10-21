@@ -19,7 +19,7 @@
     "@capacitor/app": "8.1.2",
     "@capacitor/browser": "8.0.5",
     "@capacitor/core": "8.5.3",
-    "@capacitor/filesystem": "8.1.4",
+    "@capacitor/filesystem": "8.1.5",
     "@capacitor/status-bar": "8.0.4",
     "youtubei.js": "18.1.0"
   },
