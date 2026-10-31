@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased: Soncle Preview for Windows plays songs (C# app)
+
+- The C# / WinUI 3 test build on the **windows-preview** release (`Soncle-preview-win-x64.zip`,
+  run `Soncle.Windows.exe` from the folder) now plays music. It is still **Soncle Preview**, a
+  separate app with its own data folder; it never reads or writes the shipping app's data.
+- What works: type in the **search box in the title bar** (or press Ctrl+K) and press Enter; pick a
+  song from the list to play it, with the rest of the results as the queue. The player bar shows the
+  artwork, title and artists, play/pause, previous/next and a seek bar with the time, a spinner while
+  the song loads and a short message when it can't be played. The Windows media flyout and the media
+  keys show and control the song too. Sound goes through the new C# engine (loudness levelled,
+  limiter last) to the default output device over WASAPI, and pausing or skipping fades instead of
+  clicking.
+- What to check on Windows: that search finds what you expect, how long a song takes to start, that
+  play/pause/next/seek and the media keys work, and that nothing clicks or stutters (also with a
+  44.1 kHz device and after unplugging headphones: the bar should say the sound device stopped, and
+  Play should start it again). `uno/heads/Soncle.Windows/README.md` has the steps.
+- Not there yet: **sound starts only after the whole song has downloaded and decoded** (a few
+  seconds; streaming start comes later), only songs YouTube offers as WebM/Opus play (AAC-only ones
+  say they can't be played), it is signed out only (no account, library, likes or playlists), the
+  stream lookup uses only the two YouTube clients that need no PO token and no deciphering (more
+  come with the PO-token and player-script work), and there is no queue view, lyrics, Sound page,
+  device picker or exclusive mode yet.
+
 ## Unreleased: Soncle Uno preview for Android (C# app)
 
 - A first test build of the new C# / Uno Platform Android app is on the **uno-android-preview**

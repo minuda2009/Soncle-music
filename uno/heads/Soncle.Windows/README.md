@@ -4,17 +4,69 @@ Stage 4 of the migration (`docs/WINUI_PLAN.md` §1, §11): the real WinUI 3 / Wi
 head that opens Soncle's shell on Windows. It is **Windows only** and is deliberately not in
 `uno/Soncle.sln`, so the Linux job keeps building and testing the libraries unchanged.
 
-## What this scaffold has
+## What it has
 
 - a window with **Mica** (`MicaBackdrop`, solid when unsupported), the **48 px custom title bar**
-  (`ExtendsContentIntoTitleBar` + the `Tall` caption row) and an honest **media session**
-  (`SystemMediaTransportControls` reporting Soncle with nothing playing);
+  (`ExtendsContentIntoTitleBar` + the `Tall` caption row);
 - the four destinations — **Home · Library · Sound · Settings** — in a rail;
 - the **player bar** with the empty state from `docs/DESIGN.md` §4.1 (never a blank square with
-  `0:00 / 0:00`).
+  `0:00 / 0:00`), kept exactly until a song is chosen;
+- **search and play** (the first `Soncle.App` slice, `Playback/PlaybackHost.cs` composes it):
+  - a search box in the title bar (`docs/WINUI_PLAN.md` §3; Ctrl+K focuses it). The rest of the
+    title bar still drags the window: `WindowChrome.UseTitleBar` keeps the grid as the title bar
+    and cuts the box out as an `InputNonClientPointerSource` pass-through rectangle, recomputed
+    when the bar is resized or the display scale changes;
+  - Enter searches (InnerTube `search`, type `all`; songs and videos are listed, top result first);
+    the results list shows artwork, title and artists · album · duration, a spinner while searching
+    and a plain message when nothing was found or the search failed;
+  - clicking a row (or Enter on it) plays it with all results as the queue. The player bar then
+    shows artwork, title and artists, previous / play-pause / next, the seek bar with `m:ss`
+    elapsed and total (it seeks when you let go), a spinner while the song is looked up,
+    downloaded and decoded, and "Couldn't play this song." when it can't be played;
+  - the **media session** (`SystemMediaTransportControls`, `Playback/MediaSession.cs`) reports
+    nothing playing until then, and afterwards the title, artists, artwork and Playing / Paused;
+    its Play / Pause / Next / Previous buttons (media keys, the Windows media flyout) drive the
+    same `PlaybackController`.
+- **sound over WASAPI** (`Playback/WasapiAudioOutput.cs`, NAudio.Wasapi 2.2.1): shared mode,
+  event-driven, 32-bit float, 48 kHz stereo on the default output device. Devices whose mix
+  format is different (44.1 kHz, 24-bit) are converted by Windows (NAudio opens shared streams with
+  `AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | SRC_DEFAULT_QUALITY`). The render path does not allocate
+  (NAudio's byte buffer is reinterpreted as floats in place), each start fades in and each stop
+  plays one last faded block before the device is released on a pool thread, and a callback or
+  device failure (unplugged, taken in exclusive mode) stops the session and shows "The sound device
+  stopped. Press play to try again." in the bar. Exclusive mode and a device picker are later
+  settings (`docs/WINUI_PLAN.md` §5).
 
-Not here yet, by scope: tray / close to tray, rail collapse, `Soncle.App` pages, `Soncle.Design`
-(stage 3) and the own-data-folder carry-over. See the Issue for the exact boundary.
+How a song gets to the speakers: `StreamResolver` (clients **ANDROID_VR**, then **IOS**, the two
+that return plain URLs: no PO token, no deciphering yet) with the **WebM/Opus-only** filter →
+`SongDownloader` downloads the **whole song** → Concentus decodes it → `EnginePlayer` (one engine
+per song, loudness levelled to −14 LUFS, limiter last) → `WasapiAudioOutput`. Sound therefore
+starts only after the whole song is downloaded and decoded.
+
+Signed out, always: one `HttpClient` with `UseCookies = false`, no account, no credentials. Nothing
+touches the network at start-up (the InnerTube session is created on the first search, and retried
+by the next one if it failed), so the app opens offline. Downloads go to the preview's own
+`%LOCALAPPDATA%\Soncle Preview\streams` (emptied at start-up), never the shipping app's
+`%APPDATA%\Soncle`. Diagnostics are one-line `Trace` messages (`Soncle ...`, visible in a debugger
+or DebugView) with URLs cut out; no URL, header or token is logged.
+
+Not here yet, by scope: streaming start (sound before the download finishes), AAC-only songs,
+PO-token and deciphered clients (YTMUSIC, WEB), sign-in and the library, a queue view, lyrics, the
+Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `Soncle.Design`
+(stage 3) and the own-data-folder carry-over.
+
+## What to test on Windows
+
+1. Start `Soncle.Windows.exe` with the network off: the window opens, the bar says "Nothing
+   playing". Turn the network on.
+2. Drag the window by the title bar on both sides of the search box; click into the box and type.
+3. Search (Enter) for an artist; the list fills. Pick a song: the bar shows it with a spinner, then
+   plays (expect a few seconds before sound: the whole song is downloaded and decoded first).
+4. Pause / play, next / previous, drag the seek bar and let go, and use the keyboard media keys and
+   the Windows media flyout. Listen for clicks at start, pause, skip and seek.
+5. Switch the default device to one at 44.1 kHz, and unplug headphones while playing: the bar should
+   say the sound device stopped; Play starts it again on the new default device.
+6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to).
 
 ## Measured (shell, `windows-latest`, 10 Oct 2026)
 
@@ -54,7 +106,7 @@ dotnet publish uno/heads/Soncle.Windows/Soncle.Windows.csproj `
 appear) and only then touches the release, so a head that no longer starts never replaces the last
 good preview. The build is unsigned, so SmartScreen warns; run from a folder, nothing is installed.
 Its app id is `com.minuda2009.soncle.preview` and it never reads or writes the shipping app's
-`%APPDATA%\Soncle` (the window exists; nothing persists yet — the carry-over arrives with the
+`%APPDATA%\Soncle` (only the stream cache above is written; the carry-over arrives with the
 switch).
 
 Building for Windows needs Windows: Uno's SDK stops with `UNOB0014` on other systems, and
