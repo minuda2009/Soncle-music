@@ -4,16 +4,19 @@
 
 - **Reels safe area** for 9:16 cards (on by default): the words, the song name and the cues stay clear of
   Instagram's top bar, the like/comment/share column and the caption and music strip at the bottom. Turn it
-  off under Lyric card → Reels safe area to get the old layout.
+  off under Lyric card → Reels safe area to get the old layout. The 9:16 image keeps the top and bottom
+  clearance but stays centred, since a picture or Story has no button column on the right.
 - **Text size**: Normal, Large or Huge. Large and Huge put fewer words on each screen so the type really
   gets bigger.
 - **Animation**: Pop (as before), Fade, Slide up, Typewriter or Karaoke (the whole line shows dim and lights
   up word by word).
 - **Start cue** (optional): "Start the song at m:ss" is burned into the first seconds of the video, so you
-  still know where to start the song when you pick it in the music picker later.
+  still know where to start the song when you pick it in the music picker later. For chosen lines the video
+  now starts on a whole second of the song (never before 0:00), so that time is exact.
 - **Sync cues** (optional): a 3-2-1 countdown before the first word, a short pulse on each line and the song
   time in the corner, for lining the song up by hand in CapCut, VN or another editor, or for recording a
-  voiceover over it.
+  voiceover over it. A clip that opens on or inside a line has no room for the countdown; the status line
+  says so and the pulses and timecode still show.
 - The video is still silent on purpose: Soncle never reads or records the song. Add the song in the
   platform's music picker or your editor so the artist is paid. The status line under the preview now says
   where to start the song for chosen lines too.

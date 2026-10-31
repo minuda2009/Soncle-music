@@ -291,7 +291,7 @@
       safeRow.hidden = !f.safe;
       card = !synced ? still() : clip ? createCard({ lines: clipLines(lyr.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, mctx) : createCard({ lines: picked(), leadIn: st.syncCues ? 3.5 : 0.5, ...base() }, mctx);
       const from = mmss(Math.max(0, card.timeline?.origin ?? st.startAt));
-      const cues = st.syncCues ? ' The countdown and timecode help you line the song up by hand in a video editor; the video itself has no sound.' : '';
+      const cues = !st.syncCues ? '' : card.countdown ? ' The countdown, line pulses and timecode help you line the song up by hand in a video editor; the video itself has no sound.' : ' The line pulses and timecode help you line the song up by hand in a video editor (the words start too soon for a 3-2-1); the video itself has no sound.';
       t0 = performance.now();
       const long = synced && card.duration > (clip ? MAX_CLIP_S : MAX_S);
       saveVid.hidden = !canRecord; saveVid.textContent = canShareFiles() ? 'Share video' : 'Save video'; saveVid.disabled = long || !card.duration;
@@ -309,7 +309,7 @@
       busy = null; saveImg.disabled = false; rebuild();
     }
     const chips = (key, options) => { const box = el('div', { className: 'row' }); const draw = () => box.replaceChildren(...options.map(([v, l]) => el('button', { className: 'chip' + (st[key] === v ? ' on' : ''), textContent: l, onclick: () => { if (busy) return; st[key] = v; draw(); rebuild(); } }))); draw(); return box; };
-    const safeRow = el('div', { className: 'row', title: 'Keeps the words clear of the Instagram Reels buttons and caption' }, el('label', { textContent: 'Reels safe area' }), chips('safe', [[true, 'On'], [false, 'Off']]));
+    const safeRow = el('div', { className: 'row', title: 'Keeps the words clear of the Instagram Reels buttons and caption (tuned for Reels; the image stays centred)' }, el('label', { textContent: 'Reels safe area' }), chips('safe', [[true, 'On'], [false, 'Off']]));
     const startOut = el('span', { textContent: mmss(st.startAt) });
     const startRange = el('input', { type: 'range', min: 0, max: Math.max(1, songLen - 1), step: 1, value: st.startAt, 'aria-label': 'Start of the video in the song', oninput: () => { st.startAt = Number(startRange.value); startOut.textContent = mmss(st.startAt); }, onchange: () => rebuild() });
     startRange.style.flex = '1';

@@ -1932,7 +1932,7 @@ async function lyricCardDialog() {
     safeRow.hidden = !fmt.safe;
     card = !synced ? still() : clip ? createCard({ lines: clipLines(L.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, measureCtx) : createCard({ lines: picked(), leadIn: st.syncCues ? 3.5 : 0.5, ...base() }, measureCtx);
     const from = mmss(Math.max(0, card.timeline?.origin ?? st.startAt));
-    const cues = st.syncCues ? ' The countdown and timecode help you line the song up by hand in a video editor; the video itself has no sound.' : '';
+    const cues = !st.syncCues ? '' : card.countdown ? ' The countdown, line pulses and timecode help you line the song up by hand in a video editor; the video itself has no sound.' : ' The line pulses and timecode help you line the song up by hand in a video editor (the words start too soon for a 3-2-1); the video itself has no sound.';
     t0 = performance.now();
     const tooLong = synced && card.duration > (clip ? MAX_CLIP_S : MAX_S);
     saveVid.hidden = !canRecord; if (!busy) saveVid.textContent = canShareFiles() ? 'Share video' : 'Save video';
@@ -1967,7 +1967,7 @@ async function lyricCardDialog() {
   const startOut = h('output', null, mmss(st.startAt));
   const startRange = h('input', { type: 'range', min: 0, max: Math.max(1, songLen - 1), step: 1, value: st.startAt, oninput: () => { st.startAt = Number(startRange.value); startOut.textContent = mmss(st.startAt); }, onchange: () => { if (!busy) rebuild(); } });
   const clipRows = [];
-  const safeRow = h('div', { class: 'lc-row', title: 'Keeps the words clear of the Instagram Reels buttons and caption' }, h('label', null, 'Reels safe area'), chips('safe', [[true, 'On'], [false, 'Off']], rebuild));
+  const safeRow = h('div', { class: 'lc-row', title: 'Keeps the words clear of the Instagram Reels buttons and caption (tuned for Reels; the image stays centred)' }, h('label', null, 'Reels safe area'), chips('safe', [[true, 'On'], [false, 'Off']], rebuild));
   const step = (d) => { if (busy) return; st.count = Math.max(1, Math.min(10, st.count + d)); count.textContent = st.count; drawList(); rebuild(); };
   drawList(); rebuild();
   modal(h('div', { class: 'dialog lc-dialog' }, h('h3', null, 'Lyric card'),

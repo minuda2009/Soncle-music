@@ -31,11 +31,13 @@ const TEXT = {
 const textOf = (size) => TEXT[size] || TEXT.normal;
 
 // The area kept clear of the platform's overlays (or a plain margin when there is none / it is off).
-export function safeRect(fmt, safe = true) {
+// A still is posted as a picture or a Story, where there is no like/comment/share column on the right,
+// so it keeps the top and bottom insets but uses the left inset on both sides and stays centred.
+export function safeRect(fmt, safe = true, still = false) {
   const { w: W, h: H } = fmt;
   if (safe && fmt.safe) {
-    const s = fmt.safe;
-    return { x: W * s.left, y: H * s.top, w: W * (1 - s.left - s.right), h: H * (1 - s.top - s.bottom) };
+    const s = fmt.safe, right = still ? s.left : s.right;
+    return { x: W * s.left, y: H * s.top, w: W * (1 - s.left - right), h: H * (1 - s.top - s.bottom) };
   }
   return { x: W * 0.06, y: H * 0.04, w: W * 0.88, h: H * 0.92 };
 }
@@ -45,7 +47,7 @@ export function safeRect(fmt, safe = true) {
 export function textBox(fmt, { safe = true, still = false } = {}) {
   const { w: W, h: H } = fmt;
   if (safe && fmt.safe) {
-    const r = safeRect(fmt, true), top = H * (still ? 0.02 : 0.05), bottom = H * 0.09;
+    const r = safeRect(fmt, true, still), top = H * (still ? 0.02 : 0.05), bottom = H * 0.09;
     return { x: r.x, y: r.y + top, w: r.w, h: r.h - top - bottom };
   }
   const margin = W * 0.08;
@@ -152,16 +154,20 @@ export function layoutWords(words, sizes, box, measure, { align = 'center', uppe
 export const clipLines = (lines, startAt, len = 0) => lines.filter((l) => l.text && (l.end ?? l.t + 4) > startAt && (!len || l.t < startAt + len));
 
 // The whole timeline: scenes laid out and moved so the video starts at 0.
-// Without `opts.startAt` the video opens `opts.leadIn` (0.5 s) before the first word. With it, video time 0
-// is exactly that second of the song (so the clip lines up with the same song started at that second in a
-// platform's own music picker) and, with `opts.endAt`, the video is exactly as long as the clip.
+// Without `opts.startAt` the video opens at least `opts.leadIn` (0.5 s) before the first word, at a whole
+// second of the song: music pickers start a song on whole seconds, so "start the song at m:ss" is then exact.
+// It never starts before the song does (the lead-in shrinks instead, and a countdown that no longer fits is
+// left out). With `opts.startAt`, video time 0 is exactly that second of the song (so the clip lines up with
+// the same song started at that second in a platform's own music picker) and, with `opts.endAt`, the video is
+// exactly as long as the clip.
 // Also returns `origin` (the song second at video time 0) and `lineStarts` (video times of each line start).
 export function buildTimeline(lines, fmt, measure, opts = {}) {
   const ts = textOf(opts.textSize);
   const scenes = buildScenes(lines, { maxWordsPerScene: opts.maxWordsPerScene ?? ts.maxWordsPerScene, splitAt: opts.splitAt ?? ts.splitAt });
   if (!scenes.length) return { scenes: [], duration: 0 };
   const clip = Number.isFinite(opts.startAt);
-  const origin = clip ? opts.startAt : scenes[0].t0 - (Number.isFinite(opts.leadIn) ? opts.leadIn : 0.5);
+  const leadIn = Number.isFinite(opts.leadIn) ? opts.leadIn : 0.5;
+  const origin = clip ? opts.startAt : Math.max(0, Math.floor(scenes[0].t0 - leadIn + 1e-6));
   const box = textBox(fmt, { safe: opts.safe !== false });
   const out = scenes.map((s) => {
     const { items } = layoutWords(s.words, s.sizes, box, measure, opts);

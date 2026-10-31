@@ -67,7 +67,7 @@ test('big words use the biggest size, mid and small the set ratios', () => {
 
 test('the timeline starts at the lead-in and ends after the last scene', () => {
   const tl = buildTimeline(LINES, FORMATS.story, measure);
-  assert.ok(Math.abs(tl.scenes[0].t0 - 0.5) < 1e-9);
+  assert.ok(Math.abs(tl.scenes[0].t0 - 1) < 1e-9, 'first line at 10 s, 0.5 s lead-in snapped down to the whole second 9');
   assert.ok(tl.duration > tl.scenes[tl.scenes.length - 1].t1);
   assert.ok(tl.duration < 20);
   assert.ok(tl.scenes.every((s) => s.items.every((it) => it.t >= s.t0 - 1e-9)));
@@ -95,12 +95,23 @@ test('on a 9:16 Reel every word stays clear of the Instagram overlays', () => {
   const { w: W, h: H } = FORMATS.story, zone = safeRect(FORMATS.story);
   assert.deepEqual([zone.x, zone.y, zone.x + zone.w, zone.y + zone.h].map((v) => Math.round(v)), [65, 230, 929, 1498]);
   for (const textSize of ['normal', 'large', 'huge']) {
-    const items = [...buildTimeline(LINES, FORMATS.story, measure, { textSize }).scenes.flatMap((s) => s.items), ...buildStill(LINES, FORMATS.story, measure, { textSize })];
-    for (const it of items) {
+    for (const it of buildTimeline(LINES, FORMATS.story, measure, { textSize }).scenes.flatMap((s) => s.items)) {
       assert.ok(inside(it, zone), `${it.text} (${textSize}) inside the safe zone`);
       assert.ok(top(it) >= 0.12 * H - 1e-6 && it.y <= H * (1 - 0.22) + 1e-6 && it.x + it.w <= W * (1 - 0.14) + 1e-6);
     }
+    for (const it of buildStill(LINES, FORMATS.story, measure, { textSize })) {
+      assert.ok(inside(it, safeRect(FORMATS.story, true, true)), `${it.text} (${textSize}) inside the still's safe zone`);
+      assert.ok(top(it) >= 0.12 * H - 1e-6 && it.y <= H * (1 - 0.22) + 1e-6 && it.x + it.w <= W * (1 - 0.06) + 1e-6);
+    }
   }
+});
+
+test('a 9:16 still keeps the top and bottom insets but stays centred (no Reels button column on a picture)', () => {
+  const { w: W } = FORMATS.story, r = safeRect(FORMATS.story, true, true), b = textBox(FORMATS.story, { still: true });
+  assert.ok(Math.abs(r.x - (W - r.x - r.w)) < 1e-6 && Math.abs(b.x - (W - b.x - b.w)) < 1e-6);
+  assert.deepEqual([r.y, r.h], [safeRect(FORMATS.story).y, safeRect(FORMATS.story).h]);
+  const items = buildStill([{ t: 0, end: 2, text: 'moon' }], FORMATS.story, measure, { align: 'center' });
+  assert.ok(Math.abs(items[0].x + items[0].w / 2 - W / 2) < 1e-6, 'a centred word sits on the middle of the frame');
 });
 
 test('with the safe area off (and on formats without one) the text box is the classic one', () => {
@@ -152,15 +163,31 @@ test('every motion style rests fully shown once the word is in, and hides (or di
 
 test('the timeline reports its song origin, line starts and honours the lead-in', () => {
   const tl = buildTimeline(LINES, FORMATS.story, measure);
-  assert.equal(tl.origin, 9.5);
-  assert.deepEqual(tl.lineStarts, [0.5, 3.5, 6.5, 8.5]);
+  assert.equal(tl.origin, 9);
+  assert.deepEqual(tl.lineStarts, [1, 4, 7, 9]);
   const clip = buildTimeline(LINES, FORMATS.story, measure, { startAt: 12, endAt: 20 });
   assert.equal(clip.origin, 12);
   assert.deepEqual(clip.lineStarts, [1, 4, 6]);
   const lead = buildTimeline(LINES, FORMATS.story, measure, { leadIn: 3.5 });
-  assert.ok(Math.abs(lead.scenes[0].t0 - 3.5) < 1e-9);
-  assert.equal(lead.origin, 6.5);
+  assert.ok(Math.abs(lead.scenes[0].t0 - 4) < 1e-9);
+  assert.equal(lead.origin, 6);
   assert.equal(buildTimeline(LINES, FORMATS.story, measure, { startAt: 12, leadIn: 3.5 }).origin, 12, 'lead-in only applies to chosen lines');
+});
+
+test('chosen lines start on a whole song second, never before the song', () => {
+  const at = (t, leadIn) => buildTimeline([{ t, end: t + 3, text: 'Hold me tonight' }], FORMATS.story, measure, leadIn === undefined ? {} : { leadIn });
+  const frac = at(10.37, 3.5);
+  assert.equal(frac.origin, 6, 'origin snapped down to a whole second');
+  assert.ok(Math.abs(frac.scenes[0].t0 - 4.37) < 1e-9, 'the lead-in only grows');
+  assert.equal(startCueText(frac.origin), 'Start the song at 0:06');
+  assert.equal(mmss(frac.origin, true), '0:06.0', 'the timecode at video 0 agrees with the start cue');
+  assert.ok(Math.abs(frac.scenes[0].items[0].t - (10.37 - frac.origin)) < 1e-9, 'a word is drawn when the song (started at origin) sings it');
+  assert.equal(at(9.5).origin, 9);
+  assert.equal(at(9).origin, 8);
+  const early = at(2.2, 3.5);
+  assert.equal(early.origin, 0, 'a line near the song start does not push the origin below 0:00');
+  assert.ok(Math.abs(early.scenes[0].t0 - 2.2) < 1e-9);
+  assert.equal(countdownAt(0.5, early.scenes[0].t0), null, 'the countdown drops out when it no longer fits');
 });
 
 test('countdown, start cue and timecode helpers', () => {

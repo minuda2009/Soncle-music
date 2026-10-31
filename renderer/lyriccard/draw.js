@@ -34,14 +34,15 @@ function paintBackground(ctx, W, H, kind, { cover, hue = 235, sat = 55 }) {
 // opts: { lines, format, background, align, upper, showTitle, title, artist, cover, hue, sat, accent, startAt?, endAt?,
 //   safe (true: keep clear of Reels overlays on 9:16), textSize ('normal'|'large'|'huge'), motion (see MOTIONS),
 //   startCue (burn in "Start the song at m:ss" for the first seconds), syncCues (3-2-1 countdown, line pulses,
-//   song timecode), leadIn (seconds before the first word when not a clip) }
+//   song timecode), leadIn (at least this many seconds before the first word when not a clip) }
+// The card's `countdown` says whether the 3-2-1 is actually shown (it needs 3 s before the first word).
 // startAt/endAt (seconds into the song) make a clip whose video time 0 is startAt; see buildTimeline.
 // `ctxForMeasure` is any 2D context (only measureText is used).
 export function createCard(opts, ctxForMeasure) {
   const fmt = FORMATS[opts.format] || FORMATS.story;
   const { w: W, h: H } = fmt;
   const measure = (text, px, weight) => { ctxForMeasure.font = `${weight} ${px}px ${FONT}`; return ctxForMeasure.measureText(text).width; };
-  const safe = opts.safe !== false, safeOn = safe && !!fmt.safe, area = safeRect(fmt, safe);
+  const safe = opts.safe !== false, safeOn = safe && !!fmt.safe, area = safeRect(fmt, safe, !!opts.still);
   const motion = opts.motion || 'pop', accent = opts.accent || '#fff';
   const lo = { align: opts.align || 'center', upper: opts.upper !== false, startAt: opts.startAt, endAt: opts.endAt, safe, textSize: opts.textSize || 'normal', leadIn: opts.leadIn };
   const timeline = opts.still ? null : buildTimeline(opts.lines, fmt, measure, lo);
@@ -51,6 +52,8 @@ export function createCard(opts, ctxForMeasure) {
   paintBackground(bctx, W, H, opts.background || 'cover', opts);
   const textColor = '#fff';
   const firstWordT = timeline?.scenes.length ? timeline.scenes[0].t0 : NaN;
+  // Whether the 3-2-1 fits before the first word (it does not when a clip opens on or inside a line).
+  const countdown = !!opts.syncCues && countdownAt(firstWordT - 3, firstWordT) !== null;
 
   function footer(ctx) {
     if (opts.showTitle === false || !opts.title) return;
@@ -152,5 +155,5 @@ export function createCard(opts, ctxForMeasure) {
     footer(ctx);
     ctx.restore();
   }
-  return { W, H, duration: timeline ? timeline.duration : 0, render, timeline, stillItems };
+  return { W, H, duration: timeline ? timeline.duration : 0, render, timeline, stillItems, countdown };
 }
