@@ -3,6 +3,8 @@
     x:Class="Soncle.Windows.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Soncle.Windows"
+    xmlns:vm="using:Soncle.App.ViewModels"
     Background="Transparent">
 
     <Page.Resources>
@@ -21,12 +23,32 @@
             <RowDefinition Height="88" />
         </Grid.RowDefinitions>
 
-        <!-- Title bar: WindowChrome makes this the drag region; the system caption buttons sit on
-             the right, so nothing is placed there. -->
+        <!-- Title bar: WindowChrome makes this the drag region and leaves a pass-through hole over
+             the search box (docs/WINUI_PLAN.md §3, search in the title bar); the system caption
+             buttons sit on the right, so nothing is placed there. -->
         <Grid x:Name="TitleBar" Grid.Row="0" Background="Transparent" Padding="16,0,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <TextBlock Text="Soncle Preview"
                        VerticalAlignment="Center"
                        Style="{StaticResource TitleSmall}" />
+            <AutoSuggestBox x:Name="SearchBox"
+                            Grid.Column="1"
+                            Width="360"
+                            Margin="16,0"
+                            VerticalAlignment="Center"
+                            PlaceholderText="Search songs"
+                            AutomationProperties.Name="Search songs"
+                            IsEnabled="False"
+                            TextChanged="OnSearchTextChanged"
+                            QuerySubmitted="OnSearchSubmitted">
+                <AutoSuggestBox.QueryIcon>
+                    <SymbolIcon Symbol="Find" />
+                </AutoSuggestBox.QueryIcon>
+            </AutoSuggestBox>
         </Grid>
 
         <!-- The rail: the four destinations (docs/DESIGN.md §3.1). -->
@@ -62,22 +84,79 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
-            <!-- Pages arrive with Soncle.App (plan stage 4/5); the shell shows one placeholder. -->
-            <Grid Background="{ThemeResource BackgroundBrush}" Padding="32">
-                <StackPanel VerticalAlignment="Center" Spacing="8">
+            <!-- One placeholder per destination; search results replace it until another
+                 destination is picked. -->
+            <Grid Background="{ThemeResource BackgroundBrush}">
+                <StackPanel x:Name="Placeholder" Margin="32" VerticalAlignment="Center" Spacing="8">
                     <TextBlock x:Name="DestinationTitle"
                                Text="Home"
                                Style="{StaticResource HeadlineMedium}" />
-                    <TextBlock Text="The pages arrive with Soncle.App — this build is the shell."
+                    <TextBlock Text="Search for a song in the title bar to play it. The other pages arrive with Soncle.App."
+                               TextWrapping="Wrap"
                                Style="{StaticResource BodyMedium}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}" />
                 </StackPanel>
+
+                <Grid x:Name="ResultsPanel" Visibility="Collapsed" Padding="16,16,16,0" RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Padding="16,0">
+                        <TextBlock Text="Songs" VerticalAlignment="Center" Style="{StaticResource TitleSmall}" />
+                        <ProgressRing x:Name="SearchProgress"
+                                      Width="20" Height="20"
+                                      IsActive="False"
+                                      Visibility="Collapsed" />
+                    </StackPanel>
+                    <TextBlock x:Name="SearchMessage"
+                               Grid.Row="1"
+                               Margin="16,8"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <ListView x:Name="ResultsList"
+                              Grid.Row="1"
+                              SelectionMode="None"
+                              IsItemClickEnabled="True"
+                              ItemClick="OnResultClick"
+                              AutomationProperties.Name="Search results">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SongItem">
+                                <Grid Padding="0,8" ColumnSpacing="16" MinHeight="64">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="48" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="48" Height="48"
+                                            CornerRadius="8"
+                                            VerticalAlignment="Center"
+                                            Background="{ThemeResource SurfaceVariantBrush}">
+                                        <Image Source="{x:Bind local:MainPage.Artwork(ThumbnailUrl, 96)}"
+                                               Stretch="UniformToFill" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="{x:Bind Title}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Style="{StaticResource TitleSmall}" />
+                                        <TextBlock Text="{x:Bind local:MainPage.Details(Artists, Album, DurationText)}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Style="{StaticResource BodySmall}"
+                                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
             </Grid>
         </NavigationView>
 
         <!-- Player bar: the empty state is a message, never a blank square with 0:00 / 0:00
-             (docs/DESIGN.md §4.1). -->
-        <Grid Grid.Row="2"
+             (docs/DESIGN.md §4.1). It stays exactly as it was until a song is chosen. -->
+        <Grid x:Name="EmptyBar"
+              Grid.Row="2"
               Background="{ThemeResource SurfaceVariantBrush}"
               Padding="16,0"
               ColumnSpacing="16">
@@ -96,6 +175,103 @@
                            Foreground="{ThemeResource OnSurfaceVariantBrush}" />
             </StackPanel>
             <Button Grid.Column="2" Content="Play" Style="{StaticResource FilledButtonStyle}" />
+        </Grid>
+
+        <!-- Now playing: artwork, title + artists, the transport group and the seek bar. -->
+        <Grid x:Name="NowPlayingBar"
+              Grid.Row="2"
+              Visibility="Collapsed"
+              Background="{ThemeResource SurfaceVariantBrush}"
+              Padding="16,0"
+              ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="120" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Width="56" Height="56"
+                    CornerRadius="8"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource PrimaryBrush}">
+                <Image x:Name="BarArtwork" Stretch="UniformToFill" />
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="BarTitle"
+                           TextTrimming="CharacterEllipsis"
+                           Style="{StaticResource TitleSmall}" />
+                <TextBlock x:Name="BarSubtitle"
+                           TextTrimming="CharacterEllipsis"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <TextBlock x:Name="BarError"
+                           Visibility="Collapsed"
+                           TextTrimming="CharacterEllipsis"
+                           Style="{StaticResource BodySmall}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                    <Button x:Name="PrevButton"
+                            Width="40" Height="40" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            ToolTipService.ToolTip="Previous"
+                            AutomationProperties.Name="Previous"
+                            Click="OnPrevClick">
+                        <FontIcon Glyph="&#xE892;" FontSize="16" />
+                    </Button>
+                    <Grid Width="40" Height="40">
+                        <Button x:Name="PlayButton"
+                                Width="40" Height="40" Padding="0"
+                                CornerRadius="20"
+                                Style="{StaticResource FilledButtonStyle}"
+                                ToolTipService.ToolTip="Play"
+                                AutomationProperties.Name="Play"
+                                Click="OnPlayClick">
+                            <FontIcon x:Name="PlayGlyph" Glyph="&#xE768;" FontSize="16" />
+                        </Button>
+                        <ProgressRing x:Name="BarProgress"
+                                      Width="40" Height="40"
+                                      IsActive="False"
+                                      IsHitTestVisible="False"
+                                      Visibility="Collapsed" />
+                    </Grid>
+                    <Button x:Name="NextButton"
+                            Width="40" Height="40" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            ToolTipService.ToolTip="Next"
+                            AutomationProperties.Name="Next"
+                            Click="OnNextClick">
+                        <FontIcon Glyph="&#xE893;" FontSize="16" />
+                    </Button>
+                </StackPanel>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="40" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="BarPosition"
+                               Text="0:00"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource BodySmall}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <Slider x:Name="SeekBar"
+                            Grid.Column="1"
+                            Minimum="0" Maximum="1" StepFrequency="1"
+                            IsThumbToolTipEnabled="False"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="Seek"
+                            ValueChanged="OnSeekValueChanged" />
+                    <TextBlock x:Name="BarDuration"
+                               Grid.Column="2"
+                               Text="0:00"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource BodySmall}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                </Grid>
+            </StackPanel>
         </Grid>
     </Grid>
 </Page>

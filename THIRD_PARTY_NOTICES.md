@@ -86,6 +86,17 @@ built on and that ship inside its APK.
 | [Roboto](https://github.com/googlefonts/roboto) font, when bundled by Uno Material (`Uno.Fonts.Roboto`) | Apache-2.0 (Roboto 2.x) / SIL OFL-1.1 (Roboto 3.x) |
 | Concentus, the C# Opus decoder | BSD-3-Clause (see "Algorithms and data" below) |
 
+## C# / .NET Windows preview dependencies (`uno/heads/Soncle.Windows`)
+
+The `windows-preview` build ("Soncle Preview" for Windows) is a test build of the WinUI 3 head; it
+is not the shipping app yet. Besides Uno Themes and Uno Toolkit (listed above) on the Windows App SDK,
+it ships:
+
+| Package | Licence |
+| --- | --- |
+| [NAudio](https://github.com/naudio/NAudio) by Mark Heath (`NAudio.Wasapi`, `NAudio.Core`), the WASAPI sound output | MIT |
+| Concentus, the C# Opus decoder | BSD-3-Clause (see "Algorithms and data" below) |
+
 ## C# / .NET test dependencies (`uno/`)
 
 The C# port under `uno/` is not shipped yet; these are used only to build and test it.
