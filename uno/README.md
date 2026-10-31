@@ -31,6 +31,7 @@ Libraries (`src/`):
 | `Soncle.Flow` | Flow radio: WebM cues, tempo/key/energy analysis, the planner |
 | `Soncle.Audio` | decode → two decks → master chain → limiter (no output device) |
 | `Soncle.Services` | AutoEq, import, devices, lyrics, carry-over, backups |
+| `Soncle.App` | the heads' shared app logic, UI-free: the engine-backed player over a head's `IAudioOutput`, YouTube streams (resolve with the Opus-only filter → download → decode) and the search and player-bar view models |
 
 Tests (`tests/`): one xUnit project per library, plus `Soncle.TestKit` with the shared helpers
 (`Fixtures.Path`, `JsonAssert.Equal`, the `AudioAssert` level meters) that later tasks use.
