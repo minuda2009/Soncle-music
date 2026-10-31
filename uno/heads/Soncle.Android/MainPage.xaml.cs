@@ -26,7 +26,7 @@ public sealed partial class MainPage : Page
     {
         InitializeComponent();
         _player = new SamplePlayer(_output, line => global::Android.Util.Log.Info(StartupClock.LogTag, line));
-        _output.Interrupted += (_, _) => DispatcherQueue.TryEnqueue(UpdatePlayerBar);
+        _output.Interrupted += (_, reason) => DispatcherQueue.TryEnqueue(() => OnInterrupted(reason));
         _clock.Tick += (_, _) => UpdatePlayerBar();
 
         BottomBar.RegisterPropertyChangedCallback(
@@ -101,6 +101,16 @@ public sealed partial class MainPage : Page
         {
             _ = StartAsync();
         }
+    }
+
+    /// <summary>The output stopped itself: a focus loss reads as a pause, a device failure as an error.</summary>
+    private void OnInterrupted(AudioInterruption reason)
+    {
+        if (reason == AudioInterruption.DeviceFailed)
+        {
+            _error = "The sound device stopped. Tap Test sound to try again.";
+        }
+        UpdatePlayerBar();
     }
 
     private async Task StartAsync()

@@ -9,7 +9,8 @@
 - What works: the app's shell with Home · Library · Sound · Settings in a bottom bar on a phone and
   in a side rail on a wide screen, the player bar's "Nothing playing" state, and a **Test sound**
   button that plays a built-in 8 s clip on repeat through the new C# audio engine (limiter last).
-  It pauses when another app takes the audio. Settings shows how long the app took to open.
+  It pauses when another app takes the audio, and pausing or resuming fades instead of clicking.
+  Settings shows how long the app took to open.
 - What to check on your phone: how fast it opens (compare with Soncle), memory while idle and while
   the test sound plays, and whether the sound ever stutters. `uno/heads/Soncle.Android/README.md`
   has the steps.

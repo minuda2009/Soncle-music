@@ -73,7 +73,11 @@ public sealed class SamplePlayer : IDisposable
         _output.Start(_render!);
     }
 
-    /// <summary>Stops the device; the engine keeps its place so <see cref="PlayAsync"/> resumes.</summary>
+    /// <summary>
+    /// Stops the device without waiting for it: the output fades its last block out and plays it,
+    /// so nothing rendered is dropped and the engine keeps its place; <see cref="PlayAsync"/>
+    /// resumes from there with a fade-in.
+    /// </summary>
     public void Pause() => _output.Stop();
 
     public void Dispose() => _output.Stop();

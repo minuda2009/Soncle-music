@@ -61,7 +61,7 @@ check_no_crash() {
   local crashes
   crashes=$(crash_log)
   if [ -n "$crashes" ]; then
-    printf '%s\n' "$crashes" | head -n 40
+    printf '%s\n' "$crashes" | sed -n '1,40p'
     fail "$1: the app crashed (see the crash log in the soncle-uno-smoke artifact)"
   fi
 }
@@ -141,7 +141,7 @@ sh_adb am start -W -n "$ACT" --es soncle.demo play > /dev/null
 wait_for_line 's/.*\(audio-started .*\)$/\1/p' 60 "demo start"
 audio=$FOUND
 if [ -z "$audio" ]; then
-  if soncle_log | grep -q 'audio-focus-denied'; then
+  if soncle_log | grep 'audio-focus-denied' > /dev/null; then
     fail "audio focus was denied, the test sound did not start"
   fi
   fail "no audio-started line within 60 s of the demo launch"
@@ -151,8 +151,11 @@ decoded=$(soncle_log | sed -n 's/.*\(sample-decoded .*\)$/\1/p' | tail -n 1)
 sleep 10
 check_no_crash "while playing"
 check_alive "while playing"
-if soncle_log | grep -q 'audio-focus-lost'; then
+if soncle_log | grep 'audio-focus-lost' > /dev/null; then
   fail "audio focus was lost while the test sound played"
+fi
+if soncle_log | grep -E 'audio-(write|thread)-failed' > /dev/null; then
+  fail "the audio device failed while the test sound played"
 fi
 adb exec-out screencap -p > "$OUT/playing.png"
 playing_kb=$(mem_kb)

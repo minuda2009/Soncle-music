@@ -123,7 +123,8 @@ jobs:
             echo "Largest entries (uncompressed bytes, stored bytes, name):"
             echo ""
             echo '```'
-            unzip -Zl "$apk" | awk 'NF >= 10 && $4 ~ /^[0-9]+$/ { print $4, $6, $NF }' | sort -nr | head -n 10
+            # sed reads all of sort's output (head would exit early and SIGPIPE sort under pipefail)
+            unzip -Zl "$apk" | awk 'NF >= 10 && $4 ~ /^[0-9]+$/ { print $4, $6, $NF }' | sort -nr | sed -n '1,10p'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
@@ -198,7 +199,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v7
         with:
           name: soncle-uno-preview-arm64
       - name: Publish to the uno-android-preview release

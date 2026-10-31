@@ -21,7 +21,11 @@ its own.
   limiter last) -> `Soncle.Audio.Output.OutputPump` -> `AudioTrackOutput`
   (`Platforms/Android/AudioTrackOutput.cs`, the `Soncle.Core.Platform.IAudioOutput` seam on
   `AudioTrack`: float PCM, 48 kHz stereo, one dedicated thread, preallocated buffer, blocking
-  writes). It asks for audio focus first and stops when another app takes it. Decoding runs off the
+  writes). It asks for audio focus first and stops when another app takes it. Start ramps the
+  first block up from silence and a stop ramps one last block down and lets the track play out
+  what is queued (`Soncle.Audio.Output.GainRamp`), so pause and resume neither click nor skip; the
+  render thread does that and releases the track and focus itself, so the UI thread never waits for
+  the device. A device failure shows as an error in the player bar, not as a pause. Decoding runs off the
   UI thread. Only the output is Android code; `Playback/SamplePlayer.cs` is plain .NET so the
   Windows head can reuse it with a WASAPI output;
 - the **start-up measurement** for the `docs/DESIGN.md` §7.2 gate: process start to first Uno frame,
@@ -37,6 +41,7 @@ its own.
 | `audio-started sr=<sr> buffer-frames=<n>` | the AudioTrack started |
 | `audio-stopped frames=<total> underruns=<n>` | pause, focus loss or shutdown (`AudioTrack.UnderrunCount`) |
 | `audio-focus-denied`, `audio-focus-lost <kind>` | audio focus refused or taken by another app |
+| `audio-write-failed code=<n>`, `audio-thread-failed <error>` | the device failed; the track and focus are released |
 
 ## What it doesn't have yet (known gaps, by scope)
 
