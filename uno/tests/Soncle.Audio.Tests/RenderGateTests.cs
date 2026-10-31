@@ -27,7 +27,7 @@ public class RenderGateTests
     }
 
     [Fact]
-    public void CloseWaitsForACallbackInProgress()
+    public async Task CloseWaitsForACallbackInProgress()
     {
         var gate = new RenderGate();
         Assert.True(gate.TryEnter());
@@ -48,8 +48,8 @@ public class RenderGateTests
         Thread.Sleep(30);
         Assert.False(closer.IsCompleted);
         release.Set();
-        Assert.True(closer.Wait(5_000));
-        Assert.True(closer.Result);
+        // WaitAsync throws TimeoutException if the close never finishes
+        Assert.True(await closer.WaitAsync(TimeSpan.FromSeconds(5)));
         device.Join();
         Assert.False(gate.TryEnter());
     }
