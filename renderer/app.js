@@ -1902,9 +1902,9 @@ async function lyricCardDialog() {
   const synced = !!L?.lines?.length;
   const rows = synced ? L.lines.filter((l) => l.text) : (L?.plain || '').split(/\n/).map((x) => x.trim()).filter(Boolean).map((text) => ({ text }));
   if (!t || !rows.length) return toast('No lyrics to turn into a card');
-  const [{ createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, untimed, clipLines }] = await Promise.all([import('./lyriccard/draw.js'), import('./lyriccard/export.js'), import('./lyriccard/layout.js')]);
+  const [{ createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, TEXT_SIZES, untimed, clipLines }, { MOTIONS }] = await Promise.all([import('./lyriccard/draw.js'), import('./lyriccard/export.js'), import('./lyriccard/layout.js'), import('./lyriccard/motion.js')]);
   const cur = synced ? L.lines[Math.max(0, LY?.active ?? 0)] : null;
-  const st = { start: Math.max(0, rows.indexOf(cur)), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true, mode: 'lines', startAt: 0, len: 30 };
+  const st = { start: Math.max(0, rows.indexOf(cur)), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true, mode: 'lines', startAt: 0, len: 30, safe: true, textSize: 'normal', motion: 'pop', startCue: false, syncCues: false };
   const cover = await new Promise((res) => { const u = thumbOf(t); if (!u) return res(null); const im = new Image(); im.crossOrigin = 'anonymous'; im.referrerPolicy = 'no-referrer'; im.onload = () => res(im); im.onerror = () => res(null); im.src = u; });
   const col = await extractColor(thumbOf(t)).catch(() => null);
   const MAX_S = 60, MAX_CLIP_S = 360, canRecord = synced && !!videoType();
@@ -1918,7 +1918,8 @@ async function lyricCardDialog() {
 
   const picked = () => rows.slice(st.start, st.start + st.count);
   const still = () => createCard({ lines: synced ? picked() : untimed(picked().map((r) => r.text)), still: true, ...base() }, measureCtx);
-  const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: t.title, artist: artistNames(t), cover, hue: col?.[0] ?? 235, sat: Math.max(40, col?.[1] ?? 55) });
+  const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: t.title, artist: artistNames(t), cover, hue: col?.[0] ?? 235, sat: Math.max(40, col?.[1] ?? 55),
+    safe: st.safe, textSize: st.textSize, motion: st.motion, startCue: st.startCue, syncCues: st.syncCues, accent: `hsl(${col?.[0] ?? 235} ${Math.max(60, col?.[1] ?? 55)}% 74%)` });
   const status = h('div', { class: 'lc-status' });
   const saveImg = h('button', { class: 'btn tonal', onclick: () => saveImage() }, 'Save image');
   const saveVid = h('button', { class: 'btn filled', onclick: () => saveVideo() }, 'Save video');
@@ -1928,12 +1929,15 @@ async function lyricCardDialog() {
     pv.width = Math.round(fmt.w * k); pv.height = Math.round(fmt.h * k);
     const clip = synced && st.mode === 'clip';
     clipRows.forEach((e) => { e.hidden = !clip; });
-    card = !synced ? still() : clip ? createCard({ lines: clipLines(L.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, measureCtx) : createCard({ lines: picked(), ...base() }, measureCtx);
+    safeRow.hidden = !fmt.safe;
+    card = !synced ? still() : clip ? createCard({ lines: clipLines(L.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, measureCtx) : createCard({ lines: picked(), leadIn: st.syncCues ? 3.5 : 0.5, ...base() }, measureCtx);
+    const from = mmss(Math.max(0, card.timeline?.origin ?? st.startAt));
+    const cues = st.syncCues ? ' The countdown and timecode help you line the song up by hand in a video editor; the video itself has no sound.' : '';
     t0 = performance.now();
     const tooLong = synced && card.duration > (clip ? MAX_CLIP_S : MAX_S);
     saveVid.hidden = !canRecord; if (!busy) saveVid.textContent = canShareFiles() ? 'Share video' : 'Save video';
     saveVid.disabled = tooLong || !card.duration;
-    status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This device cannot record video; the image still works.' : tooLong ? `That is ${Math.round(card.duration)} s: ${clip ? `pick a shorter length (up to ${MAX_CLIP_S / 60} min)` : `pick fewer lines (up to ${MAX_S} s)`}.` : !card.duration ? 'There are no lyrics in that part of the song.' : clip ? `Video: ${mmss(card.duration)}, silent, from ${mmss(st.startAt)} of the song. It records in real time, so keep this window open. In the music picker of Instagram, TikTok or YouTube Shorts, start the song at ${mmss(st.startAt)} so the words match; the artist is paid through the platform.${videoType().includes('mp4') ? '' : ' This device saves WebM; some apps want MP4.'}` : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in the platform’s music picker so the artist is still paid.`;
+    status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This device cannot record video; the image still works.' : tooLong ? `That is ${Math.round(card.duration)} s: ${clip ? `pick a shorter length (up to ${MAX_CLIP_S / 60} min)` : `pick fewer lines (up to ${MAX_S} s)`}.` : !card.duration ? 'There are no lyrics in that part of the song.' : clip ? `Video: ${mmss(card.duration)}, silent, from ${mmss(st.startAt)} of the song. It records in real time, so keep this window open. In the music picker of Instagram, TikTok or YouTube Shorts, start the song at ${from} so the words match; the artist is paid through the platform.${cues}${videoType().includes('mp4') ? '' : ' This device saves WebM; some apps want MP4.'}` : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in the platform’s music picker and start it at ${from} so the words match; the artist is still paid.${cues}`;
   };
   const loop = () => {
     if (!pv.isConnected || $('#modal').hidden) return;
@@ -1963,6 +1967,7 @@ async function lyricCardDialog() {
   const startOut = h('output', null, mmss(st.startAt));
   const startRange = h('input', { type: 'range', min: 0, max: Math.max(1, songLen - 1), step: 1, value: st.startAt, oninput: () => { st.startAt = Number(startRange.value); startOut.textContent = mmss(st.startAt); }, onchange: () => { if (!busy) rebuild(); } });
   const clipRows = [];
+  const safeRow = h('div', { class: 'lc-row', title: 'Keeps the words clear of the Instagram Reels buttons and caption' }, h('label', null, 'Reels safe area'), chips('safe', [[true, 'On'], [false, 'Off']], rebuild));
   const step = (d) => { if (busy) return; st.count = Math.max(1, Math.min(10, st.count + d)); count.textContent = st.count; drawList(); rebuild(); };
   drawList(); rebuild();
   modal(h('div', { class: 'dialog lc-dialog' }, h('h3', null, 'Lyric card'),
@@ -1973,9 +1978,14 @@ async function lyricCardDialog() {
       clipRows[clipRows.push(h('div', { class: 'lc-row' }, h('label', null, 'Starts at'), startRange, startOut)) - 1],
       clipRows[clipRows.push(h('div', { class: 'lc-row' }, h('label', null, 'Length'), chips('len', [[15, '15 s'], [30, '30 s'], [60, '60 s'], [0, 'Whole song']], rebuild))) - 1],
       h('div', { class: 'lc-row' }, h('label', null, 'Size'), chips('format', Object.values(FORMATS).map((f) => [f.id, f.id === 'story' ? '9:16' : f.id === 'portrait' ? '4:5' : '1:1']), rebuild)),
+      safeRow,
       h('div', { class: 'lc-row' }, h('label', null, 'Background'), chips('background', BACKGROUNDS, rebuild)),
       h('div', { class: 'lc-row' }, h('label', null, 'Text'), chips('align', [['center', 'Centre'], ['left', 'Left']], rebuild)),
-      h('div', { class: 'lc-row' }, h('label', null, 'Song name'), chips('showTitle', [[true, 'Show'], [false, 'Hide']], rebuild)))),
+      h('div', { class: 'lc-row' }, h('label', null, 'Text size'), chips('textSize', TEXT_SIZES, rebuild)),
+      synced ? h('div', { class: 'lc-row' }, h('label', null, 'Animation'), chips('motion', MOTIONS, rebuild)) : null,
+      h('div', { class: 'lc-row' }, h('label', null, 'Song name'), chips('showTitle', [[true, 'Show'], [false, 'Hide']], rebuild)),
+      synced ? h('div', { class: 'lc-row', title: 'Shows “Start the song at m:ss” for the first seconds of the video' }, h('label', null, 'Start cue'), chips('startCue', [[true, 'Show'], [false, 'Hide']], rebuild)) : null,
+      synced ? h('div', { class: 'lc-row', title: 'A 3-2-1 countdown, a pulse on each line and the song time, for lining the song up by hand in a video editor' }, h('label', null, 'Sync cues'), chips('syncCues', [[true, 'Show'], [false, 'Hide']], rebuild)) : null)),
     status,
     h('div', { class: 'd-actions' }, h('button', { class: 'text-btn', onclick: () => { busy?.abort(); closeModal(); } }, 'Close'), saveImg, saveVid)));
   requestAnimationFrame(loop);
