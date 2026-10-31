@@ -55,4 +55,12 @@
                       LogicalName="Soncle.sample.webm" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- CI scripts (ci/smoke.sh, run by .github/workflows/uno-android-preview.yml) are not part of
+         the app: keep them out of every default item glob so they never end up in the APK. -->
+    <None Remove="ci/**" />
+    <Content Remove="ci/**" />
+    <EmbeddedResource Remove="ci/**" />
+  </ItemGroup>
+
 </Project>

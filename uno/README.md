@@ -35,8 +35,10 @@ Libraries (`src/`):
 Tests (`tests/`): one xUnit project per library, plus `Soncle.TestKit` with the shared helpers
 (`Fixtures.Path`, `JsonAssert.Equal`, the `AudioAssert` level meters) that later tasks use.
 
-Windows head (`heads/`, not in `Soncle.sln` — it is Windows only):
+Heads (`heads/`, not in `Soncle.sln`: each needs a platform workload the Linux library job doesn't
+have, so each has its own workflow):
 
 | Project | What it holds |
 | --- | --- |
 | `Soncle.Windows` | the WinUI 3 head (Soncle Preview): the shell window, Mica, the custom title bar and the media session; built on `windows-latest` (`.github/workflows/windows-preview.yml`), never on Linux |
+| `Soncle.Android` | the Uno Android head (Soncle Uno, `com.minuda2009.soncle.uno`): the adaptive shell (bottom bar on a phone, rail when wide), the player-bar empty state and a built-in test sound through `Soncle.Audio` and `AudioTrack`; built, size-checked and emulator-smoke-tested on `ubuntu-latest` (`.github/workflows/uno-android-preview.yml`), which publishes the `uno-android-preview` APK |

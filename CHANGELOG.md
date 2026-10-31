@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased: Soncle Uno preview for Android (C# app)
+
+- A first test build of the new C# / Uno Platform Android app is on the **uno-android-preview**
+  release (`Soncle-uno-preview-arm64.apk`, 64-bit phones). It installs as a separate app,
+  **Soncle Uno**, next to Soncle and Soncle Preview, and shares no data with them; every new build
+  installs over the last one.
+- What works: the app's shell with Home · Library · Sound · Settings in a bottom bar on a phone and
+  in a side rail on a wide screen, the player bar's "Nothing playing" state, and a **Test sound**
+  button that plays a built-in 8 s clip on repeat through the new C# audio engine (limiter last).
+  It pauses when another app takes the audio. Settings shows how long the app took to open.
+- What to check on your phone: how fast it opens (compare with Soncle), memory while idle and while
+  the test sound plays, and whether the sound ever stutters. `uno/heads/Soncle.Android/README.md`
+  has the steps.
+- Not there yet: songs, search and the library, the pages themselves (each shows a placeholder),
+  lock-screen and notification controls (the sound may stop when the app is in the background),
+  and icons in the bottom bar.
+- Each build is checked before it is published: size against the 30 MB budget, and an emulator run
+  that must open the app and start the test sound.
+
 ## Unreleased: Companion extension 0.5 — Soncle Now Playing
 
 - **Soncle Now Playing** (Alt+N, or Full screen in the panel, or Settings → Appearance): a full-screen player in

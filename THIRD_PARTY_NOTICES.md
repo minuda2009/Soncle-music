@@ -68,6 +68,24 @@ The head is ours; these are the platform and theme packages it is built on.
 | [Uno Toolkit](https://github.com/unoplatform/uno.toolkit.ui) (`Uno.Toolkit.WinUI`, `.Material`) | Apache-2.0 |
 | [Microsoft Windows App SDK](https://github.com/microsoft/WindowsAppSDK) (WinUI 3 / Mica; its `license.txt` ships in the package) | Microsoft Windows App SDK license — the platform chosen in `docs/WINUI_PLAN.md` §1 |
 
+## C# / .NET Android preview dependencies (`uno/heads/Soncle.Android`)
+
+The `uno-android-preview` build ("Soncle Uno") is a test build of the Uno Android head; it is not
+the shipping app yet. The head is ours; these are the platform, rendering and theme packages it is
+built on and that ship inside its APK.
+
+| Package | Licence |
+| --- | --- |
+| [.NET for Android](https://github.com/dotnet/android) and the [.NET runtime](https://github.com/dotnet/runtime) | MIT |
+| [Uno Platform](https://github.com/unoplatform/uno) (`Uno.WinUI`, Skia renderer, `Uno.Resizetizer`) | Apache-2.0 |
+| [Uno Themes](https://github.com/unoplatform/uno.themes) (Material 3 styles) | Apache-2.0 |
+| [Uno Toolkit](https://github.com/unoplatform/uno.toolkit.ui) (`Uno.Toolkit.WinUI`, `.Material`) | Apache-2.0 |
+| [SkiaSharp](https://github.com/mono/SkiaSharp) (includes Google's Skia, BSD-3-Clause) | MIT |
+| [HarfBuzzSharp](https://github.com/mono/SkiaSharp) (includes HarfBuzz, "Old MIT") | MIT |
+| [AndroidX libraries](https://developer.android.com/jetpack/androidx) (via the `Xamarin.AndroidX.*` bindings, MIT) | Apache-2.0 |
+| [Roboto](https://github.com/googlefonts/roboto) font, when bundled by Uno Material (`Uno.Fonts.Roboto`) | Apache-2.0 (Roboto 2.x) / SIL OFL-1.1 (Roboto 3.x) |
+| Concentus, the C# Opus decoder | BSD-3-Clause (see "Algorithms and data" below) |
+
 ## C# / .NET test dependencies (`uno/`)
 
 The C# port under `uno/` is not shipped yet; these are used only to build and test it.

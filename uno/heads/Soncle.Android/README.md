@@ -63,15 +63,15 @@ no data with them. The minimum Android version is 7.0 (API 24), the same as the 
 dotnet workload install android
 dotnet build uno/heads/Soncle.Android/Soncle.Android.csproj -t:InstallAndroidDependencies \
   -f net10.0-android -p:AndroidSdkDirectory=$HOME/android-sdk -p:AcceptAndroidSDKLicenses=True
-SONCLE_KEYSTORE_PASS=soncle-test \
+SONCLE_TEST_KEY_PASS=soncle-test \
 dotnet publish uno/heads/Soncle.Android/Soncle.Android.csproj -f net10.0-android -c Release \
   -r android-arm64 -p:AndroidPackageFormat=apk -p:AndroidLinkTool=r8 \
   -p:AndroidSdkDirectory=$HOME/android-sdk \
   -p:AndroidKeyStore=true \
   -p:AndroidSigningKeyStore=$PWD/mobile/android/app/soncle-test.keystore \
-  -p:AndroidSigningStorePass=env:SONCLE_KEYSTORE_PASS \
+  -p:AndroidSigningStorePass=env:SONCLE_TEST_KEY_PASS \
   -p:AndroidSigningKeyAlias=soncle \
-  -p:AndroidSigningKeyPass=env:SONCLE_KEYSTORE_PASS \
+  -p:AndroidSigningKeyPass=env:SONCLE_TEST_KEY_PASS \
   -o out
 ```
 
@@ -107,3 +107,24 @@ Pause the test sound to get the `audio-stopped ... underruns=<n>` line; it shoul
 Nothing in this head has been built or run outside CI: the first build is the
 `uno-android-preview` workflow's. Start-up, memory and underruns on a real phone come from the
 preview APK.
+
+## CI (`.github/workflows/uno-android-preview.yml`)
+
+Every push that touches `uno/**` runs three jobs:
+
+- **apk**: publishes the arm64 Release APK with R8, signed with the test key above, and fails if the
+  package is not `com.minuda2009.soncle.uno`, the label is not `Soncle Uno`, the APK carries any ABI
+  other than `arm64-v8a`, or `apksigner verify` fails. The job summary shows the size against the
+  30 MB budget (a warning when over), the versionCode and the ten largest entries;
+- **smoke**: publishes an x86_64 build and runs `ci/smoke.sh` in an Android emulator (API 34,
+  `google_apis`, KVM, audio on): cold start, `first-frame-ms=` within 120 s, process alive,
+  screenshot and idle memory; then a launch with `--es soncle.demo play`, `audio-started` within
+  60 s, ~10 s of the test sound, memory and a second screenshot. It fails on a crash, a missing
+  first frame or a missing `audio-started`. The numbers in its summary are **emulator numbers**, not
+  a phone. The `soncle-uno-smoke` artifact holds the screenshots, the `Soncle` log lines and the
+  crash buffer for this package only;
+- **release**: after both pass, replaces the `uno-android-preview` prerelease with
+  `Soncle-uno-preview-arm64.apk`.
+
+The workflow runs every `dotnet` command from `uno/` so `uno/global.json` selects the SDK the
+android workload is installed for; do the same locally if you have several SDKs.
