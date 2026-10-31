@@ -4,7 +4,9 @@
 // measured through a callback, so the same code runs under node:test and on a canvas.
 
 export const FORMATS = {
-  story: { id: 'story', label: 'Story / Reel 9:16', w: 1080, h: 1920 },
+  // `safe`: the parts of a 9:16 Reel that Instagram covers with its own UI (status and header on top,
+  // caption, music and buttons at the bottom, like/comment/share on the right), as fractions of the frame.
+  story: { id: 'story', label: 'Story / Reel 9:16', w: 1080, h: 1920, safe: { top: 0.12, bottom: 0.22, left: 0.06, right: 0.14 } },
   portrait: { id: 'portrait', label: 'Post 4:5', w: 1080, h: 1350 },
   square: { id: 'square', label: 'Square 1:1', w: 1080, h: 1080 }
 };
@@ -16,6 +18,39 @@ const bare = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 export const isFiller = (w) => FILLER.has(bare(w));
 
 export const SIZE = { big: 1, mid: 0.56, small: 0.34 };
+
+// Text size choices. Bigger sizes raise the quiet words, start the fit search higher and put fewer
+// words in each scene (a long line is split), so the type really grows; the fit search still keeps
+// every word inside the box.
+export const TEXT_SIZES = [['normal', 'Normal'], ['large', 'Large'], ['huge', 'Huge']];
+const TEXT = {
+  normal: { ratio: SIZE, start: 0.3, maxWordsPerScene: 8, splitAt: Infinity },
+  large: { ratio: { big: 1, mid: 0.66, small: 0.44 }, start: 0.38, maxWordsPerScene: 6, splitAt: 4 },
+  huge: { ratio: { big: 1, mid: 0.76, small: 0.54 }, start: 0.46, maxWordsPerScene: 4, splitAt: 3 }
+};
+const textOf = (size) => TEXT[size] || TEXT.normal;
+
+// The area kept clear of the platform's overlays (or a plain margin when there is none / it is off).
+export function safeRect(fmt, safe = true) {
+  const { w: W, h: H } = fmt;
+  if (safe && fmt.safe) {
+    const s = fmt.safe;
+    return { x: W * s.left, y: H * s.top, w: W * (1 - s.left - s.right), h: H * (1 - s.top - s.bottom) };
+  }
+  return { x: W * 0.06, y: H * 0.04, w: W * 0.88, h: H * 0.92 };
+}
+
+// The box the lyrics are set in. Inside the safe area it leaves room for the start cue on top and the
+// song name below; without it, it is the classic box (8% side margins).
+export function textBox(fmt, { safe = true, still = false } = {}) {
+  const { w: W, h: H } = fmt;
+  if (safe && fmt.safe) {
+    const r = safeRect(fmt, true), top = H * (still ? 0.02 : 0.05), bottom = H * 0.09;
+    return { x: r.x, y: r.y + top, w: r.w, h: r.h - top - bottom };
+  }
+  const margin = W * 0.08;
+  return still ? { x: margin, y: H * 0.1, w: W - margin * 2, h: H * 0.72 } : { x: margin, y: H * 0.12, w: W - margin * 2, h: H * 0.68 };
+}
 const WEIGHT = { big: 800, mid: 600, small: 500 };
 
 // One lyric line -> words with start and end times. Enhanced-LRC words are used as they are; for a
@@ -47,11 +82,17 @@ export function classify(words) {
 
 // Lines -> scenes. Two short neighbouring lines share one scene; a scene runs until its last word
 // has finished (plus a moment) or the next scene starts.
-export function buildScenes(lines, { maxWordsPerScene = 8 } = {}) {
+// `splitAt` splits a line with more words than that into even parts, each its own scene.
+export function buildScenes(lines, { maxWordsPerScene = 8, splitAt = Infinity } = {}) {
   const src = lines.filter((l) => l && l.text && l.text.trim());
   const groups = [];
   for (let i = 0; i < src.length; i++) {
     const a = lineWords(src[i]);
+    if (a.length > splitAt) {
+      const n = Math.ceil(a.length / splitAt), per = Math.ceil(a.length / n);
+      for (let k = 0; k < a.length; k += per) groups.push({ words: a.slice(k, k + per), lines: 2, lastLineEnd: src[i].end ?? src[i].t + 4 });
+      continue;
+    }
     const prev = groups[groups.length - 1];
     if (prev && prev.words.length + a.length <= maxWordsPerScene && src[i].t - prev.lastLineEnd < 1.2 && prev.lines < 2 && a.length <= 4 && prev.words.length <= 4) {
       prev.words.push(...a); prev.lines++; prev.lastLineEnd = src[i].end ?? src[i].t + 4; continue;
@@ -71,14 +112,15 @@ export function buildScenes(lines, { maxWordsPerScene = 8 } = {}) {
 // Sets one scene's words in rows. `measure(text, px, weight)` returns the text width. The base size
 // is searched downwards until every row fits the box, so a short line gets huge type and a long
 // one gets smaller type. Returns { items: [{ text, px, weight, x, y (baseline), w, k, ... }] }.
-export function layoutWords(words, sizes, box, measure, { align = 'center', upper = true } = {}) {
+export function layoutWords(words, sizes, box, measure, { align = 'center', upper = true, textSize = 'normal' } = {}) {
   const { w: maxW, h: maxH } = box;
+  const { ratio, start } = textOf(textSize);
   const shown = words.map((w, i) => (upper && sizes[i] === 'big' && w.text.length <= 12 ? w.text.toUpperCase() : w.text));
   const tryBase = (B) => {
     const rows = [];
     let row = null;
     for (let i = 0; i < shown.length; i++) {
-      const px = B * SIZE[sizes[i]], wd = measure(shown[i], px, WEIGHT[sizes[i]]), gap = px * 0.3;
+      const px = B * ratio[sizes[i]], wd = measure(shown[i], px, WEIGHT[sizes[i]]), gap = px * 0.3;
       if (wd > maxW) return null;
       if (!row || row.w + gap + wd > maxW) rows.push((row = { items: [], w: 0, h: 0 }));
       row.items.push({ i, px, wd, gap }); row.w += (row.items.length > 1 ? gap : 0) + wd; row.h = Math.max(row.h, px);
@@ -87,7 +129,7 @@ export function layoutWords(words, sizes, box, measure, { align = 'center', uppe
     const total = rows.reduce((a, r) => a + r.h * lead, 0) + space * (rows.length - 1);
     return total <= maxH ? { rows, lead, space, total } : null;
   };
-  let B = Math.min(maxW * 0.3, maxH * 0.3), fit = null;
+  let B = Math.min(maxW * start, maxH * start), fit = null;
   for (let n = 0; n < 60 && B > 8; n++, B *= 0.94) if ((fit = tryBase(B))) break;
   if (!fit) { B = 8; fit = tryBase(B) || { rows: [], lead: 1, space: 0, total: 0 }; }
   const items = new Array(words.length);
@@ -110,31 +152,33 @@ export function layoutWords(words, sizes, box, measure, { align = 'center', uppe
 export const clipLines = (lines, startAt, len = 0) => lines.filter((l) => l.text && (l.end ?? l.t + 4) > startAt && (!len || l.t < startAt + len));
 
 // The whole timeline: scenes laid out and moved so the video starts at 0.
-// Without `opts.startAt` the video opens 0.5 s before the first word. With it, video time 0 is exactly
-// that second of the song (so the clip lines up with the same song started at that second in a platform's
-// own music picker) and, with `opts.endAt`, the video is exactly as long as the clip.
+// Without `opts.startAt` the video opens `opts.leadIn` (0.5 s) before the first word. With it, video time 0
+// is exactly that second of the song (so the clip lines up with the same song started at that second in a
+// platform's own music picker) and, with `opts.endAt`, the video is exactly as long as the clip.
+// Also returns `origin` (the song second at video time 0) and `lineStarts` (video times of each line start).
 export function buildTimeline(lines, fmt, measure, opts = {}) {
-  const scenes = buildScenes(lines, opts);
+  const ts = textOf(opts.textSize);
+  const scenes = buildScenes(lines, { maxWordsPerScene: opts.maxWordsPerScene ?? ts.maxWordsPerScene, splitAt: opts.splitAt ?? ts.splitAt });
   if (!scenes.length) return { scenes: [], duration: 0 };
   const clip = Number.isFinite(opts.startAt);
-  const origin = clip ? opts.startAt : scenes[0].t0 - 0.5;
-  const margin = fmt.w * 0.08;
-  const box = { x: margin, y: fmt.h * 0.12, w: fmt.w - margin * 2, h: fmt.h * 0.68 };
+  const origin = clip ? opts.startAt : scenes[0].t0 - (Number.isFinite(opts.leadIn) ? opts.leadIn : 0.5);
+  const box = textBox(fmt, { safe: opts.safe !== false });
   const out = scenes.map((s) => {
     const { items } = layoutWords(s.words, s.sizes, box, measure, opts);
     for (const it of items) { it.t -= origin; it.end -= origin; }
     return { t0: s.t0 - origin, t1: s.t1 - origin, items };
   });
   const natural = out[out.length - 1].t1 + 0.6;
-  return { scenes: out, duration: clip && Number.isFinite(opts.endAt) ? Math.max(0, opts.endAt - origin) : natural };
+  const duration = clip && Number.isFinite(opts.endAt) ? Math.max(0, opts.endAt - origin) : natural;
+  const lineStarts = lines.filter((l) => l && l.text && l.text.trim()).map((l) => l.t - origin).filter((t) => t >= 0 && t <= duration).sort((a, b) => a - b);
+  return { scenes: out, duration, origin, lineStarts };
 }
 
 // Every selected word in one image, for the still picture.
 export function buildStill(lines, fmt, measure, opts = {}) {
   const scenes = buildScenes(lines, { maxWordsPerScene: 1e9 });
   const words = scenes.flatMap((s) => s.words), sizes = scenes.flatMap((s) => s.sizes);
-  const margin = fmt.w * 0.08;
-  return layoutWords(words, sizes, { x: margin, y: fmt.h * 0.1, w: fmt.w - margin * 2, h: fmt.h * 0.72 }, measure, opts).items;
+  return layoutWords(words, sizes, textBox(fmt, { safe: opts.safe !== false, still: true }), measure, opts).items;
 }
 
 // A plain (unsynced) line list has no times; give each line a nominal one so a still can be built.
