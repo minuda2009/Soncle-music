@@ -5,8 +5,8 @@
   if (window.__soncleCompanion) return;
   window.__soncleCompanion = true;
   const url = (p) => chrome.runtime.getURL(p);
-  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, untimed, clipLines }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }, { createNowPlaying }] = await Promise.all([
-    import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js')),
+  const [{ parseLrc }, { createCard, BACKGROUNDS }, { renderPng, recordVideo, saveBlob, videoType, canShareFiles }, { FORMATS, TEXT_SIZES, untimed, clipLines }, { MOTIONS }, { themeVars, dominantHue }, { cssFor, resolveMode, accentHs, ACCENTS, DEFAULTS }, { GROUPS, ABOUT, STATUS_LABEL }, { createNowPlaying }] = await Promise.all([
+    import(url('shared/lrc.js')), import(url('shared/lyriccard/draw.js')), import(url('shared/lyriccard/export.js')), import(url('shared/lyriccard/layout.js')), import(url('shared/lyriccard/motion.js')),
     import(url('shared/palette.js')), import(url('shared/theme.js')), import(url('shared/features.js')), import(url('shared/nowplaying.js'))
   ]);
 
@@ -81,7 +81,7 @@
     .dlg h3 { margin: 0 0 14px; font-weight: 500; font-size: 22px; }
     .body { display: flex; gap: 16px; align-items: flex-start; } .body canvas { flex: none; background: #000; border-radius: 12px; max-height: 52vh; }
     .opts { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-    .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .row label { width: 84px; color: var(--on-surface-var, #c8c5d0); font-size: 13px; }
+    .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .row label { width: 84px; color: var(--on-surface-var, #c8c5d0); font-size: 13px; } .row[hidden] { display: none; }
     .row .chip.on { background: var(--primary-container, #3b3d63); border-color: var(--primary-container, #3b3d63); font-weight: 650; }
     .pick { max-height: 140px; overflow: auto; border: 1px solid var(--outline-var, #47464f); border-radius: 12px; }
     .pick div { padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .pick .on { background: var(--primary-container, #3b3d63); }
@@ -264,7 +264,7 @@
     const synced = !!lyr?.lines?.length;
     const rows = synced ? lyr.lines.filter((l) => l.text) : (lyr?.plain || '').split(/\n/).map((x) => x.trim()).filter(Boolean).map((text) => ({ text }));
     if (!track || !rows.length) return;
-    const st = { start: Math.max(0, rows.indexOf(lyr.lines?.[Math.max(0, active)])), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true, mode: 'lines', startAt: 0, len: 30 };
+    const st = { start: Math.max(0, rows.indexOf(lyr.lines?.[Math.max(0, active)])), count: 3, format: 'story', background: 'cover', align: 'center', showTitle: true, mode: 'lines', startAt: 0, len: 30, safe: true, textSize: 'normal', motion: 'pop', startCue: false, syncCues: false };
     const cover = await new Promise((res) => { if (!track.thumb) return res(null); const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = track.thumb; });
     const canRecord = synced && !!videoType(), MAX_S = 60, MAX_CLIP_S = 360;
     const songLen = Math.round(track.duration || (synced ? (lyr.lines[lyr.lines.length - 1].end || lyr.lines[lyr.lines.length - 1].t + 5) : 0));
@@ -275,7 +275,8 @@
     const mctx = document.createElement('canvas').getContext('2d'), pv = document.createElement('canvas'), pctx = pv.getContext('2d');
     let card = null, t0 = performance.now(), busy = null;
     const picked = () => rows.slice(st.start, st.start + st.count);
-    const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: track.title, artist: names(track), cover });
+    const base = () => ({ format: st.format, background: st.background, align: st.align, showTitle: st.showTitle, title: track.title, artist: names(track), cover,
+      safe: st.safe, textSize: st.textSize, motion: st.motion, startCue: st.startCue, syncCues: st.syncCues });
     const still = () => createCard({ lines: synced ? picked() : untimed(picked().map((r) => r.text)), still: true, ...base() }, mctx);
     const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids.filter(Boolean)); return e; };
     const status = el('div', { className: 'st' });
@@ -287,15 +288,18 @@
       const f = FORMATS[st.format]; pv.width = Math.round(f.w * 0.2); pv.height = Math.round(f.h * 0.2);
       const clip = synced && st.mode === 'clip';
       clipRows.forEach((e) => { e.hidden = !clip; });
-      card = !synced ? still() : clip ? createCard({ lines: clipLines(lyr.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, mctx) : createCard({ lines: picked(), ...base() }, mctx);
+      safeRow.hidden = !f.safe;
+      card = !synced ? still() : clip ? createCard({ lines: clipLines(lyr.lines, st.startAt, st.len), startAt: st.startAt, endAt: clipEnd(), ...base() }, mctx) : createCard({ lines: picked(), leadIn: st.syncCues ? 3.5 : 0.5, ...base() }, mctx);
+      const from = mmss(Math.max(0, card.timeline?.origin ?? st.startAt));
+      const cues = !st.syncCues ? '' : card.countdown ? ' The countdown, line pulses and timecode help you line the song up by hand in a video editor; the video itself has no sound.' : ' The line pulses and timecode help you line the song up by hand in a video editor (the words start too soon for a 3-2-1); the video itself has no sound.';
       t0 = performance.now();
       const long = synced && card.duration > (clip ? MAX_CLIP_S : MAX_S);
       saveVid.hidden = !canRecord; saveVid.textContent = canShareFiles() ? 'Share video' : 'Save video'; saveVid.disabled = long || !card.duration;
       status.textContent = !synced ? 'These lyrics have no timing, so only the image is available.' : !canRecord ? 'This browser cannot record video; the image still works.'
         : long ? `That is ${Math.round(card.duration)} s: ${clip ? `pick a shorter length (up to ${MAX_CLIP_S / 60} min)` : `pick fewer lines (up to ${MAX_S} s)`}.`
         : !card.duration ? 'There are no lyrics in that part of the song.'
-        : clip ? `Video: ${mmss(card.duration)}, silent, from ${mmss(st.startAt)} of the song. It records in real time, so keep this tab open. In the music picker of Instagram, TikTok or YouTube Shorts, start the song at ${mmss(st.startAt)} so the words match; the artist is paid through the platform.${videoType().includes('mp4') ? '' : ' This browser saves WebM; some apps want MP4.'}`
-        : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in the platform’s music picker so the artist is still paid.`;
+        : clip ? `Video: ${mmss(card.duration)}, silent, from ${mmss(st.startAt)} of the song. It records in real time, so keep this tab open. In the music picker of Instagram, TikTok or YouTube Shorts, start the song at ${from} so the words match; the artist is paid through the platform.${cues}${videoType().includes('mp4') ? '' : ' This browser saves WebM; some apps want MP4.'}`
+        : `Video: ${card.duration.toFixed(1)} s, silent. Add the song in the platform’s music picker and start it at ${from} so the words match; the artist is still paid.${cues}`;
     };
     async function video() {
       if (busy) { busy.abort(); return; }
@@ -305,6 +309,7 @@
       busy = null; saveImg.disabled = false; rebuild();
     }
     const chips = (key, options) => { const box = el('div', { className: 'row' }); const draw = () => box.replaceChildren(...options.map(([v, l]) => el('button', { className: 'chip' + (st[key] === v ? ' on' : ''), textContent: l, onclick: () => { if (busy) return; st[key] = v; draw(); rebuild(); } }))); draw(); return box; };
+    const safeRow = el('div', { className: 'row', title: 'Keeps the words clear of the Instagram Reels buttons and caption (tuned for Reels; the image stays centred)' }, el('label', { textContent: 'Reels safe area' }), chips('safe', [[true, 'On'], [false, 'Off']]));
     const startOut = el('span', { textContent: mmss(st.startAt) });
     const startRange = el('input', { type: 'range', min: 0, max: Math.max(1, songLen - 1), step: 1, value: st.startAt, 'aria-label': 'Start of the video in the song', oninput: () => { st.startAt = Number(startRange.value); startOut.textContent = mmss(st.startAt); }, onchange: () => rebuild() });
     startRange.style.flex = '1';
@@ -322,9 +327,14 @@
         synced && clipRows[clipRows.push(el('div', { className: 'row' }, el('label', { textContent: 'Starts at' }), startRange, startOut)) - 1],
         synced && clipRows[clipRows.push(el('div', { className: 'row' }, el('label', { textContent: 'Length' }), chips('len', [[15, '15 s'], [30, '30 s'], [60, '60 s'], [0, 'Whole song']]))) - 1],
         el('div', { className: 'row' }, el('label', { textContent: 'Size' }), chips('format', [['story', '9:16'], ['portrait', '4:5'], ['square', '1:1']])),
+        safeRow,
         el('div', { className: 'row' }, el('label', { textContent: 'Background' }), chips('background', BACKGROUNDS)),
         el('div', { className: 'row' }, el('label', { textContent: 'Text' }), chips('align', [['center', 'Centre'], ['left', 'Left']])),
-        el('div', { className: 'row' }, el('label', { textContent: 'Song name' }), chips('showTitle', [[true, 'Show'], [false, 'Hide']])))),
+        el('div', { className: 'row' }, el('label', { textContent: 'Text size' }), chips('textSize', TEXT_SIZES)),
+        synced && el('div', { className: 'row' }, el('label', { textContent: 'Animation' }), chips('motion', MOTIONS)),
+        el('div', { className: 'row' }, el('label', { textContent: 'Song name' }), chips('showTitle', [[true, 'Show'], [false, 'Hide']])),
+        synced && el('div', { className: 'row', title: 'Shows “Start the song at m:ss” for the first seconds of the video' }, el('label', { textContent: 'Start cue' }), chips('startCue', [[true, 'Show'], [false, 'Hide']])),
+        synced && el('div', { className: 'row', title: 'A 3-2-1 countdown, a pulse on each line and the song time, for lining the song up by hand in a video editor' }, el('label', { textContent: 'Sync cues' }), chips('syncCues', [[true, 'Show'], [false, 'Hide']])))),
       status, el('div', { className: 'act' }, el('button', { className: 'btn text', textContent: 'Close', onclick: close }), saveImg, saveVid)));
     modal.hidden = false;
     modal.onmousedown = (e) => { if (e.target === modal) close(); };

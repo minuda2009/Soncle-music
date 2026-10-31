@@ -5,7 +5,7 @@ as usual: this is for people who want some of Soncle's features while staying on
 
 Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later. Written with AI coding agents.
 
-## What it does (version 0.5.0)
+## What it does (version 0.5.1)
 
 - **Soncle's look on YouTube Music (deeper)**: full-page palette from the apps (dark / black / light /
   system; nine accents; or cover-art colours that change per song). Maps a wider set of YTM and yt-spec
@@ -18,6 +18,10 @@ Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later. Wri
   sizes (9:16, 4:5, 1:1) for Reels and Stories. The video can cover chosen lines or a part of the song, up to
   the whole song, from a start point you pick. It has no audio on purpose: add the song in the platform's own
   music picker (the card tells you where to start it) so the artist is paid.
+  Options for Reels: a 9:16 safe area that keeps the words clear of Instagram's buttons and caption, three
+  text sizes, five animations (Pop, Fade, Slide up, Typewriter, Karaoke), an optional "Start the song at m:ss"
+  cue in the video and optional sync cues (3-2-1 countdown, a pulse on each line, the song time) for lining
+  the song up by hand in a video editor.
 
 It reads the song title, artist and the player's clock, and talks to lrclib.net. It does not read your
 account, cookies or the audio, and it never downloads or alters the stream.
