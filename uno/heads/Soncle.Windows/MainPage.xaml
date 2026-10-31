@@ -133,7 +133,7 @@
                                             CornerRadius="8"
                                             VerticalAlignment="Center"
                                             Background="{ThemeResource SurfaceVariantBrush}">
-                                        <Image Source="{x:Bind local:MainPage.Artwork(ThumbnailUrl, 96)}"
+                                        <Image Source="{x:Bind local:MainPage.RowArtwork(ThumbnailUrl)}"
                                                Stretch="UniformToFill" />
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">

@@ -26,6 +26,8 @@ public sealed partial class MainPage : Page
     private bool _showResults;
     private bool _seekDragging;
     private bool _settingSeek;
+    private bool _seekQueued;
+    private double _queuedSeek;
     private string? _artworkUrl;
     private string? _deviceError;
 
@@ -62,6 +64,9 @@ public sealed partial class MainPage : Page
         }
         return new BitmapImage { UriSource = uri, DecodePixelWidth = decodeWidth, DecodePixelType = DecodePixelType.Logical };
     }
+
+    /// <summary>A result row's 48 px artwork (x:Bind function: one string argument, no literal to convert).</summary>
+    public static ImageSource? RowArtwork(string url) => Artwork(url, 96);
 
     /// <summary>A result row's second line: artists · album · duration (empty parts left out).</summary>
     public static string Details(string artists, string album, string duration) =>
@@ -272,6 +277,8 @@ public sealed partial class MainPage : Page
     {
         if (!_seekDragging) return;
         _seekDragging = false;
+        // a click's own queued seek (if it hasn't run yet) is this one
+        _queuedSeek = double.NaN;
         _host?.Bar.Seek(SeekBar.Value);
     }
 
@@ -284,8 +291,25 @@ public sealed partial class MainPage : Page
             BarPosition.Text = TimeText.Format(e.NewValue);
             return;
         }
-        // keyboard (arrows, Home/End) and automation: seek at once
-        host.Bar.Seek(e.NewValue);
+        // keyboard (arrows, Home/End) and automation seek without waiting for a release. A click on the track also
+        // changes the value before the handled-too PointerPressed marks a drag, so the seek waits
+        // one dispatcher turn: if a press arrived meanwhile, the release seeks instead (one fade dip,
+        // not two). Repeated keys inside one turn coalesce to the latest value.
+        _queuedSeek = e.NewValue;
+        if (_seekQueued) return;
+        _seekQueued = true;
+        if (!DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, ApplyQueuedSeek))
+        {
+            _seekQueued = false;
+            host.Bar.Seek(e.NewValue);
+        }
+    }
+
+    private void ApplyQueuedSeek()
+    {
+        _seekQueued = false;
+        if (_seekDragging || double.IsNaN(_queuedSeek) || _host is not { } host) return;
+        host.Bar.Seek(_queuedSeek);
     }
 
     private void OnOutputFailed(object? sender, string reason)

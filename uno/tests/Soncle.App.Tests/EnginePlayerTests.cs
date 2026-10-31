@@ -2,6 +2,7 @@
 using Soncle.App.Playback;
 using Soncle.Audio;
 using Soncle.Audio.Opus;
+using Soncle.Core.Platform;
 using Soncle.Core.Playback;
 using Soncle.TestKit;
 
@@ -15,7 +16,7 @@ public class EnginePlayerTests
 {
     private const int Sr = 48_000;
 
-    private static EnginePlayer Player(FakeAudioOutput output, params IAudioSource[] songs)
+    private static EnginePlayer Player(IAudioOutput output, params IAudioSource[] songs)
     {
         var byId = songs.Select((s, i) => (s, i)).ToDictionary(p => "s" + p.i, p => p.s);
         return new EnginePlayer(output, (id, ct) => Task.FromResult(byId[id]));
@@ -217,5 +218,79 @@ public class EnginePlayerTests
         Assert.True(output.IsRunning);
         player.Dispose();
         Assert.False(output.IsRunning);
+    }
+
+    [Fact]
+    public async Task AQuickPauseAndPlayHandsOverWithoutASecondRendererCall()
+    {
+        // the stopped session has not pulled its faded last block yet when play comes back
+        var output = new DeferredStopOutput();
+        using var player = Player(output, Pcm.Sine(5, 440, 0.5));
+        await player.LoadAsync("s0", null, 0, true, CancellationToken.None);
+        var old = output.Current!;
+        for (var i = 0; i < 20; i++) old.Pull();
+        player.Pause();
+        await player.PlayAsync(CancellationToken.None);
+        var fresh = output.Current!;
+        Assert.NotSame(old, fresh);
+        var position = player.Position;
+
+        // the old device thread's late read: silence, and the song does not move
+        Assert.Equal(0, old.Pull());
+        Assert.Equal(20, old.Renders);
+        Assert.True(old.Finished);
+        Assert.Equal(0.0, Pcm.Peak(old.Buffer));
+        Assert.Equal(position, player.Position);
+
+        // the new session carries on from the same spot, fading in
+        Assert.Equal(output.BlockFrames, fresh.Pull());
+        Assert.True(Pcm.Peak(fresh.Buffer.AsSpan(0, 20)) < 0.05, "fades in");
+        Assert.True(Pcm.Peak(fresh.Buffer) > 0.05, "and plays");
+        Assert.Equal(1, output.MaxConcurrentRenders);
+    }
+
+    [Fact]
+    public async Task AStoppedSessionThatPullsItsLastBlockFirstFadesOut()
+    {
+        var output = new DeferredStopOutput();
+        using var player = Player(output, Pcm.Sine(5, 440, 0.5));
+        await player.LoadAsync("s0", null, 0, true, CancellationToken.None);
+        var old = output.Current!;
+        for (var i = 0; i < 20; i++) old.Pull();
+        player.Pause();
+        Assert.Equal(output.BlockFrames, old.Pull());
+        Assert.True(old.Finished);
+        Assert.True(Math.Abs(old.Buffer[^1]) < 0.01 && Math.Abs(old.Buffer[^2]) < 0.01, "the last block ends in silence");
+        await player.PlayAsync(CancellationToken.None);
+        Assert.Equal(output.BlockFrames, output.Current!.Pull());
+        Assert.Equal(0, old.Pull());
+        Assert.Equal(1, output.MaxConcurrentRenders);
+    }
+
+    [Fact]
+    public async Task OverlappingDeviceThreadsNeverRenderAtOnce()
+    {
+        // real threads: the old session pulls flat out while play comes back on this thread
+        for (var round = 0; round < 20; round++)
+        {
+            var output = new DeferredStopOutput(blockFrames: 64);
+            using var player = Player(output, Pcm.Sine(30, 440, 0.5));
+            await player.LoadAsync("s0", null, 0, true, CancellationToken.None);
+            var old = output.Current!;
+            using var go = new ManualResetEventSlim(false);
+            var device = new Thread(() =>
+            {
+                go.Wait();
+                while (!old.Finished) old.Pull();
+            });
+            device.Start();
+            player.Pause();
+            go.Set();
+            Thread.SpinWait(round * 100);
+            await player.PlayAsync(CancellationToken.None);
+            for (var i = 0; i < 50; i++) output.Current!.Pull();
+            device.Join();
+            Assert.Equal(1, output.MaxConcurrentRenders);
+        }
     }
 }

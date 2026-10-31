@@ -28,6 +28,15 @@ namespace Soncle.Windows.Playback;
 /// that goes away (unplugged, taken in exclusive mode) ends the session and raises
 /// <see cref="Failed"/>; <see cref="Start"/> may be called again.
 /// </para>
+/// <para>
+/// Hand-over: a <see cref="Start"/> right after <see cref="Stop"/> (a double click on play, the
+/// media key twice) finds the old session still owing its faded last block. Both sessions pull
+/// from the same callback and the engine behind it is single-threaded, so <see cref="Start"/>
+/// first waits up to <see cref="HandOverWaitMs"/> for that block (the usual case: it is due within
+/// one device period, so the pause still fades), then closes the old session's
+/// <see cref="RenderGate"/>: from then on the old session renders silence and is never inside the
+/// callback again. A superseded session that fails no longer raises <see cref="Failed"/>.
+/// </para>
 /// </summary>
 public sealed class WasapiAudioOutput : IAudioOutput
 {
@@ -36,6 +45,12 @@ public sealed class WasapiAudioOutput : IAudioOutput
 
     /// <summary>How long a stopping session waits for its faded last block before it stops anyway.</summary>
     private const int FinalBlockWaitMs = 500;
+
+    /// <summary>How long <see cref="Start"/> waits for a stopping session's faded last block (UI thread; one buffer at most).</summary>
+    private const int HandOverWaitMs = LatencyMs;
+
+    /// <summary>How long <see cref="Start"/> waits for a superseded session to leave the render callback.</summary>
+    private const int GateCloseWaitMs = 250;
 
     private readonly SynchronizationContext? _ui;
     private readonly object _gate = new();
@@ -82,6 +97,18 @@ public sealed class WasapiAudioOutput : IAudioOutput
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (IsRunning) return;
+
+            if (_session is { } old)
+            {
+                // the old session still owes its faded last block: let it render that (normally
+                // within one device period), then keep it out of the shared callback for good
+                if (!old.HasFailed) old.FinalBlock.Wait(HandOverWaitMs);
+                if (!old.Gate.Close(GateCloseWaitMs))
+                {
+                    Trace.WriteLine("Soncle audio-start-failed previous-session-busy");
+                    throw new InvalidOperationException("the previous audio session is still rendering");
+                }
+            }
 
             WasapiOut? device = null;
             try
@@ -144,12 +171,16 @@ public sealed class WasapiAudioOutput : IAudioOutput
     {
         if (Interlocked.Exchange(ref session.FailedFlag, 1) != 0) return;
         Trace.WriteLine($"Soncle audio-failed {reason}");
+        bool current;
         lock (_gate)
         {
-            if (ReferenceEquals(_session, session)) FailureReason = reason;
+            current = ReferenceEquals(_session, session) && !session.Gate.IsClosed;
+            if (current) FailureReason = reason;
             session.StopRequested = true;
         }
         ThreadPool.QueueUserWorkItem<Session>(static st => st.Owner.Teardown(st, playOut: false), session, preferLocal: false);
+        // a session a newer Start has replaced is not the player's concern any more
+        if (!current) return;
         if (_ui is null) Failed?.Invoke(this, reason);
         else _ui.Post(_ => Failed?.Invoke(this, reason), null);
     }
@@ -208,6 +239,9 @@ public sealed class WasapiAudioOutput : IAudioOutput
 
         public WasapiOut? Device { get; set; }
 
+        /// <summary>Closed by the next <see cref="Start"/>: this session then never calls the shared callback again.</summary>
+        public RenderGate Gate { get; } = new();
+
         /// <summary>Set once the faded last block has been handed to the device.</summary>
         public ManualResetEventSlim FinalBlock { get; } = new(false);
 
@@ -234,16 +268,31 @@ public sealed class WasapiAudioOutput : IAudioOutput
             if (!_finished && !HasFailed)
             {
                 var stopping = _stopRequested;
-                try
+                string? failure = null;
+                if (Gate.TryEnter())
                 {
-                    frames = Math.Clamp(_render(floats), 0, floats.Length / 2);
+                    try
+                    {
+                        frames = Math.Clamp(_render(floats), 0, floats.Length / 2);
+                    }
+                    catch (Exception e)
+                    {
+                        // never into NAudio: play silence and end the session from a pool thread
+                        frames = 0;
+                        failure = e.GetType().Name;
+                    }
+                    finally
+                    {
+                        Gate.Exit();
+                    }
                 }
-                catch (Exception e)
+                else
                 {
-                    // never into NAudio: play silence and end the session from a pool thread
-                    frames = 0;
-                    Owner.Fail(this, $"render: {e.GetType().Name}");
+                    // superseded by a newer session: silence, and this was the last block
+                    stopping = true;
                 }
+                // outside the gate: Fail takes the owner's lock, which Start may hold while closing it
+                if (failure is not null) Owner.Fail(this, $"render: {failure}");
                 // frames past the returned count are silence (the IAudioOutput contract)
                 floats[(frames * 2)..].Clear();
                 if (_first) GainRamp.Apply(floats, 2, 0f, 1f);

@@ -19,15 +19,16 @@ public class YouTubeStreamsTests : IDisposable
         try { Directory.Delete(_cache, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
-    private (YouTubeStreams Streams, FakeFetcher Fetcher) Build(string mime = Opus, string? loudnessDb = "-3.5", bool filter = true)
+    private (YouTubeStreams Streams, FakeFetcher Fetcher) Build(string mime = Opus, string? loudnessDb = "-3.5", bool filter = true,
+        int bitrate = 160_000, int maxSongSeconds = YouTubeStreams.MaxSongSeconds)
     {
         var client = new FakeStreamClient(
-            new AudioFormat($"https://gv/a?clen={_webm.Length}", mime, 160_000, _webm.Length, LoudnessDb: loudnessDb));
+            new AudioFormat($"https://gv/a?clen={_webm.Length}", mime, bitrate, _webm.Length, LoudnessDb: loudnessDb));
         var resolver = new StreamResolver(client, accept: filter ? YouTubeStreams.OpusOnly : null);
         resolver.SetClients(new[] { "ANDROID_VR" });
         var fetcher = new FakeFetcher(_webm);
         var downloader = new SongDownloader(_cache, fetcher);
-        return (new YouTubeStreams(resolver, downloader, new FakeOpusCodec()), fetcher);
+        return (new YouTubeStreams(resolver, downloader, new FakeOpusCodec(), maxSongSeconds), fetcher);
     }
 
     private static ResolvedStream Stream(string? loudnessDb) =>
@@ -99,5 +100,41 @@ public class YouTubeStreamsTests : IDisposable
         var (filtered, _) = Build(mime: "audio/mp4", filter: true);
         var e = await Assert.ThrowsAsync<InvalidOperationException>(() => filtered.PrefetchAsync("v1", CancellationToken.None));
         Assert.Contains("no playable audio format", e.Message);
+    }
+
+    [Fact]
+    public void TheLengthEstimateComesFromBytesAndBitrate()
+    {
+        static ResolvedStream S(long length, int bitrate) =>
+            new("https://gv/a", "IOS", new Dictionary<string, string>(), "ua", Opus, length, bitrate, null, 0);
+        Assert.Equal(240.0, YouTubeStreams.EstimatedSeconds(S(4_800_000, 160_000))!.Value, 9);
+        Assert.Null(YouTubeStreams.EstimatedSeconds(S(0, 160_000)));
+        Assert.Null(YouTubeStreams.EstimatedSeconds(S(4_800_000, 0)));
+        // the default cap: 20 min, about 460 MB of decoded PCM
+        Assert.Equal(1200, YouTubeStreams.MaxSongSeconds);
+    }
+
+    [Fact]
+    public async Task ASongEstimatedOverTheCapIsRefusedBeforeAnyDownload()
+    {
+        // 1 kbit/s makes the fixture's bytes look far longer than 5 s
+        var (streams, fetcher) = Build(bitrate: 1_000, maxSongSeconds: 5);
+        var e = await Assert.ThrowsAsync<NotSupportedException>(() => streams.PrefetchAsync("v1", CancellationToken.None));
+        Assert.Contains("can't play yet", e.Message);
+        await Assert.ThrowsAsync<NotSupportedException>(() => streams.LoadSongAsync("v1", CancellationToken.None));
+        Assert.Equal(0, fetcher.Calls);
+    }
+
+    [Fact]
+    public async Task ASongDecodedOverTheCapIsRefusedBeforeItsPcmIsAllocated()
+    {
+        // a high bitrate makes the estimate short; the decoder's exact length (8 s) is over 5 s
+        var (streams, _) = Build(bitrate: 10_000_000, maxSongSeconds: 5);
+        await streams.PrefetchAsync("v1", CancellationToken.None);
+        var e = await Assert.ThrowsAsync<NotSupportedException>(() => streams.LoadSongAsync("v1", CancellationToken.None));
+        Assert.Contains("limit", e.Message);
+        // the same song under a cap it fits plays
+        var (fits, _) = Build(bitrate: 10_000_000, maxSongSeconds: 9);
+        Assert.True((await fits.LoadSongAsync("v1", CancellationToken.None)).LengthFrames > 0);
     }
 }

@@ -43,6 +43,23 @@ that return plain URLs: no PO token, no deciphering yet) with the **WebM/Opus-on
 per song, loudness levelled to −14 LUFS, limiter last) → `WasapiAudioOutput`. Sound therefore
 starts only after the whole song is downloaded and decoded.
 
+The decoded song is held in memory (48 kHz stereo float: about 23 MB a minute, and two songs can be
+alive across a skip), so **songs and videos over 20 minutes are refused** with the bar's "Couldn't
+play this song." (`YouTubeStreams.MaxSongSeconds`): first from the stream's length and bitrate,
+before anything is downloaded, then from the exact length, before the PCM is allocated. The limit
+goes when streaming start lands. Playback CPU and memory are not measured yet: pending on
+minuda2009's PC (step 7 below).
+
+A quick pause → play (double click, the media key twice) starts a new WASAPI session while the old
+one still owes its faded last block. `Start` waits up to one buffer (80 ms) for that block, then
+closes the old session's `RenderGate`, so only one session ever calls the engine; the old one
+renders silence from then on and its failures no longer reach the bar.
+
+The transport icons (play/pause/previous/next, Segoe Fluent glyphs) and the search box's
+`SymbolIcon Find` follow the rail's current placeholders; they become Material Symbols outlined at
+weight 600 with the Material Symbols font task, so screenshots of this build don't show the final
+look.
+
 Signed out, always: one `HttpClient` with `UseCookies = false`, no account, no credentials. Nothing
 touches the network at start-up (the InnerTube session is created on the first search, and retried
 by the next one if it failed), so the app opens offline. Downloads go to the preview's own
@@ -63,10 +80,15 @@ Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `
 3. Search (Enter) for an artist; the list fills. Pick a song: the bar shows it with a spinner, then
    plays (expect a few seconds before sound: the whole song is downloaded and decoded first).
 4. Pause / play, next / previous, drag the seek bar and let go, and use the keyboard media keys and
-   the Windows media flyout. Listen for clicks at start, pause, skip and seek.
+   the Windows media flyout. Listen for clicks at start, pause, skip and seek. Also double-click
+   play/pause and press the play/pause media key twice quickly: it should keep playing without a
+   skip or an error. Click once on the seek bar's track: one short dip, not two.
 5. Switch the default device to one at 44.1 kHz, and unplug headphones while playing: the bar should
    say the sound device stopped; Play starts it again on the new default device.
-6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to).
+6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to, and so are
+   videos over 20 minutes: search for a one-hour mix to check).
+7. With a typical 3–5 minute song playing, note the working set and CPU of `Soncle.Windows.exe` in
+   Task Manager (Details tab), and again after a few skips; those are the first playback numbers.
 
 ## Measured (shell, `windows-latest`, 10 Oct 2026)
 

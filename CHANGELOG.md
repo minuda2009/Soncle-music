@@ -17,11 +17,13 @@
   44.1 kHz device and after unplugging headphones: the bar should say the sound device stopped, and
   Play should start it again). `uno/heads/Soncle.Windows/README.md` has the steps.
 - Not there yet: **sound starts only after the whole song has downloaded and decoded** (a few
-  seconds; streaming start comes later), only songs YouTube offers as WebM/Opus play (AAC-only ones
+  seconds; streaming start comes later), so **songs and videos over 20 minutes don't play yet**
+  (they say they can't be played; the whole decoded song is kept in memory until then), only songs YouTube offers as WebM/Opus play (AAC-only ones
   say they can't be played), it is signed out only (no account, library, likes or playlists), the
   stream lookup uses only the two YouTube clients that need no PO token and no deciphering (more
   come with the PO-token and player-script work), and there is no queue view, lyrics, Sound page,
-  device picker or exclusive mode yet.
+  device picker or exclusive mode yet. The player bar's icons are placeholders until the
+  Material Symbols font arrives. Playback CPU and memory are still to be measured on a real PC.
 
 ## Unreleased: Soncle Uno preview for Android (C# app)
 
