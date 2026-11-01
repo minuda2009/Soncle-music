@@ -273,5 +273,16 @@
                 </Grid>
             </StackPanel>
         </Grid>
+
+        <!-- The hidden BotGuard page lives here (Playback/WebViewBotGuardPage.cs): 1x1, invisible,
+             never hit-tested; empty unless a PO token is minted. -->
+        <Grid x:Name="BotGuardHost"
+              Grid.RowSpan="3"
+              Width="1"
+              Height="1"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Top"
+              Opacity="0"
+              IsHitTestVisible="False" />
     </Grid>
 </Page>

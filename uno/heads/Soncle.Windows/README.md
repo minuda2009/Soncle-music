@@ -39,16 +39,34 @@ head that opens Soncle's shell on Windows. It is **Windows only** and is deliber
 
 How a song gets to the speakers: `StreamResolver` (clients **ANDROID_VR**, then **IOS**, the two
 that return plain URLs: no PO token, no deciphering yet) with the **WebM/Opus-only** filter →
-`SongDownloader` downloads the **whole song** → Concentus decodes it → `EnginePlayer` (one engine
-per song, loudness levelled to −14 LUFS, limiter last) → `WasapiAudioOutput`. Sound therefore
-starts only after the whole song is downloaded and decoded.
+`SongDownloader` downloads the song to its cache file (a 256 KB first piece, then ≤ 1 MB
+requests) → **`StreamingOpusSource`** demuxes and decodes it with Concentus *while it downloads* →
+`EnginePlayer` (one engine per song, loudness levelled to −14 LUFS, limiter last) →
+`WasapiAudioOutput`. **Sound starts as soon as the head and the first packets are in** (the first
+piece), not after the whole song.
 
-The decoded song is held in memory (48 kHz stereo float: about 23 MB a minute, and two songs can be
-alive across a skip), so **songs and videos over 20 minutes are refused** with the bar's "Couldn't
-play this song." (`YouTubeStreams.MaxSongSeconds`): first from the stream's length and bitrate,
-before anything is downloaded, then from the exact length, before the PCM is allocated. The limit
-goes when streaming start lands. Playback CPU and memory are not measured yet: pending on
-minuda2009's PC (step 7 below).
+Streaming start, in short (`uno/src/Soncle.Audio/StreamingOpusSource.cs`):
+
+- a decode-ahead thread per song fills a preallocated ring of about 5.5 s of PCM (2 MB), so a song
+  of any length uses the same memory: **there is no length limit any more** (the old 20-minute cap
+  is gone);
+- the audio thread only copies out of the ring: it never waits, locks or allocates. If the download
+  falls behind (network drop, slow connection) the song fades out over 10 ms, plays silence, the
+  bar shows its **spinner while buffering** (the song stays "playing", like a browser's `<audio>`),
+  and the sound fades back in when the bytes arrive (the downloader retries for about 10 minutes);
+- a seek restarts decoding at the WebM cue before the target (80 ms pre-roll) and drops what comes
+  before it; a seek **far past the download** is read straight from the network at that byte
+  offset while the cache keeps filling. Files without Cues in front re-read from the first cluster;
+- the length shown is the file's Duration until the real end is decoded, and only the real end
+  ends a song, so an estimate can't cut one short;
+- a download that fails before the first audio shows "Couldn't play this song." (it doesn't skip
+  silently); one that fails mid-song ends the song there, and seeking tries again;
+- the song playing is never dropped from the download cache while it streams from it (the cache
+  keeps four songs, oldest-used first);
+- the decode thread sleeps while the ring is full and waits for a seek at the end, instead of
+  polling: 16 idle songs went from about 5.7 % to 0.4 % of one core in the Linux test harness.
+
+Playback CPU and memory are not measured yet: pending on minuda2009's PC (step 7 below).
 
 A quick pause → play (double click, the media key twice) starts a new WASAPI session while the old
 one still owes its faded last block. `Start` waits up to one buffer (80 ms) for that block, then
@@ -67,7 +85,20 @@ by the next one if it failed), so the app opens offline. Downloads go to the pre
 `%APPDATA%\Soncle`. Diagnostics are one-line `Trace` messages (`Soncle ...`, visible in a debugger
 or DebugView) with URLs cut out; no URL, header or token is logged.
 
-Not here yet, by scope: streaming start (sound before the download finishes), AAC-only songs,
+**PO tokens (built, not used for playback yet).** `Playback/WebViewBotGuardPage.cs` is the hidden
+BotGuard page of `docs/WINUI_PLAN.md` §6: a 1×1 invisible WebView2 in the window that answers
+`https://www.youtube.com/soncle-potoken*` (`AddWebResourceRequestedFilter` +
+`WebResourceRequested`) with `src/po_token.html`, embedded unchanged from the repo
+(`<EmbeddedResource LogicalName="Soncle.po_token.html">`), then `Navigate`s there (not
+`NavigateToString`, which gives the wrong origin). Every other request in that WebView gets a 404,
+as in `potoken.mjs`. `Soncle.YouTube.PoTokenMinter` drives it (Create → `runBotGuard` →
+GenerateIT → `createPoTokenMinter` → `obtainPoToken`) and closes it after 10 minutes without a
+request. The resolver is **not** given the minter: the YTMUSIC and WEB clients stay off until an
+`IPlayerScript` decipherer exists, because their URLs need deciphering as well as a token. The page
+is created only when a token is minted, and nothing mints one unless `SONCLE_POTOKEN_SELFTEST=1` is
+set (see "What to test"). The token is never logged, only its length.
+
+Not here yet, by scope: AAC-only songs,
 PO-token and deciphered clients (YTMUSIC, WEB), sign-in and the library, a queue view, lyrics, the
 Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `Soncle.Design`
 (stage 3) and the own-data-folder carry-over.
@@ -78,17 +109,44 @@ Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `
    playing". Turn the network on.
 2. Drag the window by the title bar on both sides of the search box; click into the box and type.
 3. Search (Enter) for an artist; the list fills. Pick a song: the bar shows it with a spinner, then
-   plays (expect a few seconds before sound: the whole song is downloaded and decoded first).
+   plays. **Note the time from the click to the first sound** (it should be about a second on a
+   normal connection: only the first piece has to arrive).
 4. Pause / play, next / previous, drag the seek bar and let go, and use the keyboard media keys and
    the Windows media flyout. Listen for clicks at start, pause, skip and seek. Also double-click
    play/pause and press the play/pause media key twice quickly: it should keep playing without a
    skip or an error. Click once on the seek bar's track: one short dip, not two.
 5. Switch the default device to one at 44.1 kHz, and unplug headphones while playing: the bar should
    say the sound device stopped; Play starts it again on the new default device.
-6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to, and so are
-   videos over 20 minutes: search for a one-hour mix to check).
-7. With a typical 3–5 minute song playing, note the working set and CPU of `Soncle.Windows.exe` in
+6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to).
+7. **Long songs:** search for a one-hour mix (anything over 20 minutes): it must start as quickly
+   as a short song and play; skip to near the end with the seek bar.
+8. **Seek past the download:** right after a long song starts, drag the seek bar far ahead (past
+   what can have downloaded): sound should come back within a second or two at the new spot, with
+   no click and no error.
+9. **Network pull mid-song:** while a song plays, turn Wi-Fi off (or pull the cable). Once the
+   decoded seconds run out the sound fades out and the bar shows the spinner (the song stays
+   "playing"); turn the network back on: the sound fades back in where it stopped. Note how long
+   the gap was and whether anything clicked.
+10. With a typical 3–5 minute song playing, note the working set and CPU of `Soncle.Windows.exe` in
    Task Manager (Details tab), and again after a few skips; those are the first playback numbers.
+11. **Slow connection:** with a throttled connection (e.g. a phone hotspot at 1 bar) a song that
+   stalls should come back for a stretch each time, not flicker between sound and spinner every
+   moment; a song whose download gives up mid-way fades out (no click) and the next one starts.
+12. **PO token self-test** (only this build's BotGuard page; playback doesn't use it yet): in
+   PowerShell `$env:SONCLE_POTOKEN_SELFTEST = "1"; ./Soncle.Windows.exe`, then search once. In
+   DebugView (capture Win32) look for `Soncle potoken-selftest ok length=…` within a few
+   seconds (or `potoken-selftest failed …` with the reason) and `Soncle PO token minter ready (ttl
+   …s)`. A line `helper page origin is …` means the page did not get the youtube.com origin.
+   Ten minutes later, without another search, the WebView2 child processes
+   (`msedgewebview2.exe` under Soncle.Windows in Task Manager) should be gone.
+   While the page is open, `%TEMP%\Soncle-potoken` holds one folder (its throw-away profile);
+   a few seconds after the page closes it should be empty again, and nothing should appear next to
+   `Soncle.Windows.exe` (no `Soncle.Windows.exe.WebView2` folder).
+13. **The BotGuard page reaches nothing but YouTube's two BotGuard calls:** during step 12, open
+   Resource Monitor (`resmon`), Network tab, and tick `msedgewebview2.exe`: it should show no TCP
+   connections of its own (every request inside the page is answered with a 404 by the app; the
+   BotGuard calls go through `Soncle.Windows.exe`). A self-test that still says `ok` with that
+   blocking in place is the check that the page has what it needs.
 
 ## Measured (shell, `windows-latest`, 10 Oct 2026)
 

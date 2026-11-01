@@ -35,9 +35,8 @@ public static class OpusWebmDecoder
     public const int SampleRate = 48_000;
 
     /// <summary>Decodes <paramref name="file"/> in memory. Throws <see cref="NotSupportedException"/> if it has no Opus track.</summary>
-    /// <param name="maxFrames">The longest song accepted, in frames: a longer one throws <see cref="NotSupportedException"/> before its PCM is allocated.</param>
     /// <exception cref="InvalidDataException">A packet the codec refuses.</exception>
-    public static DecodedAudio Decode(ReadOnlyMemory<byte> file, IOpusDecoderFactory codec, long maxFrames = long.MaxValue)
+    public static DecodedAudio Decode(ReadOnlyMemory<byte> file, IOpusDecoderFactory codec)
     {
         var f = WebmOpusReader.Read(file) ?? throw new NotSupportedException("no Opus audio track in this WebM");
         var ch = f.Head.Channels;
@@ -47,8 +46,6 @@ public static class OpusWebmDecoder
         foreach (var p in f.Packets) total += p.Samples;
         var padding = f.Packets.Sum(p => p.DiscardPaddingNs) * SampleRate / 1_000_000_000L;
         var frames = Math.Max(0, total - f.Head.PreSkip - padding);
-        if (frames > maxFrames)
-            throw new NotSupportedException($"the song is {frames / SampleRate} s long, over the {maxFrames / SampleRate} s limit");
 
         var gain = (float)Math.Pow(10, f.Head.OutputGainDb / 20.0);
         var outPcm = new float[frames * 2];

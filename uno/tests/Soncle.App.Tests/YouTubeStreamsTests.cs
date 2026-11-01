@@ -7,7 +7,7 @@ using Soncle.YouTube;
 
 namespace Soncle.App.Tests;
 
-/// <summary>Resolve → download → decode, against a fake player client and a fake googlevideo (no network).</summary>
+/// <summary>Resolve → download → streaming decode, against a fake player client and a fake googlevideo (no network).</summary>
 public class YouTubeStreamsTests : IDisposable
 {
     private const string Opus = "audio/webm; codecs=\"opus\"";
@@ -20,7 +20,7 @@ public class YouTubeStreamsTests : IDisposable
     }
 
     private (YouTubeStreams Streams, FakeFetcher Fetcher) Build(string mime = Opus, string? loudnessDb = "-3.5", bool filter = true,
-        int bitrate = 160_000, int maxSongSeconds = YouTubeStreams.MaxSongSeconds)
+        int bitrate = 160_000)
     {
         var client = new FakeStreamClient(
             new AudioFormat($"https://gv/a?clen={_webm.Length}", mime, bitrate, _webm.Length, LoudnessDb: loudnessDb));
@@ -28,7 +28,7 @@ public class YouTubeStreamsTests : IDisposable
         resolver.SetClients(new[] { "ANDROID_VR" });
         var fetcher = new FakeFetcher(_webm);
         var downloader = new SongDownloader(_cache, fetcher);
-        return (new YouTubeStreams(resolver, downloader, new FakeOpusCodec(), maxSongSeconds), fetcher);
+        return (new YouTubeStreams(resolver, downloader, new FakeOpusCodec()), fetcher);
     }
 
     private static ResolvedStream Stream(string? loudnessDb) =>
@@ -65,20 +65,42 @@ public class YouTubeStreamsTests : IDisposable
         Assert.Null(await unknown.PrefetchAsync("v1", CancellationToken.None));
     }
 
+    /// <summary>Reads a streaming song to its end, waiting (async) whenever the decoder is behind.</summary>
+    private static async Task<long> ReadToEndAsync(IAudioSource song)
+    {
+        var l = new float[480];
+        var r = new float[480];
+        var total = 0L;
+        var s = (StreamingOpusSource)song;
+        for (var spins = 0; spins < 5000; spins++)
+        {
+            if (s.DecodedEndFrame - s.Position < 480 + StreamingOpusSource.ResumeRampFrames && !s.DecodeComplete) { await Task.Delay(2); continue; }
+            var n = song.Read(l, r, 480);
+            total += n;
+            if (n < 480) return total;
+        }
+        throw new TimeoutException("the song never ended");
+    }
+
     [Fact]
-    public async Task LoadSongDownloadsTheWholeSongAndDecodesIt()
+    public async Task LoadSongStreamsTheSongFromTheDownloader()
     {
         var (streams, fetcher) = Build();
         await streams.PrefetchAsync("v1", CancellationToken.None);
         var song = await streams.LoadSongAsync("v1", CancellationToken.None);
+        using var _ = (IDisposable)song;
         Assert.True(fetcher.Calls > 0);
+        Assert.IsType<StreamingOpusSource>(song);
         Assert.Equal(48_000, song.SampleRate);
-        // sample.webm is 8 s; the fake codec yields the packets' TOC lengths minus pre-skip/padding
-        Assert.InRange(song.LengthFrames!.Value, 7 * 48_000, 9 * 48_000);
         var l = new float[256];
         var r = new float[256];
         Assert.Equal(256, song.Read(l, r, 256));
         Assert.All(l, x => Assert.True(x > 0, "decoded PCM from the codec"));
+        // sample.webm is 8 s; the fake codec yields the packets' TOC lengths minus pre-skip/padding
+        var total = 256 + await ReadToEndAsync(song);
+        Assert.InRange(total, 7 * 48_000, 9 * 48_000);
+        Assert.Equal(total, song.LengthFrames);
+        Assert.True(((IBufferingSource)song).Ended);
     }
 
     [Fact]
@@ -110,31 +132,19 @@ public class YouTubeStreamsTests : IDisposable
         Assert.Equal(240.0, YouTubeStreams.EstimatedSeconds(S(4_800_000, 160_000))!.Value, 9);
         Assert.Null(YouTubeStreams.EstimatedSeconds(S(0, 160_000)));
         Assert.Null(YouTubeStreams.EstimatedSeconds(S(4_800_000, 0)));
-        // the default cap: 20 min, about 460 MB of decoded PCM
-        Assert.Equal(1200, YouTubeStreams.MaxSongSeconds);
     }
 
     [Fact]
-    public async Task ASongEstimatedOverTheCapIsRefusedBeforeAnyDownload()
+    public async Task ALongSongIsNotRefused()
     {
-        // 1 kbit/s makes the fixture's bytes look far longer than 5 s
-        var (streams, fetcher) = Build(bitrate: 1_000, maxSongSeconds: 5);
-        var e = await Assert.ThrowsAsync<NotSupportedException>(() => streams.PrefetchAsync("v1", CancellationToken.None));
-        Assert.Contains("can't play yet", e.Message);
-        await Assert.ThrowsAsync<NotSupportedException>(() => streams.LoadSongAsync("v1", CancellationToken.None));
-        Assert.Equal(0, fetcher.Calls);
-    }
-
-    [Fact]
-    public async Task ASongDecodedOverTheCapIsRefusedBeforeItsPcmIsAllocated()
-    {
-        // a high bitrate makes the estimate short; the decoder's exact length (8 s) is over 5 s
-        var (streams, _) = Build(bitrate: 10_000_000, maxSongSeconds: 5);
+        // at 100 bit/s the fixture's bytes look like an hour-long song: there is no length limit any more
+        var (streams, fetcher) = Build(bitrate: 100);
+        Assert.True(_webm.Length * 8.0 / 100 > 20 * 60);
         await streams.PrefetchAsync("v1", CancellationToken.None);
-        var e = await Assert.ThrowsAsync<NotSupportedException>(() => streams.LoadSongAsync("v1", CancellationToken.None));
-        Assert.Contains("limit", e.Message);
-        // the same song under a cap it fits plays
-        var (fits, _) = Build(bitrate: 10_000_000, maxSongSeconds: 9);
-        Assert.True((await fits.LoadSongAsync("v1", CancellationToken.None)).LengthFrames > 0);
+        var song = await streams.LoadSongAsync("v1", CancellationToken.None);
+        using var _ = (IDisposable)song;
+        Assert.True(fetcher.Calls > 0);
+        // the file's own Duration (8 s) replaces the estimate as soon as the head is read
+        Assert.InRange(song.LengthFrames!.Value, 7 * 48_000, 9 * 48_000);
     }
 }

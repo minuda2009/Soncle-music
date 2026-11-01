@@ -32,9 +32,15 @@ public sealed class OutputPump
 
     /// <summary>
     /// True once <see cref="Source"/> has a known length and has been read to its end. A looping
-    /// source wraps before its end, so it never ends.
+    /// source wraps before its end, so it never ends. A streaming source
+    /// (<see cref="IBufferingSource"/>) says so itself: its length may be an estimate.
     /// </summary>
-    public bool Ended => Source is { LengthFrames: long length } s && s.Position >= length;
+    public bool Ended => Source switch
+    {
+        IBufferingSource b => b.Ended,
+        { LengthFrames: long length } s => s.Position >= length,
+        _ => false,
+    };
 
     /// <summary>
     /// Renders <c>interleaved.Length / 2</c> frames into <paramref name="interleaved"/> (L, R, ...)

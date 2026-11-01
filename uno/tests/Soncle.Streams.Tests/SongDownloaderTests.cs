@@ -202,6 +202,50 @@ public class SongDownloaderTests : IDisposable
     }
 
     [Fact]
+    public async Task ASongWithAnOpenReaderIsNeverEvicted()
+    {
+        var data = TestData.Make(400_000);
+        var server = new FakeGooglevideo(data);
+        var dl = NewDownloader(server);
+        dl.Register("playing", TestData.Source("playing", data.Length));
+        var reader = dl.OpenRead("playing", 0);   // a streaming song reads for as long as it is loaded
+        for (var i = 1; i <= 5; i++) dl.Register("v" + i, TestData.Source("v" + i, data.Length));
+
+        Assert.NotNull(dl.Status("playing"));
+        Assert.Null(dl.Status("v1"));             // the oldest one nobody reads went instead
+        Assert.Equal(data, await ReadAllAsync(reader));
+        // a second reader (a seek reopening the bytes) still works
+        using (var again = dl.OpenRead("playing", 100_000))
+            Assert.Equal(data.Skip(100_000), await ReadAllAsync(again));
+
+        // once nothing reads it, it ages out like any other song
+        reader.Dispose();
+        reader.Dispose();                         // disposing twice releases once
+        for (var i = 6; i <= 9; i++) dl.Register("v" + i, TestData.Source("v" + i, data.Length));
+        Assert.Null(dl.Status("playing"));
+        Assert.NotNull(dl.Status("v9"));
+    }
+
+    [Fact]
+    public void OpeningAReaderOrRegisteringAgainMakesASongTheNewest()
+    {
+        var data = TestData.Make(400_000);
+        var server = new FakeGooglevideo(data);
+        var dl = NewDownloader(server);
+        for (var i = 1; i <= 4; i++) dl.Register("v" + i, TestData.Source("v" + i, data.Length));
+
+        dl.OpenRead("v1", 0).Dispose();           // going back to the first song
+        dl.Register("v2", TestData.Source("v2", data.Length));   // a refreshed URL
+        dl.Register("v5", TestData.Source("v5", data.Length));
+
+        Assert.Null(dl.Status("v3"));             // now the oldest
+        Assert.NotNull(dl.Status("v1"));
+        Assert.NotNull(dl.Status("v2"));
+        Assert.NotNull(dl.Status("v4"));
+        Assert.NotNull(dl.Status("v5"));
+    }
+
+    [Fact]
     public async Task GivesUpAfterTheRetryLimit()
     {
         var data = TestData.Make(1_000_000);

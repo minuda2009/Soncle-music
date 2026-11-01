@@ -30,6 +30,7 @@ public sealed class PlayerBarViewModel : ObservableObject
     private string _thumbnailUrl = "";
     private bool _isPlaying;
     private bool _isLoading;
+    private bool _isBuffering;
     private double _positionSeconds;
     private double _durationSeconds;
     private string? _errorMessage;
@@ -47,6 +48,7 @@ public sealed class PlayerBarViewModel : ObservableObject
         _player.Playing += () => OnUi(Refresh);
         _player.Paused += () => OnUi(Refresh);
         _player.Ended += () => OnUi(Refresh);
+        _player.Waiting += () => OnUi(Refresh);
     }
 
     public bool IsEmpty { get => _isEmpty; private set => SetProperty(ref _isEmpty, value); }
@@ -57,6 +59,8 @@ public sealed class PlayerBarViewModel : ObservableObject
     public bool IsPlaying { get => _isPlaying; private set => SetProperty(ref _isPlaying, value); }
     /// <summary>A song was chosen and is being looked up, downloaded or decoded.</summary>
     public bool IsLoading { get => _isLoading; private set => SetProperty(ref _isLoading, value); }
+    /// <summary>Playing, but waiting for the download (silence until it catches up); the head shows its progress ring.</summary>
+    public bool IsBuffering { get => _isBuffering; private set => SetProperty(ref _isBuffering, value); }
 
     /// <summary>For the seek slider.</summary>
     public double PositionSeconds
@@ -100,6 +104,7 @@ public sealed class PlayerBarViewModel : ObservableObject
         if (IsEmpty) return;
         IsPlaying = _player.State == PlaybackState.Playing;
         IsLoading = !IsPlaying && ErrorMessage is null && (_controller.Loading || _player.State == PlaybackState.Loading);
+        IsBuffering = IsPlaying && _player.IsBuffering;
         if (_player.State is PlaybackState.Playing or PlaybackState.Paused)
         {
             if (_player.Duration > 0) DurationSeconds = _player.Duration;
@@ -120,6 +125,7 @@ public sealed class PlayerBarViewModel : ObservableObject
         DurationSeconds = t.Duration > 0 ? t.Duration : row?.DurationSeconds ?? 0;
         IsPlaying = false;
         IsLoading = true;
+        IsBuffering = false;
     }
 
     private void OnFailed(string reason)

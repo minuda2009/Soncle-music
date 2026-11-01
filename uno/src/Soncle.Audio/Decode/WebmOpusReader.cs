@@ -27,7 +27,8 @@ public sealed record WebmOpusFile(OpusHead Head, IReadOnlyList<OpusPacket> Packe
 /// </summary>
 public static class WebmOpusReader
 {
-    private const long Segment = 0x18538067, Info = 0x1549a966, Tracks = 0x1654ae6b, TrackEntry = 0xae,
+    // element ids, shared with the incremental WebmOpusStreamReader
+    internal const long Segment = 0x18538067, Info = 0x1549a966, Tracks = 0x1654ae6b, TrackEntry = 0xae,
         TrackNumber = 0xd7, TrackType = 0x83, CodecId = 0x86, CodecPrivate = 0x63a2, TimecodeScale = 0x2ad7b1,
         Cluster = 0x1f43b675, Timecode = 0xe7, SimpleBlock = 0xa3, BlockGroup = 0xa0, Block = 0xa1, DiscardPadding = 0x75a2;
 
@@ -65,13 +66,18 @@ public static class WebmOpusReader
             }
         }
         if (head is null) return null;
-        // Opus in WebM is mono or stereo here; anything with a channel mapping table is not handled
-        if (head.MappingFamily != 0 || head.Channels is < 1 or > 2)
-            throw new NotSupportedException($"Opus with {head.Channels} channels (mapping family {head.MappingFamily})");
+        CheckSupported(head);
         return new WebmOpusFile(head, packets);
     }
 
-    private static (long Number, long Type, string Codec, ReadOnlyMemory<byte>? Private) ReadTrack(ReadOnlyMemory<byte> b, EbmlElement entry)
+    /// <summary>Opus in WebM is mono or stereo here; anything with a channel mapping table is not handled.</summary>
+    internal static void CheckSupported(OpusHead head)
+    {
+        if (head.MappingFamily != 0 || head.Channels is < 1 or > 2)
+            throw new NotSupportedException($"Opus with {head.Channels} channels (mapping family {head.MappingFamily})");
+    }
+
+    internal static (long Number, long Type, string Codec, ReadOnlyMemory<byte>? Private) ReadTrack(ReadOnlyMemory<byte> b, EbmlElement entry)
     {
         long number = -1, type = -1; var codec = ""; ReadOnlyMemory<byte>? priv = null;
         foreach (var c in Ebml.Children(b, entry.DataStart, Math.Min(entry.DataEnd, b.Length)))
