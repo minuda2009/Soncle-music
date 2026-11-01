@@ -152,6 +152,57 @@ public class StreamResolverTests
         Assert.DoesNotContain("YTMUSIC", c.CalledClients);
     }
 
+    // the heads' Opus-only rule (Soncle.App's YouTubeStreams.OpusOnly), restated so this project stays app-free
+    private static bool Webm(AudioFormat f) => f.MimeType.StartsWith("audio/webm", StringComparison.OrdinalIgnoreCase);
+
+    private static AudioFormat[] OpusAndHigherM4a() => new[]
+    {
+        new AudioFormat("https://gv/m4a?clen=1", "audio/mp4; codecs=\"mp4a.40.2\"", 256_000, 0),
+        new AudioFormat("https://gv/opus?clen=1", "audio/webm; codecs=\"opus\"", 160_000, 0),
+    };
+
+    [Fact]
+    public async Task AFormatFilterPrefersOpusOverAHigherBitrateM4a()
+    {
+        var c = new FakeStreamClient();
+        c.Responses["IOS"] = () => Fmts(OpusAndHigherM4a());
+        var r = new StreamResolver(c, accept: Webm);
+        var s = await r.ResolveAsync("v1");
+        Assert.Equal("https://gv/opus?clen=1", s.Url);
+        Assert.Equal("audio/webm; codecs=\"opus\"", s.Mime);
+    }
+
+    [Fact]
+    public async Task AClientWithOnlyFilteredFormatsIsSkipped()
+    {
+        var c = new FakeStreamClient();
+        c.Responses["IOS"] = () => Fmts(new AudioFormat("https://gv/m4a?clen=1", "audio/mp4", 256_000, 0));
+        c.Responses["ANDROID_VR"] = () => Fmts(new AudioFormat("https://gv/vr?clen=1", "audio/webm", 128_000, 0));
+        var r = new StreamResolver(c, accept: Webm);
+        r.SetClients(new[] { "IOS", "ANDROID_VR" });
+        var s = await r.ResolveAsync("v1");
+        Assert.Equal("ANDROID_VR", s.Client);
+        Assert.Equal(new[] { "IOS", "ANDROID_VR" }, c.CalledClients);
+
+        // nothing playable anywhere: the error names the reason per client
+        var none = new FakeStreamClient();
+        none.Responses["IOS"] = () => Fmts(new AudioFormat("https://gv/m4a?clen=1", "audio/mp4", 256_000, 0));
+        var r2 = new StreamResolver(none, accept: Webm);
+        r2.SetClients(new[] { "IOS" });
+        var e = await Assert.ThrowsAsync<InvalidOperationException>(() => r2.ResolveAsync("v1"));
+        Assert.Contains("IOS: no playable audio format", e.Message);
+    }
+
+    [Fact]
+    public async Task WithoutAFilterTheHighestBitrateWinsAsInJs()
+    {
+        var c = new FakeStreamClient();
+        c.Responses["IOS"] = () => Fmts(OpusAndHigherM4a());
+        var r = new StreamResolver(c);
+        var s = await r.ResolveAsync("v1");
+        Assert.Equal("https://gv/m4a?clen=1", s.Url);
+    }
+
     [Fact]
     public void SetClientsKeepsOnlyTheNamedOnesInOrder()
     {

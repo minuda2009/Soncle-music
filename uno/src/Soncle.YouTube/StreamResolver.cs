@@ -39,6 +39,13 @@ public sealed record StreamSpec(string Client, bool Pot);
 /// and decipher calls are an <see cref="IStreamClient"/> (a head/platform concern); this class holds
 /// the portable rules, so they are unit-testable with a fake client.
 /// </summary>
+/// <remarks>
+/// C#-only addition: an optional <c>accept</c> format filter. yt.mjs has none (Chromium decodes
+/// every format YouTube serves), but the C# heads only decode WebM/Opus until an AAC decoder
+/// exists, so a head passes a filter and an M4A/AAC format is never chosen. A client whose formats
+/// all fail the filter counts as a failed client and the next one is tried. Without a filter the
+/// choice is exactly the JS one.
+/// </remarks>
 public sealed class StreamResolver
 {
     private const int CacheMax = 64;
@@ -49,11 +56,15 @@ public sealed class StreamResolver
     private readonly PoTokenProvider? _pot;
     private readonly Func<long> _nowMs;
     private readonly Action<string> _log;
+    private readonly Func<AudioFormat, bool>? _accept;
     private readonly Dictionary<string, ResolvedStream> _cache = new();
     private readonly Dictionary<string, Task<ResolvedStream>> _pending = new();
 
-    public StreamResolver(IStreamClient client, PoTokenProvider? pot = null, Func<long>? nowMs = null, Action<string>? log = null)
+    /// <param name="accept">Optional: only formats it returns true for are considered (see remarks); null keeps the JS choice.</param>
+    public StreamResolver(IStreamClient client, PoTokenProvider? pot = null, Func<long>? nowMs = null, Action<string>? log = null,
+        Func<AudioFormat, bool>? accept = null)
     {
+        _accept = accept;
         _client = client;
         _pot = pot;
         _nowMs = nowMs ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
@@ -142,6 +153,12 @@ public sealed class StreamResolver
         if (info.Status.Length > 0 && info.Status != "OK") throw new InvalidOperationException(info.Reason ?? info.Status);
         var fmts = info.AudioFormats.ToList();
         if (fmts.Count == 0) throw new InvalidOperationException("no audio formats");
+        // C#-only: keep the formats this head can decode (a failure moves on to the next client)
+        if (_accept is not null)
+        {
+            fmts = fmts.Where(_accept).ToList();
+            if (fmts.Count == 0) throw new InvalidOperationException("no playable audio format");
+        }
         // prefer original-language, non-DRC tracks
         var pool = fmts.Where(f => !f.IsDrc && f.IsDefaultAudioTrack).ToList();
         var cands = (pool.Count > 0 ? pool : fmts).OrderByDescending(f => f.Bitrate).ToList();

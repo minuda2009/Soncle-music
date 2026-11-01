@@ -22,6 +22,51 @@
   where to start the song for chosen lines too.
 - In the app on desktop and Android, and in the Companion extension (0.5.1).
 
+## Unreleased: Soncle Preview for Windows plays songs (C# app)
+
+- The C# / WinUI 3 test build on the **windows-preview** release (`Soncle-preview-win-x64.zip`,
+  run `Soncle.Windows.exe` from the folder) now plays music. It is still **Soncle Preview**, a
+  separate app with its own data folder; it never reads or writes the shipping app's data.
+- What works: type in the **search box in the title bar** (or press Ctrl+K) and press Enter; pick a
+  song from the list to play it, with the rest of the results as the queue. The player bar shows the
+  artwork, title and artists, play/pause, previous/next and a seek bar with the time, a spinner while
+  the song loads and a short message when it can't be played. The Windows media flyout and the media
+  keys show and control the song too. Sound goes through the new C# engine (loudness levelled,
+  limiter last) to the default output device over WASAPI, and pausing or skipping fades instead of
+  clicking.
+- What to check on Windows: that search finds what you expect, how long a song takes to start, that
+  play/pause/next/seek and the media keys work, and that nothing clicks or stutters (also with a
+  44.1 kHz device and after unplugging headphones: the bar should say the sound device stopped, and
+  Play should start it again). `uno/heads/Soncle.Windows/README.md` has the steps.
+- Not there yet: **sound starts only after the whole song has downloaded and decoded** (a few
+  seconds; streaming start comes later), so **songs and videos over 20 minutes don't play yet**
+  (they say they can't be played; the whole decoded song is kept in memory until then), only songs YouTube offers as WebM/Opus play (AAC-only ones
+  say they can't be played), it is signed out only (no account, library, likes or playlists), the
+  stream lookup uses only the two YouTube clients that need no PO token and no deciphering (more
+  come with the PO-token and player-script work), and there is no queue view, lyrics, Sound page,
+  device picker or exclusive mode yet. The player bar's icons are placeholders until the
+  Material Symbols font arrives. Playback CPU and memory are still to be measured on a real PC.
+
+## Unreleased: Soncle Uno preview for Android (C# app)
+
+- A first test build of the new C# / Uno Platform Android app is on the **uno-android-preview**
+  release (`Soncle-uno-preview-arm64.apk`, 64-bit phones). It installs as a separate app,
+  **Soncle Uno**, next to Soncle and Soncle Preview, and shares no data with them; every new build
+  installs over the last one.
+- What works: the app's shell with Home · Library · Sound · Settings in a bottom bar on a phone and
+  in a side rail on a wide screen, the player bar's "Nothing playing" state, and a **Test sound**
+  button that plays a built-in 8 s clip on repeat through the new C# audio engine (limiter last).
+  It pauses when another app takes the audio, and pausing or resuming fades instead of clicking.
+  Settings shows how long the app took to open.
+- What to check on your phone: how fast it opens (compare with Soncle), memory while idle and while
+  the test sound plays, and whether the sound ever stutters. `uno/heads/Soncle.Android/README.md`
+  has the steps.
+- Not there yet: songs, search and the library, the pages themselves (each shows a placeholder),
+  lock-screen and notification controls (the sound may stop when the app is in the background),
+  and icons in the bottom bar.
+- Each build is checked before it is published: size against the 30 MB budget, and an emulator run
+  that must open the app and start the test sound.
+
 ## Unreleased: Companion extension 0.5 — Soncle Now Playing
 
 - **Soncle Now Playing** (Alt+N, or Full screen in the panel, or Settings → Appearance): a full-screen player in

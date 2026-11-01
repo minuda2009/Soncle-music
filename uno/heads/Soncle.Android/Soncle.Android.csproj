@@ -1,0 +1,66 @@
+<!-- Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later -->
+<Project Sdk="Uno.Sdk">
+
+  <!--
+    The Uno Android head (docs/WINUI_PLAN.md §1, §11). Like uno/heads/Soncle.Windows it is NOT in
+    uno/Soncle.sln: the ubuntu library job (.github/workflows/uno.yml) has no Android workload, so
+    adding a net10.0-android project there would break it. This head is built only by
+    .github/workflows/uno-android-preview.yml, which installs the workload and the Android SDK.
+  -->
+  <PropertyGroup>
+    <!-- Android only: no desktop target, so nothing here ever runs on the Linux library path. -->
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+    <!-- Not "Soncle.Android": inside a Soncle.Android namespace every `Android.X` reference would
+         resolve to Soncle.Android.X first and the platform APIs would need global:: everywhere. -->
+    <RootNamespace>Soncle.Droid</RootNamespace>
+
+    <!-- Its own name and id, so it installs side by side with the shipping app
+         (com.minuda2009.soncle) and the Capacitor preview (com.minuda2009.soncle.preview). -->
+    <ApplicationTitle>Soncle Uno</ApplicationTitle>
+    <ApplicationId>com.minuda2009.soncle.uno</ApplicationId>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <!-- CI overrides this with the run number so every preview installs over the last one. -->
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationPublisher>Soncle</ApplicationPublisher>
+    <Description>Soncle Uno: the Uno Platform Android head of the Soncle migration (docs/WINUI_PLAN.md).</Description>
+
+    <!-- Same floor as the Capacitor app (mobile/android/variables.gradle). -->
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+
+    <!-- Material 3 from Uno Material + Toolkit, drawn by the Skia renderer (as the probe measured). -->
+    <UnoFeatures>
+      Material;
+      Toolkit;
+      SkiaRenderer;
+    </UnoFeatures>
+
+    <!-- Same suppressions as the Uno template and the Windows head
+         (uno/Directory.Build.props sets warnings-as-errors). -->
+    <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Soncle.Core/Soncle.Core.csproj" />
+    <ProjectReference Include="../../src/Soncle.Audio/Soncle.Audio.csproj" />
+    <ProjectReference Include="../../src/Soncle.Audio.Opus/Soncle.Audio.Opus.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The 8 s synthetic test clip, linked from fixtures/ (not copied) and read with
+         Assembly.GetManifestResourceStream (Playback/SamplePlayer.cs). -->
+    <EmbeddedResource Include="../../../fixtures/flow/sample.webm"
+                      Link="Assets/sample.webm"
+                      LogicalName="Soncle.sample.webm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- CI scripts (ci/smoke.sh, run by .github/workflows/uno-android-preview.yml) are not part of
+         the app: keep them out of every default item glob so they never end up in the APK. -->
+    <None Remove="ci/**" />
+    <Content Remove="ci/**" />
+    <EmbeddedResource Remove="ci/**" />
+  </ItemGroup>
+
+</Project>

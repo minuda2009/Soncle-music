@@ -84,7 +84,10 @@ in your PR.
   - M00 and M01 can run in parallel.
   - After them, M02, M04, M05 and M08 are independent of each other.
 - **Not tasked yet:**
-  - The Android viability gate (`docs/DESIGN.md` §7.2) — next, before any page work.
+  - The Android viability gate (`docs/DESIGN.md` §7.2): next, before any page work. There is now
+    a buildable head (`uno/heads/Soncle.Android`, Soncle Uno) whose APK CI publishes on the
+    `uno-android-preview` release with its size and emulator start-up/memory in the job summary;
+    the measurement on a phone is still pending.
   - The design system (plan stage 3), the heads and the pages (stages 4–5). Head order is decided:
     **Windows first** (plan, top). Their task files follow `docs/DESIGN.md`; don't start shell or
     page work until those task files exist.

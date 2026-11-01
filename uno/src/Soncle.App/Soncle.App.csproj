@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <SoncleIsLibrary>true</SoncleIsLibrary>
+    <RootNamespace>Soncle.App</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Soncle.Core/Soncle.Core.csproj" />
+    <ProjectReference Include="../Soncle.Audio/Soncle.Audio.csproj" />
+    <ProjectReference Include="../Soncle.Audio.Opus/Soncle.Audio.Opus.csproj" />
+    <ProjectReference Include="../Soncle.Streams/Soncle.Streams.csproj" />
+    <ProjectReference Include="../Soncle.YouTube/Soncle.YouTube.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Soncle.App.Tests" />
+  </ItemGroup>
+
+</Project>

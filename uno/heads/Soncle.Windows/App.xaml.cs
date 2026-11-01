@@ -1,5 +1,6 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 using Uno.Resizetizer;
+using Windows.Media;
 
 namespace Soncle.Windows;
 
@@ -16,6 +17,9 @@ public partial class App : Application
     /// <summary>The shell window. Exposed so the shell page can set its custom title bar.</summary>
     public Window? MainWindow { get; private set; }
 
+    /// <summary>The window's media session (SMTC); null if Windows refused it.</summary>
+    public SystemMediaTransportControls? MediaControls { get; private set; }
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         // The window title is what the taskbar, Alt+Tab and Task Manager show; the custom title bar
@@ -23,7 +27,15 @@ public partial class App : Application
         // to the name the preview installs/runs under (docs/WINUI_PLAN.md §10).
         MainWindow = new Window { Title = WindowTitle };
         WindowChrome.UseMica(MainWindow);
-        WindowChrome.UseMediaSession(MainWindow);
+        try
+        {
+            MediaControls = WindowChrome.UseMediaSession(MainWindow);
+        }
+        catch (Exception e)
+        {
+            // the app plays without a media session; it must not fail to open over one
+            System.Diagnostics.Trace.WriteLine($"Soncle media-session-unavailable {e.GetType().Name}");
+        }
 
         if (MainWindow.Content is not Frame rootFrame)
         {
