@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "music-metadata": "^12.2.3",
-    "youtubei.js": "18.1.0"
+    "youtubei.js": "18.2.0"
   },
   "build": {
     "appId": "com.minuda2009.soncle",
