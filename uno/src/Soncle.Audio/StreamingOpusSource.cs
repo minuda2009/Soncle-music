@@ -14,9 +14,11 @@ namespace Soncle.Audio;
 /// <item><see cref="Read"/> never blocks, locks, allocates or touches the network. It holds back
 /// <see cref="ResumeRampFrames"/> frames before the end, so when the ring runs low it fades out
 /// over that reserve (across blocks if they are short), plays silence, reports
-/// <see cref="IsBuffering"/> and fades back in over <see cref="ResumeRampFrames"/> once a block
-/// plus the reserve is there again. However the stall falls on the block grid, the gain never
-/// steps.</item>
+/// <see cref="IsBuffering"/> and fades back in over <see cref="ResumeRampFrames"/> once
+/// <see cref="ResumeLeadFrames"/> (at least a block plus the reserve) are there again, so a
+/// download trickling at about the playback rate doesn't drop out every few blocks. However the
+/// stall falls on the block grid, the gain never steps. Only the real end is exempt from the
+/// reserve: a song whose download fails mid-way fades out over its last decoded frames.</item>
 /// <item><see cref="Seek"/> is lock-free: it bumps a request generation (a seqlock with the
 /// frame); the decode thread notices it, aborts a read that waits for bytes, reopens the bytes at
 /// the cluster of the last cue at least <see cref="PreRollSamples"/> before the target (the start
@@ -52,6 +54,8 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     public const int ResumeRampFrames = 480;
     /// <summary>Audio decoded before <see cref="Ready"/>, frames (100 ms: a few blocks plus the fade-out reserve).</summary>
     public const int ReadyFrames = 4800;
+    /// <summary>The lead decoded before playback resumes after an underrun, frames (100 ms, like <see cref="ReadyFrames"/>; at least a block plus the reserve).</summary>
+    public const int ResumeLeadFrames = ReadyFrames;
     /// <summary>The longest the decode thread sleeps between checks when nothing wakes it, ms.</summary>
     public const int MaxIdleMs = 50;
     private const int ByteWaitMs = 250;
@@ -77,6 +81,7 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     private long _segStartFrame;
     private long _write;
     private long _eosGen = -1;
+    private long _failedGen = -1;   // the generation whose decoding stopped on an error (written before _eosGen)
     private long _exactLength = -1;
     private long _infoFrames = -1;
     private long _decodedEnd;
@@ -94,7 +99,7 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     private int _rampLeft;   // fade-in frames still to go
     private int _fadeLen;    // the fade-out under way (0 = none)
     private int _fadeLeft;
-    private bool _dry;       // faded out, silent until a block plus the reserve is decoded
+    private bool _dry;       // faded out, silent until enough is decoded to resume
 
     /// <param name="open">Opens the song's bytes at an absolute offset (reads may wait for bytes still on the way).</param>
     /// <param name="codec">The Opus codec.</param>
@@ -206,6 +211,8 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     public int Read(Span<float> left, Span<float> right, int frames)
     {
         if (frames <= 0) return 0;
+        // ended (really, or after a failed generation's fade-out): nothing more until a seek
+        if (_ended) return End(left, right, 0, frames);
         if (!_adopted && Volatile.Read(ref _segGen) == _gen)
         {
             Volatile.Write(ref _readIdx, Volatile.Read(ref _segStart));
@@ -214,17 +221,28 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
 
         long avail = 0;
         var eos = false;
+        var failed = false;
         if (_adopted)
         {
             eos = Volatile.Read(ref _eosGen) == _gen;
+            failed = eos && Volatile.Read(ref _failedGen) == _gen;
             avail = Volatile.Read(ref _write) - _readIdx;
         }
-        // enough for this block while keeping the fade-out reserve (none needed at the end)
-        var enough = eos || avail >= frames + ResumeRampFrames;
+        // enough for this block while keeping the fade-out reserve (none needed at the real end;
+        // a failed end fades out like a stall, then ends)
+        var enough = (eos && !failed) || avail >= frames + ResumeRampFrames;
 
         if (_dry)
         {
-            if (!enough) return Silence(left, right, 0, frames);
+            // after an underrun mid-play wait for a longer lead (hysteresis); right after a seek
+            // a block plus the reserve is enough to start
+            var resume = (eos && !failed) || avail >= (_sinceSeek > 0 ? Math.Max(frames + ResumeRampFrames, ResumeLeadFrames) : frames + ResumeRampFrames)
+                || (failed && enough);
+            if (!resume)
+            {
+                if (failed) return End(left, right, 0, frames);
+                return Silence(left, right, 0, frames);
+            }
             _dry = false;
             _rampLeft = ResumeRampFrames;
         }
@@ -249,6 +267,7 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
             _buffering = true;
             if (_fadeLen == 0)
             {
+                if (failed) return End(left, right, 0, frames);
                 _dry = true;
                 return Silence(left, right, 0, frames);
             }
@@ -265,8 +284,22 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
         _buffering = true;
         if (_fadeLeft > 0) return k;   // k == frames
         _fadeLen = 0;
+        // a failed generation ends after its fade-out (what is left past the fade isn't played)
+        if (failed) return End(left, right, k, frames);
         _dry = true;
         return Silence(left, right, k, frames);
+    }
+
+    /// <summary>Ends the song after <paramref name="played"/> frames (the rest of the block is cleared).</summary>
+    private int End(Span<float> left, Span<float> right, int played, int frames)
+    {
+        left[played..frames].Clear();
+        right[played..frames].Clear();
+        _fadeLen = _fadeLeft = 0;
+        _dry = false;
+        _ended = true;
+        _buffering = false;
+        return played;
     }
 
     /// <summary>Copies <paramref name="count"/> ring frames to [at, at + count) and applies the fade-in.</summary>
@@ -560,6 +593,7 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
             var exact = written > 0 ? _segStartFrame + written : endFrame >= 0 ? Math.Min(endFrame, _segStartFrame) : -1;
             if (exact >= 0) Volatile.Write(ref _exactLength, exact);
         }
+        if (failed) Volatile.Write(ref _failedGen, _curGen);
         Volatile.Write(ref _eosGen, _curGen);
         _ready.TrySetResult();
     }

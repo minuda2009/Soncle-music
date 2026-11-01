@@ -282,7 +282,7 @@ public class StreamingOpusSourceTests
 
         // the download catches up: the audio comes back with a fade, no jump
         d.Have = bytes.Length;
-        await Ahead(s, 960 + R);
+        await Ahead(s, StreamingOpusSource.ResumeLeadFrames + R);
         Assert.Equal(480, s.Read(l, r, 480));
         Assert.False(s.IsBuffering);
         Assert.True(l[0] <= ConstCodec.Level / 400, $"first resumed sample {l[0]}");
@@ -325,7 +325,7 @@ public class StreamingOpusSourceTests
 
         d.Have = bytes.Length;
         var resume = 2 + StreamingOpusSource.ResumeRampFrames / block;   // the whole fade-in and a bit
-        await Ahead(s, (resume + 1) * block + StreamingOpusSource.ResumeRampFrames);
+        await Ahead(s, Math.Max((resume + 1) * block + StreamingOpusSource.ResumeRampFrames, StreamingOpusSource.ResumeLeadFrames + block));
         Play(resume);
         Assert.False(s.IsBuffering);
         Assert.Equal(ConstCodec.Level, played[^1], 6);
@@ -403,7 +403,8 @@ public class StreamingOpusSourceTests
         Assert.True(s.Ended);
         Assert.NotNull(s.Failure);
         Assert.True(got.Length / 2 < whole.Frames);
-        SameSamples(whole.InterleavedStereo, 0, got);
+        // sample-exact up to the fade-out over the last decoded frames
+        SameSamples(whole.InterleavedStereo, 0, got[..(got.Length - 2 * StreamingOpusSource.ResumeRampFrames)]);
 
         // a seek fails right away (no network), before anything is read
         flaky.Broken = true;
@@ -418,6 +419,115 @@ public class StreamingOpusSourceTests
         s.Seek(2 * Sr);
         SameSamples(whole.InterleavedStereo, 2 * Sr, await ReadAsync(s, Sr));
         Assert.Null(s.Failure);
+    }
+
+    [Theory]
+    [InlineData(480)]
+    [InlineData(128)]
+    [InlineData(2048)]
+    public async Task AFailureMidSongFadesOutInsteadOfCuttingOff(int block)
+    {
+        var bytes = Bytes("flow/sample.webm");
+        var d = new FakeDownload(bytes) { Have = bytes.Length };
+        var flaky = new Flaky(d) { FailAt = bytes.Length / 2 };
+        using var s = new StreamingOpusSource(flaky.Open, new ConstCodec());
+        await s.Ready;
+        await Until(() => s.DecodeComplete, "the download never failed");
+        Assert.NotNull(s.Failure);
+
+        var l = new float[block];
+        var r = new float[block];
+        var played = new List<float>();
+        for (var i = 0; i < 10_000 && !s.Ended; i++)
+        {
+            var n = s.Read(l, r, block);
+            for (var j = 0; j < n; j++) played.Add(l[j]);
+        }
+        Assert.True(s.Ended);
+        Assert.False(s.IsBuffering);
+        Assert.True(played.Count > 2 * StreamingOpusSource.ResumeRampFrames);
+        // the last decoded frames fade to silence: no step at the cut (the song's start, sample 0,
+        // is Engine.Load's fade-in)
+        Assert.True(played[^1] <= ConstCodec.Level / 400, $"the song stops at {played[^1]}");
+        for (var i = 1; i < played.Count; i++)
+            Assert.True(Math.Abs(played[i] - played[i - 1]) <= ConstCodec.Level / 400, $"a step of {played[i] - played[i - 1]} at frame {i} (block {block})");
+        Assert.Equal(0, s.Read(l, r, block));
+    }
+
+    [Fact]
+    public async Task AfterAnUnderrunItResumesOnlyOnceALongerLeadIsDecoded()
+    {
+        const int R = StreamingOpusSource.ResumeRampFrames;
+        var bytes = Bytes("flow/sample.webm");
+        var d = new FakeDownload(bytes) { Have = 12 * 1024 };
+        using var s = Source(d, new ConstCodec());
+        await s.Ready;
+        await Settled(s);
+        var l = new float[480];
+        var r = new float[480];
+        var blocks = 0;
+        while (!s.IsBuffering && blocks++ < 1000) s.Read(l, r, 480);
+        Assert.Equal(480, s.Read(l, r, 480));   // dry
+        Assert.True(s.IsBuffering);
+
+        // a block plus the reserve arrives (what used to resume it): still silent
+        var have = d.Have;
+        while (s.DecodedEndFrame - s.Position < 480 + R)
+        {
+            d.Have = have += 16;
+            await Settled(s);
+        }
+        Assert.True(s.DecodedEndFrame - s.Position < StreamingOpusSource.ResumeLeadFrames, "the step overshot the lead");
+        Assert.Equal(480, s.Read(l, r, 480));
+        Assert.All(l, x => Assert.Equal(0f, x));
+        Assert.True(s.IsBuffering);
+
+        // the longer lead: it fades back in
+        while (s.DecodedEndFrame - s.Position < StreamingOpusSource.ResumeLeadFrames)
+        {
+            d.Have = have += 64;
+            await Settled(s);
+        }
+        Assert.Equal(480, s.Read(l, r, 480));
+        Assert.False(s.IsBuffering);
+        Assert.True(l[0] <= ConstCodec.Level / 400 && l[479] > ConstCodec.Level * 0.99f);
+    }
+
+    [Fact]
+    public async Task ADownloadTricklingAtThePlaybackRateDoesNotDropOutEveryFewBlocks()
+    {
+        const int Block = 128;
+        var bytes = Bytes("flow/sample.webm");
+        var frames = OpusWebmDecoder.Decode(bytes, new ConstCodec()).Frames;
+        var d = new FakeDownload(bytes) { Have = 6 * 1024 };
+        using var s = Source(d, new ConstCodec());
+        await s.Ready;
+        await Settled(s);
+        var l = new float[Block];
+        var r = new float[Block];
+        // play into the first underrun
+        var blocks = 0;
+        while (!s.IsBuffering && blocks++ < 10_000) s.Read(l, r, Block);
+        Assert.True(s.IsBuffering);
+
+        // then the bytes arrive at about the playback rate, block by block
+        var bytesPerBlock = (double)bytes.Length / frames * Block;
+        var have = (double)d.Have;
+        var onsets = 0;
+        var wasBuffering = true;
+        for (var b = 0; b < 600 && d.Have < bytes.Length; b++)
+        {
+            have += bytesPerBlock;
+            d.Have = (long)have;
+            await Until(() => d.MaxRead >= d.Have, "the decoder didn't take the bytes");
+            await Task.Delay(1);
+            s.Read(l, r, Block);
+            if (s.IsBuffering && !wasBuffering) onsets++;
+            wasBuffering = s.IsBuffering;
+        }
+        Assert.False(wasBuffering, "it never resumed");
+        // one resume, then the lead carries it (without hysteresis: a dropout every few packets)
+        Assert.True(onsets <= 1, $"{onsets} dropouts");
     }
 
     [Fact]
