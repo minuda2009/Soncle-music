@@ -3,6 +3,7 @@
 // (renderer/) runs unchanged. YouTube access is the shared src/yt.mjs, bundled with youtubei.js's
 // web build; network requests go through CapacitorHttp (native, no CORS).
 import * as yt from '../../src/yt.mjs';
+import { getLyrics } from '../../src/lyrics-engine.mjs';
 import * as autoeq from '../../src/autoeq.mjs';
 import * as spotify from '../../src/spotify.mjs';
 import { defaultSettings, defaults } from '../../src/defaults.mjs';
@@ -175,28 +176,7 @@ if (native) {
 }
 
 // ---------- lyrics (LRCLIB, then YouTube Music) ----------
-const UA_LYRICS = { 'User-Agent': 'Soncle (https://github.com/minuda2009)' };
-const cleanTitle = (s) => (s || '').replace(/\s*[([](official|lyric|audio|video|visualizer|hd|4k|mv|remaster|feat\.?|ft\.)[^)\]]*[)\]]/gi, '').trim();
-async function lrclib(t) {
-  const artist = (t.artists || []).map((a) => a.name).filter(Boolean)[0] || '';
-  const title = cleanTitle(t.title);
-  const q = new URLSearchParams({ track_name: title, artist_name: artist });
-  if (t.album?.name) q.set('album_name', t.album.name);
-  if (t.duration) q.set('duration', String(Math.round(t.duration)));
-  try {
-    const r = await fetch('https://lrclib.net/api/get?' + q, { headers: UA_LYRICS });
-    if (r.ok) { const j = await r.json(); if (j.syncedLyrics || j.plainLyrics) return { synced: j.syncedLyrics || null, plain: j.plainLyrics || null, source: 'LRCLIB' }; }
-  } catch {}
-  try {
-    const r = await fetch('https://lrclib.net/api/search?' + new URLSearchParams({ track_name: title, artist_name: artist }), { headers: UA_LYRICS });
-    if (r.ok) {
-      const arr = await r.json();
-      const best = arr.find((x) => x.syncedLyrics && (!t.duration || Math.abs(x.duration - t.duration) < 5)) || arr.find((x) => x.syncedLyrics) || arr[0];
-      if (best) return { synced: best.syncedLyrics || null, plain: best.plainLyrics || null, source: 'LRCLIB' };
-    }
-  } catch {}
-  return null;
-}
+const lrclib = (t) => getLyrics(t, { fetchImpl: fetch, preferId: t.lyricsId }).catch(() => null);
 async function lyrics(t) {
   if (TEST) return { synced: Array.from({ length: 14 }, (_, i) => `[00:${String(i * 2).padStart(2, '0')}.00] Line ${i + 1} of the song`).join('\n'), plain: null, source: 'LRCLIB (test)' };
   const a = await lrclib(t);
@@ -230,7 +210,7 @@ async function restore() {
   if (!isBackupMarker(data.app)) throw new Error('Not a Soncle backup file');
   upgradeSettings(data.settings);
   for (const k of ['liked', 'playlists', 'savedAlbums', 'savedPlaylists', 'followedArtists', 'history', 'searchHistory', 'eqPresets']) if (Array.isArray(data[k])) store[k] = data[k];
-  for (const k of ['lyricsOffsets', 'deviceProfiles']) if (data[k] && typeof data[k] === 'object') store[k] = data[k];
+  for (const k of ['lyricsOffsets', 'lyricsChoice', 'deviceProfiles']) if (data[k] && typeof data[k] === 'object') store[k] = data[k];
   if (data.settings) store.settings = { ...defaultSettings, ...data.settings, eq: { ...defaultSettings.eq, ...(data.settings.eq || {}) }, ...MOBILE_SETTINGS };
   await save(true);
   setTimeout(() => location.reload(), 200);

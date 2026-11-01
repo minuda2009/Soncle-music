@@ -32,4 +32,19 @@
     <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The shared libraries the playback slice runs on (search, resolve, download, decode, engine). -->
+    <ProjectReference Include="../../src/Soncle.Core/Soncle.Core.csproj" />
+    <ProjectReference Include="../../src/Soncle.Audio/Soncle.Audio.csproj" />
+    <ProjectReference Include="../../src/Soncle.Audio.Opus/Soncle.Audio.Opus.csproj" />
+    <ProjectReference Include="../../src/Soncle.Streams/Soncle.Streams.csproj" />
+    <ProjectReference Include="../../src/Soncle.YouTube/Soncle.YouTube.csproj" />
+    <ProjectReference Include="../../src/Soncle.App/Soncle.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WASAPI output (Playback/WasapiAudioOutput.cs); MIT, pulls NAudio.Core (MIT). -->
+    <PackageReference Include="NAudio.Wasapi" />
+  </ItemGroup>
+
 </Project>

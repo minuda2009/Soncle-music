@@ -1,0 +1,21 @@
+<!-- Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later -->
+<Application x:Class="Soncle.Droid.App"
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- WinUI controls, then Uno Material + Toolkit with the same palette override as the
+             Windows head (docs/WINUI_PLAN.md §2.1). The Material theme's default type ramp is Roboto
+             (Uno.Fonts.Roboto), the Android system face, so no font override is needed until
+             Soncle.Design brings its own tokens. -->
+        <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+        <utum:MaterialToolkitTheme
+          xmlns:utum="using:Uno.Toolkit.UI.Material"
+          ColorOverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+</Application>

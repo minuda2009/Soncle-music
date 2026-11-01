@@ -15,5 +15,5 @@ export const defaultSettings = {
 export const defaults = {
   liked: [], playlists: [], savedAlbums: [], savedPlaylists: [], followedArtists: [], history: [], searchHistory: [],
   downloads: {}, settings: defaultSettings, cookie: '', session: null,
-  lyricsOffsets: {}, eqPresets: [], deviceProfiles: {}, skips: {}
+  lyricsOffsets: {}, lyricsChoice: {}, eqPresets: [], deviceProfiles: {}, skips: {}
 };

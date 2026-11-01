@@ -1,0 +1,223 @@
+name: Uno Android preview
+# Builds the Uno Platform Android head (uno/heads/Soncle.Android, "Soncle Uno") on GitHub's Linux
+# runners and replaces the "uno-android-preview" release with a test-key-signed arm64 APK, like
+# android-preview.yml does for the Capacitor app and windows-preview.yml for the WinUI head.
+#
+# - apk:     arm64 release APK with R8, package/label/ABI/signature checks, and its size against the
+#            30 MB budget (docs/WINUI_PLAN.md §9) in the job summary;
+# - smoke:   an x86_64 build of the same head in an Android emulator: it must start, draw its first
+#            frame and play the built-in test sound (emulator numbers, not a phone);
+# - release: only after both pass, so the uno-android-preview link keeps pointing at the last good
+#            build.
+#
+# It installs as a separate app, "Soncle Uno" (com.minuda2009.soncle.uno), next to Soncle and
+# Soncle Preview. The Capacitor app keeps shipping until the port passes the parity checklist
+# (docs/WINUI_PLAN.md §4, §10).
+on:
+  push:
+    paths: ['uno/**', 'fixtures/flow/sample.webm', '.github/workflows/uno-android-preview.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# one build at a time; a newer push replaces a build still running, so an older APK never wins
+concurrency:
+  group: uno-android-preview
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    # Bounds the job (workload, SDK packages, publish); a hung build would hold the concurrency group.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      # The SDK and the Uno.Sdk version come from uno/global.json. Every dotnet command below runs in
+      # uno/ so that global.json picks the SDK band the android workload is installed for.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: uno/global.json
+      - name: Install the .NET for Android workload
+        working-directory: uno
+        run: dotnet workload install android
+      # The runner image has an Android SDK (ANDROID_HOME); this adds the platform and build-tools
+      # versions .NET for Android asks for.
+      - name: Install the Android SDK packages the head needs
+        working-directory: uno
+        run: dotnet build heads/Soncle.Android/Soncle.Android.csproj -t:InstallAndroidDependencies -f net10.0-android -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AcceptAndroidSDKLicenses=True
+      # Signed with the committed test keystore that the Capacitor builds already use
+      # (mobile/android/app/build.gradle). It is public and NOT a secret; a fixed key means every
+      # preview installs over the previous one. The password still goes through env: so it never
+      # appears on a command line.
+      - name: Publish the arm64 APK (Release, R8, test key)
+        working-directory: uno
+        env:
+          SONCLE_TEST_KEY_PASS: soncle-test
+        run: >-
+          dotnet publish heads/Soncle.Android/Soncle.Android.csproj -f net10.0-android -c Release
+          -r android-arm64 -p:AndroidPackageFormat=apk -p:AndroidLinkTool=r8
+          -p:AndroidSdkDirectory="$ANDROID_HOME"
+          -p:ApplicationVersion=${{ github.run_number }}
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$GITHUB_WORKSPACE/mobile/android/app/soncle-test.keystore"
+          -p:AndroidSigningKeyAlias=soncle
+          -p:AndroidSigningStorePass=env:SONCLE_TEST_KEY_PASS
+          -p:AndroidSigningKeyPass=env:SONCLE_TEST_KEY_PASS
+          -o "$GITHUB_WORKSPACE/out"
+      - name: Pick the signed APK
+        run: |
+          apk=out/com.minuda2009.soncle.uno-Signed.apk
+          if [ ! -f "$apk" ]; then
+            apk=$(find out -name '*-Signed.apk' | head -n 1)
+          fi
+          if [ -z "$apk" ] || [ ! -f "$apk" ]; then
+            echo "::error::dotnet publish produced no signed APK in out/"
+            exit 1
+          fi
+          cp "$apk" Soncle-uno-preview-arm64.apk
+      # Fails the job if the APK is not what the release promises.
+      - name: Check package, label, ABI and signature
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)"
+          apk=Soncle-uno-preview-arm64.apk
+
+          badging=$("$bt/aapt2" dump badging "$apk")
+          pkg=$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+          code=$(printf '%s\n' "$badging" | sed -n "s/^package: .* versionCode='\([^']*\)'.*/\1/p")
+          name=$(printf '%s\n' "$badging" | sed -n "s/^package: .* versionName='\([^']*\)'.*/\1/p")
+          label=$(printf '%s\n' "$badging" | sed -n "s/^application-label:'\([^']*\)'.*/\1/p" | head -n 1)
+          echo "package=$pkg versionCode=$code versionName=$name label=$label"
+          [ "$pkg" = "com.minuda2009.soncle.uno" ] || { echo "::error::package is '$pkg', expected com.minuda2009.soncle.uno"; exit 1; }
+          [ "$label" = "Soncle Uno" ] || { echo "::error::label is '$label', expected Soncle Uno"; exit 1; }
+
+          abis=$(unzip -Z1 "$apk" | sed -n 's|^lib/\([^/]*\)/.*|\1|p' | sort -u)
+          echo "native ABIs: ${abis:-none}"
+          [ "$abis" = "arm64-v8a" ] || { echo "::error::expected only lib/arm64-v8a, found: $(printf '%s ' $abis)"; exit 1; }
+
+          # Prints the public test certificate's digests only.
+          "$bt/apksigner" verify --print-certs "$apk"
+
+          bytes=$(stat -c %s "$apk")
+          mb=$(awk -v b="$bytes" 'BEGIN { printf "%.1f", b / 1048576 }')
+          over=$(awk -v b="$bytes" 'BEGIN { print (b > 30 * 1048576) ? 1 : 0 }')
+          if [ "$over" = 1 ]; then
+            echo "::warning::Soncle-uno-preview-arm64.apk is $mb MB, over the 30 MB budget (docs/WINUI_PLAN.md §9)"
+          fi
+          {
+            echo "### Soncle Uno arm64 APK"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Size | **$mb MB** (budget 30 MB, docs/WINUI_PLAN.md §9)$( [ "$over" = 1 ] && echo ' - over budget' ) |"
+            echo "| Package | $pkg |"
+            echo "| Label | $label |"
+            echo "| versionCode / versionName | $code / $name |"
+            echo "| Native ABIs | $abis |"
+            echo ""
+            echo "Largest entries (uncompressed bytes, stored bytes, name):"
+            echo ""
+            echo '```'
+            # sed reads all of sort's output (head would exit early and SIGPIPE sort under pipefail)
+            unzip -Zl "$apk" | awk 'NF >= 10 && $4 ~ /^[0-9]+$/ { print $4, $6, $NF }' | sort -nr | sed -n '1,10p'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: soncle-uno-preview-arm64
+          path: Soncle-uno-preview-arm64.apk
+          if-no-files-found: error
+
+  smoke:
+    runs-on: ubuntu-latest
+    # Bounds the job (workload, publish, emulator boot, two launches).
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: uno/global.json
+      - name: Install the .NET for Android workload
+        working-directory: uno
+        run: dotnet workload install android
+      - name: Install the Android SDK packages the head needs
+        working-directory: uno
+        run: dotnet build heads/Soncle.Android/Soncle.Android.csproj -t:InstallAndroidDependencies -f net10.0-android -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AcceptAndroidSDKLicenses=True
+      # Same head and Release configuration for the emulator's x86_64 ABI. Signed with the SDK's
+      # debug key (the default), since this APK is never published.
+      - name: Publish the x86_64 APK for the emulator
+        working-directory: uno
+        run: dotnet publish heads/Soncle.Android/Soncle.Android.csproj -f net10.0-android -c Release -r android-x64 -p:AndroidPackageFormat=apk -p:AndroidSdkDirectory="$ANDROID_HOME" -o "$GITHUB_WORKSPACE/out-x64"
+      - name: Pick the emulator APK
+        run: |
+          apk=out-x64/com.minuda2009.soncle.uno-Signed.apk
+          if [ ! -f "$apk" ]; then
+            apk=$(find out-x64 -name '*-Signed.apk' | head -n 1)
+          fi
+          if [ -z "$apk" ] || [ ! -f "$apk" ]; then
+            echo "::error::dotnet publish produced no signed x86_64 APK in out-x64/"
+            exit 1
+          fi
+          cp "$apk" Soncle-uno-smoke-x64.apk
+      # Hardware acceleration for the emulator (the udev rule from the android-emulator-runner docs).
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # The emulator needs several GB free for its userdata partition and some runners have less.
+      # Removes only preinstalled toolchains this job never uses (Haskell, Boost, Swift, CodeQL);
+      # dotnet, the Android SDK and Java stay. Prints free space only.
+      - name: Free runner disk space for the emulator
+        run: |
+          df -h / | tail -n 1
+          sudo rm -rf /opt/ghc /usr/local/.ghcup /usr/local/share/boost /usr/share/swift /opt/hostedtoolcache/CodeQL
+          df -h / | tail -n 1
+      # Audio stays enabled (no -noaudio) so the AudioTrack path is exercised. The script fails the
+      # step, and so the job, if the app crashes, never draws or never starts the test sound.
+      - name: Start, first frame and test sound in the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          # A smaller userdata partition (the default asks for about 7.4 GB) leaves room on the runner.
+          disk-size: 4096M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
+          script: bash uno/heads/Soncle.Android/ci/smoke.sh Soncle-uno-smoke-x64.apk smoke
+      # Screenshots, the app's own `Soncle` log lines and the crash buffer for this package only;
+      # never the full device log.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: soncle-uno-smoke
+          path: smoke/
+          if-no-files-found: warn
+
+  release:
+    needs: [apk, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: soncle-uno-preview-arm64
+      - name: Publish to the uno-android-preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete uno-android-preview --yes --cleanup-tag || true
+          gh release create uno-android-preview Soncle-uno-preview-arm64.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Soncle Uno preview (Android, ${GITHUB_REF_NAME})" \
+            --notes "Test build of the C# / Uno Platform Android app from ${GITHUB_REF_NAME} at ${GITHUB_SHA::7}. Installs as a separate app, Soncle Uno, next to Soncle and Soncle Preview, and shares no data with them. So far it has only the app shell (bottom bar on a phone, rail on a wide screen) and a built-in test sound (Settings shows the start-up time); no songs yet. On your phone: tap Soncle-uno-preview-arm64.apk. How to measure start-up and memory: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/uno/heads/Soncle.Android/README.md#measure-on-a-phone"
