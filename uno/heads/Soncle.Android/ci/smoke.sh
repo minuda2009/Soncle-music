@@ -7,9 +7,14 @@
 #
 # It installs the APK, cold-starts the app, waits for the head's `first-frame-ms=` log line, checks
 # the process is alive, takes a screenshot and the idle memory; then restarts it with the
-# `soncle.demo=play` extra, waits for `audio-started`, lets the test sound play for ~10 s and takes
-# the memory and a screenshot again. It fails if the app crashes, never draws, or never starts the
-# AudioTrack. Numbers go to $GITHUB_STEP_SUMMARY, labelled as emulator numbers (not a phone).
+# `soncle.demo=play` extra, which searches for a fixed song and plays the first result. It waits for
+# the app to reach the end of the play path and takes the memory and a screenshot again.
+#
+# It fails if the app crashes, never draws, or never reaches the play path at all (no
+# `session-ready`). When YouTube refuses to hand out a stream to this datacenter IP - the
+# "Sign in to confirm you're not a bot" answer the JS apps also get, which needs a PO token the head
+# does not have yet - that is recorded as a known gate, not a build failure: the point of the smoke
+# test is that the app runs and searches, not that YouTube serves a datacenter.
 #
 # Only the app's own `Soncle` log tag and the crash buffer for this package are saved; the full
 # device log is never written out.
@@ -133,29 +138,49 @@ adb exec-out screencap -p > "$OUT/shell.png"
 idle_kb=$(mem_kb)
 save_logs shell
 
-# ---- 2. the test sound via the demo extra --------------------------------------------------------
+# ---- 2. search and play via the demo extra -------------------------------------------------------
 sh_adb am force-stop "$PKG"
 adb logcat -c
 sh_adb am start -W -n "$ACT" --es soncle.demo play > /dev/null
 
-wait_for_line 's/.*\(audio-started .*\)$/\1/p' 60 "demo start"
-audio=$FOUND
-if [ -z "$audio" ]; then
-  if soncle_log | grep 'audio-focus-denied' > /dev/null; then
-    fail "audio focus was denied, the test sound did not start"
-  fi
-  fail "no audio-started line within 60 s of the demo launch"
-fi
-decoded=$(soncle_log | sed -n 's/.*\(sample-decoded .*\)$/\1/p' | tail -n 1)
+# The app must reach the end of the play path: the session first (a search really went out), then
+# either audio or a refusal from YouTube.
+wait_for_line 's/.*\(session-ready .*\)$/\1/p' 90 "demo search"
+session=$FOUND
+[ -n "$session" ] || fail "no session-ready line within 90 s of the demo launch (the search never went out)"
+echo "Session: $session"
 
-sleep 10
-check_no_crash "while playing"
-check_alive "while playing"
-if soncle_log | grep 'audio-focus-lost' > /dev/null; then
-  fail "audio focus was lost while the test sound played"
-fi
-if soncle_log | grep -E 'audio-(write|thread)-failed' > /dev/null; then
-  fail "the audio device failed while the test sound played"
+wait_for_line 's/.*\(audio-started .*\)$/\1/p' 60 "demo playback"
+audio=$FOUND
+status=""
+if [ -z "$audio" ]; then
+  # No sound: either YouTube refused (the PO-token gate) or the app genuinely failed. A refusal is
+  # a known gate, not a build failure; anything else is.
+  refusal=$(soncle_log | grep 'play-failed' | tail -n 1)
+  if [ -n "$refusal" ]; then
+    case "$refusal" in
+      *"not a bot"*|*"Sign in to confirm"*)
+        status="known gate: YouTube refused this datacenter IP (${refusal##*play-failed })"
+        echo "::warning::playback blocked by YouTube's bot check (expected on a datacenter IP): $refusal" ;;
+      *) fail "the song could not be played: $refusal" ;;
+    esac
+  else
+    if soncle_log | grep 'audio-focus-denied' > /dev/null; then
+      fail "audio focus was denied, the song did not start"
+    fi
+    fail "no audio-started line within 60 s of the demo launch and no play-failed reason"
+  fi
+else
+  status="$audio"
+  sleep 10
+  check_no_crash "while playing"
+  check_alive "while playing"
+  if soncle_log | grep 'audio-focus-lost' > /dev/null; then
+    fail "audio focus was lost while the song played"
+  fi
+  if soncle_log | grep -E 'audio-(write|thread)-failed' > /dev/null; then
+    fail "the audio device failed while the song played"
+  fi
 fi
 adb exec-out screencap -p > "$OUT/playing.png"
 playing_kb=$(mem_kb)
@@ -173,6 +198,6 @@ summary "| --- | --- |"
 summary "| am start -W TotalTime (cold) | ${total_ms:-n/a} ms |"
 summary "| first-frame-ms (process start to first Uno frame) | ${first_frame} ms |"
 summary "| Total PSS idle (5 s after first frame) | $(mb "$idle_kb") |"
-summary "| Total PSS while the test sound plays (~10 s) | $(mb "$playing_kb") |"
-summary "| ${decoded:-sample-decoded: n/a} | |"
-summary "| ${audio} | |"
+summary "| Total PSS after the play attempt | $(mb "$playing_kb") |"
+summary "| ${session} | |"
+summary "| ${status:-no sound (see the log)} | |"

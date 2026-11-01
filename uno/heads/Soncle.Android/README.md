@@ -43,7 +43,7 @@ its own.
 | `session-ready from-server=<bool> clients=<list>` | the anonymous InnerTube session was created (first search) |
 | `search-failed <error>` | a search threw |
 | `play-failed <error>` | a song could not be resolved or played |
-| `audio-started sr=<sr> buffer-frames=<n>` | the AudioTrack started |
+| `audio-started sr=<sr> buffer-frames=<n>` | the AudioTrack started (a song began to play) |
 | `audio-stopped frames=<total> underruns=<n>` | pause, focus loss or shutdown (`AudioTrack.UnderrunCount`) |
 | `audio-focus-denied`, `audio-focus-lost <kind>` | audio focus refused or taken by another app |
 | `audio-write-failed code=<n>`, `audio-thread-failed <error>` | the device failed; the track and focus are released |
