@@ -22,6 +22,19 @@
   where to start the song for chosen lines too.
 - In the app on desktop and Android, and in the Companion extension (0.5.1).
 
+## Unreleased: Soncle Preview for Windows starts songs while they download (C# app)
+
+- Songs now **start playing as soon as the first piece has downloaded** (about a second on a normal
+  connection) instead of after the whole song, and the rest downloads while it plays.
+- **No more 20-minute limit**: long songs, mixes and videos play, using the same small amount of
+  memory as a short song.
+- If the connection drops mid-song, the sound fades out once the downloaded part runs out, the player
+  bar shows its spinner while it waits, and the song fades back in where it stopped when the network
+  returns. Seeking far ahead of the download works too (that part is fetched straight away).
+- What to check on Windows: time from picking a song to the first sound, a song over 20 minutes,
+  seeking far ahead right after a song starts, and turning the network off and on mid-song.
+  `uno/heads/Soncle.Windows/README.md` has the steps.
+
 ## Unreleased: Soncle Preview for Windows plays songs (C# app)
 
 - The C# / WinUI 3 test build on the **windows-preview** release (`Soncle-preview-win-x64.zip`,
@@ -38,9 +51,7 @@
   play/pause/next/seek and the media keys work, and that nothing clicks or stutters (also with a
   44.1 kHz device and after unplugging headphones: the bar should say the sound device stopped, and
   Play should start it again). `uno/heads/Soncle.Windows/README.md` has the steps.
-- Not there yet: **sound starts only after the whole song has downloaded and decoded** (a few
-  seconds; streaming start comes later), so **songs and videos over 20 minutes don't play yet**
-  (they say they can't be played; the whole decoded song is kept in memory until then), only songs YouTube offers as WebM/Opus play (AAC-only ones
+- Not there yet: only songs YouTube offers as WebM/Opus play (AAC-only ones
   say they can't be played), it is signed out only (no account, library, likes or playlists), the
   stream lookup uses only the two YouTube clients that need no PO token and no deciphering (more
   come with the PO-token and player-script work), and there is no queue view, lyrics, Sound page,

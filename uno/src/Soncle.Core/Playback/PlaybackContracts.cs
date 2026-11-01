@@ -14,6 +14,11 @@ public interface IPlayer
     double Position { get; }
     double Duration { get; }
     double BufferedEnd { get; }
+    /// <summary>
+    /// Playing, but the audio ran dry and silence plays until more arrives (an &lt;audio&gt;
+    /// element's "waiting"; <see cref="State"/> stays <see cref="PlaybackState.Playing"/>).
+    /// </summary>
+    bool IsBuffering => false;
     /// <summary>Loads a source and (optionally) starts it.</summary>
     Task LoadAsync(string source, double? lufs, double startAt, bool autoplay, CancellationToken ct);
     Task PlayAsync(CancellationToken ct);

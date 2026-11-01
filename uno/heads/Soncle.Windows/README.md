@@ -39,16 +39,28 @@ head that opens Soncle's shell on Windows. It is **Windows only** and is deliber
 
 How a song gets to the speakers: `StreamResolver` (clients **ANDROID_VR**, then **IOS**, the two
 that return plain URLs: no PO token, no deciphering yet) with the **WebM/Opus-only** filter →
-`SongDownloader` downloads the **whole song** → Concentus decodes it → `EnginePlayer` (one engine
-per song, loudness levelled to −14 LUFS, limiter last) → `WasapiAudioOutput`. Sound therefore
-starts only after the whole song is downloaded and decoded.
+`SongDownloader` downloads the song to its cache file (a 256 KB first piece, then ≤ 1 MB
+requests) → **`StreamingOpusSource`** demuxes and decodes it with Concentus *while it downloads* →
+`EnginePlayer` (one engine per song, loudness levelled to −14 LUFS, limiter last) →
+`WasapiAudioOutput`. **Sound starts as soon as the head and the first packets are in** (the first
+piece), not after the whole song.
 
-The decoded song is held in memory (48 kHz stereo float: about 23 MB a minute, and two songs can be
-alive across a skip), so **songs and videos over 20 minutes are refused** with the bar's "Couldn't
-play this song." (`YouTubeStreams.MaxSongSeconds`): first from the stream's length and bitrate,
-before anything is downloaded, then from the exact length, before the PCM is allocated. The limit
-goes when streaming start lands. Playback CPU and memory are not measured yet: pending on
-minuda2009's PC (step 7 below).
+Streaming start, in short (`uno/src/Soncle.Audio/StreamingOpusSource.cs`):
+
+- a decode-ahead thread per song fills a preallocated ring of about 5.5 s of PCM (2 MB), so a song
+  of any length uses the same memory: **there is no length limit any more** (the old 20-minute cap
+  is gone);
+- the audio thread only copies out of the ring: it never waits, locks or allocates. If the download
+  falls behind (network drop, slow connection) the song fades out over 10 ms, plays silence, the
+  bar shows its **spinner while buffering** (the song stays "playing", like a browser's `<audio>`),
+  and the sound fades back in when the bytes arrive (the downloader retries for about 10 minutes);
+- a seek restarts decoding at the WebM cue before the target (80 ms pre-roll) and drops what comes
+  before it; a seek **far past the download** is read straight from the network at that byte
+  offset while the cache keeps filling. Files without Cues in front re-read from the first cluster;
+- the length shown is the file's Duration until the real end is decoded, and only the real end
+  ends a song, so an estimate can't cut one short.
+
+Playback CPU and memory are not measured yet: pending on minuda2009's PC (step 7 below).
 
 A quick pause → play (double click, the media key twice) starts a new WASAPI session while the old
 one still owes its faded last block. `Start` waits up to one buffer (80 ms) for that block, then
@@ -67,7 +79,7 @@ by the next one if it failed), so the app opens offline. Downloads go to the pre
 `%APPDATA%\Soncle`. Diagnostics are one-line `Trace` messages (`Soncle ...`, visible in a debugger
 or DebugView) with URLs cut out; no URL, header or token is logged.
 
-Not here yet, by scope: streaming start (sound before the download finishes), AAC-only songs,
+Not here yet, by scope: AAC-only songs,
 PO-token and deciphered clients (YTMUSIC, WEB), sign-in and the library, a queue view, lyrics, the
 Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `Soncle.Design`
 (stage 3) and the own-data-folder carry-over.
@@ -78,16 +90,25 @@ Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `
    playing". Turn the network on.
 2. Drag the window by the title bar on both sides of the search box; click into the box and type.
 3. Search (Enter) for an artist; the list fills. Pick a song: the bar shows it with a spinner, then
-   plays (expect a few seconds before sound: the whole song is downloaded and decoded first).
+   plays. **Note the time from the click to the first sound** (it should be about a second on a
+   normal connection: only the first piece has to arrive).
 4. Pause / play, next / previous, drag the seek bar and let go, and use the keyboard media keys and
    the Windows media flyout. Listen for clicks at start, pause, skip and seek. Also double-click
    play/pause and press the play/pause media key twice quickly: it should keep playing without a
    skip or an error. Click once on the seek bar's track: one short dip, not two.
 5. Switch the default device to one at 44.1 kHz, and unplug headphones while playing: the bar should
    say the sound device stopped; Play starts it again on the new default device.
-6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to, and so are
-   videos over 20 minutes: search for a one-hour mix to check).
-7. With a typical 3–5 minute song playing, note the working set and CPU of `Soncle.Windows.exe` in
+6. Note any song that says "Couldn't play this song." (AAC-only songs are expected to).
+7. **Long songs:** search for a one-hour mix (anything over 20 minutes): it must start as quickly
+   as a short song and play; skip to near the end with the seek bar.
+8. **Seek past the download:** right after a long song starts, drag the seek bar far ahead (past
+   what can have downloaded): sound should come back within a second or two at the new spot, with
+   no click and no error.
+9. **Network pull mid-song:** while a song plays, turn Wi-Fi off (or pull the cable). Once the
+   decoded seconds run out the sound fades out and the bar shows the spinner (the song stays
+   "playing"); turn the network back on: the sound fades back in where it stopped. Note how long
+   the gap was and whether anything clicked.
+10. With a typical 3–5 minute song playing, note the working set and CPU of `Soncle.Windows.exe` in
    Task Manager (Details tab), and again after a few skips; those are the first playback numbers.
 
 ## Measured (shell, `windows-latest`, 10 Oct 2026)

@@ -14,7 +14,7 @@ using Soncle.YouTube.Parsing;
 namespace Soncle.Windows.Playback;
 
 /// <summary>
-/// The composition root of the playback slice: search -> pick -> resolve -> download -> decode ->
+/// The composition root of the playback slice: search -> pick -> resolve -> download + streaming decode ->
 /// engine -> WASAPI. Signed out, always: one <see cref="HttpClient"/> that never stores or sends
 /// cookies, no account, no credentials.
 /// <para>

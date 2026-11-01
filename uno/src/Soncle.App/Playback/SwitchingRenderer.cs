@@ -6,7 +6,7 @@ namespace Soncle.App.Playback;
 
 /// <summary>
 /// One loaded song, built off the audio thread: its own <see cref="Engine"/> (so the master chain
-/// and the limiter stay last), the <see cref="OutputPump"/> over it and the decoded source.
+/// and the limiter stay last), the <see cref="OutputPump"/> over it and the (decoded or streaming) source.
 /// </summary>
 internal sealed class LoadedSong
 {
@@ -15,7 +15,6 @@ internal sealed class LoadedSong
         Source = source;
         Lufs = lufs;
         SampleRate = source.SampleRate;
-        LengthFrames = source.LengthFrames ?? 0;
         Engine = new Engine(source.SampleRate);
         Engine.SetNormalize(true, EnginePlayer.NormTarget);
         Engine.Load(source, lufs, startAtSeconds);
@@ -34,7 +33,12 @@ internal sealed class LoadedSong
     public IAudioSource Source { get; }
     public double? Lufs { get; }
     public int SampleRate { get; }
-    public long LengthFrames { get; }
+
+    /// <summary>The song's length, frames (0 = unknown). Live: a streaming source's estimate becomes exact at its end.</summary>
+    public long LengthFrames => Source.LengthFrames ?? 0;
+
+    /// <summary>Stops a streaming source's decoding (reading it afterwards stays safe).</summary>
+    public void Release() => (Source as IDisposable)?.Dispose();
 
     /// <summary>
     /// A seek waiting for the render thread, in frames (-1 = none). Written by the UI thread with

@@ -14,15 +14,14 @@ namespace Soncle.App.Playback;
 /// The YouTube side of playback for the C# heads: <see cref="PrefetchAsync"/> resolves a song
 /// (<see cref="StreamResolver"/>, the <c>resolveStream</c> rules), registers it with the
 /// <see cref="SongDownloader"/> and returns its loudness; <see cref="LoadSongAsync"/> (the
-/// <see cref="EnginePlayer"/>'s <see cref="SongLoader"/>) reads the whole song from the downloader
-/// and decodes WebM/Opus in memory. Build the resolver with <see cref="OpusOnly"/> as its format
+/// <see cref="EnginePlayer"/>'s <see cref="SongLoader"/>) opens the song as a
+/// <see cref="StreamingOpusSource"/> over the downloader, so sound starts with the first piece
+/// (256 KB) while the rest downloads. Build the resolver with <see cref="OpusOnly"/> as its format
 /// filter: there is no AAC decoder yet.
 /// <para>
-/// A decoded song is held whole in memory (48 kHz stereo float, about 23 MB a minute), so songs
-/// longer than <see cref="MaxSongSeconds"/> are refused with <see cref="NotSupportedException"/>
-/// (the player bar shows its plain "can't play" message) until playback can start while streaming.
-/// The resolved length and bitrate give an estimate before anything is downloaded; the decoder
-/// checks the exact length before it allocates the PCM.
+/// Only a few seconds of PCM are held per song (the decode-ahead ring), so there is no length
+/// limit. A seek far past the download is served from the network by the downloader; the
+/// resolved length and bitrate give the length estimate until the file's own Duration is read.
 /// </para>
 /// </summary>
 public sealed class YouTubeStreams : IPlaybackStreams
@@ -30,21 +29,14 @@ public sealed class YouTubeStreams : IPlaybackStreams
     /// <summary>YouTube's loudness reference: a song's LUFS is <c>-14 + loudnessDb</c> (the JS rule).</summary>
     public const double YouTubeReference = -14;
 
-    /// <summary>The longest song played, s (20 min: about 460 MB of PCM, two of which can be alive across a swap).</summary>
-    public const int MaxSongSeconds = 20 * 60;
-
     private readonly StreamResolver _resolver;
     private readonly SongDownloader _downloader;
     private readonly IOpusDecoderFactory _codec;
     private readonly ConcurrentDictionary<string, ResolvedStream> _resolved = new(StringComparer.Ordinal);
-    private readonly int _maxSeconds;
 
     /// <param name="codec">The Opus codec; null = Concentus (tests inject a fake).</param>
-    /// <param name="maxSongSeconds">The longest song played, s (tests lower it).</param>
-    public YouTubeStreams(StreamResolver resolver, SongDownloader downloader, IOpusDecoderFactory? codec = null, int maxSongSeconds = MaxSongSeconds)
+    public YouTubeStreams(StreamResolver resolver, SongDownloader downloader, IOpusDecoderFactory? codec = null)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxSongSeconds);
-        _maxSeconds = maxSongSeconds;
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
         _codec = codec ?? new ConcentusOpusDecoderFactory();
@@ -81,7 +73,6 @@ public sealed class YouTubeStreams : IPlaybackStreams
         ArgumentException.ThrowIfNullOrEmpty(id);
         var s = await _resolver.ResolveAsync(id, ct: ct).ConfigureAwait(false);
         if (!CanDecode(s.Mime)) throw new NotSupportedException($"this build can't play {s.Mime} yet");
-        if (EstimatedSeconds(s) is { } seconds && seconds > _maxSeconds) throw TooLong((long)seconds);
         _resolved[id] = s;
         // a re-registration hands a refreshed URL to the running download (same song, same length)
         _downloader.Register(id, new StreamSource(s.Url, s.Headers, s.Length, s.Mime));
@@ -89,11 +80,12 @@ public sealed class YouTubeStreams : IPlaybackStreams
     }
 
     /// <summary>
-    /// Reads the whole song from the downloader and decodes it (call it off the UI thread; the
-    /// <see cref="EnginePlayer"/> does). Prefetches first if the song was never resolved.
+    /// Opens the song for streaming playback and returns once its head is parsed and the first
+    /// audio is decoded (call it off the UI thread; the <see cref="EnginePlayer"/> does). The
+    /// download carries on in the background. Prefetches first if the song was never resolved.
     /// </summary>
-    /// <exception cref="NotSupportedException">The stream isn't WebM/Opus, or the song is longer than the limit.</exception>
-    /// <exception cref="IOException">The download ended short.</exception>
+    /// <exception cref="NotSupportedException">The stream isn't WebM/Opus.</exception>
+    /// <exception cref="IOException">The download failed before the first audio.</exception>
     public async Task<IAudioSource> LoadSongAsync(string id, CancellationToken ct)
     {
         if (!_resolved.TryGetValue(id, out var s))
@@ -103,18 +95,19 @@ public sealed class YouTubeStreams : IPlaybackStreams
         }
         if (!CanDecode(s.Mime)) throw new NotSupportedException($"this build can't play {s.Mime} yet");
 
-        using var bytes = new MemoryStream(s.Length is > 0 and < int.MaxValue ? (int)s.Length : 0);
-        await using (var src = _downloader.OpenRead(id, 0))
-            await src.CopyToAsync(bytes, ct).ConfigureAwait(false);
-        if (s.Length > 0 && bytes.Length != s.Length)
-            throw new IOException($"incomplete download: {bytes.Length} of {s.Length} bytes");
-
-        // the exact length is checked before the PCM is allocated
-        var pcm = OpusWebmDecoder.Decode(bytes.GetBuffer().AsMemory(0, (int)bytes.Length), _codec,
-            maxFrames: (long)_maxSeconds * OpusWebmDecoder.SampleRate);
-        return new MemoryPcmSource(pcm.InterleavedStereo, pcm.SampleRate);
+        var estimate = EstimatedSeconds(s) is { } seconds ? (long)(seconds * OpusWebmDecoder.SampleRate) : (long?)null;
+        var source = new StreamingOpusSource(
+            position => _downloader.OpenRead(id, position), _codec, estimate,
+            () => _downloader.Status(id)?.Fraction ?? 0);
+        try
+        {
+            await source.Ready.WaitAsync(ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            source.Dispose();
+            throw;
+        }
+        return source;
     }
-
-    private NotSupportedException TooLong(long seconds) =>
-        new($"songs over {_maxSeconds} s can't play yet (this one is about {seconds} s)");
 }

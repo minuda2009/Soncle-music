@@ -16,6 +16,22 @@ public interface IAudioSource
     long? LengthFrames { get; }
 }
 
+/// <summary>
+/// A source that plays while it is still arriving (<see cref="StreamingOpusSource"/>): it can run
+/// dry and its <see cref="IAudioSource.LengthFrames"/> may be an estimate until the end is
+/// decoded, so the end is <see cref="Ended"/>, never <c>Position &gt;= LengthFrames</c>. All
+/// members are cheap reads of volatile state, safe from any thread.
+/// </summary>
+public interface IBufferingSource : IAudioSource
+{
+    /// <summary>The last read ran out of decoded audio before the end (silence was played): waiting for data.</summary>
+    bool IsBuffering { get; }
+    /// <summary>Everything up to the real end has been read.</summary>
+    bool Ended { get; }
+    /// <summary>How far the song is available (decoded or downloaded), in frames.</summary>
+    long BufferedEndFrame { get; }
+}
+
 /// <summary>A generated test source: a sine per channel, or silence.</summary>
 public sealed class GeneratedSource : IAudioSource
 {

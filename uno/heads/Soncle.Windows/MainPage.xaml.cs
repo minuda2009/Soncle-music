@@ -360,8 +360,9 @@ public sealed partial class MainPage : Page
         PlayGlyph.Glyph = b.IsPlaying ? "\uE769" : "\uE768";
         ToolTipService.SetToolTip(PlayButton, label);
         AutomationProperties.SetName(PlayButton, label);
-        BarProgress.IsActive = b.IsLoading;
-        BarProgress.Visibility = b.IsLoading ? Visibility.Visible : Visibility.Collapsed;
+        var busy = b.IsLoading || b.IsBuffering;   // looking up / downloading, or waiting for the download mid-song
+        BarProgress.IsActive = busy;
+        BarProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
 
         BarDuration.Text = b.DurationText;
         SeekBar.IsEnabled = b.DurationSeconds > 0;
