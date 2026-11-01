@@ -58,7 +58,8 @@ public sealed class RealMinterClock : IMinterClock
 /// </summary>
 public sealed class PoTokenMinter
 {
-    private const string UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+    /// <summary>The user agent of the BotGuard requests and the helper page (<c>UA</c> in potoken.mjs).</summary>
+    public const string UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
     /// <summary>The helper page's URL (<c>PAGE</c> in potoken.mjs); the head serves po_token.html there.</summary>
     public const string PageUrl = "https://www.youtube.com/soncle-potoken";
     public const string Origin = "https://www.youtube.com";

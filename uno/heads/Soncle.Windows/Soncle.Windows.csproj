@@ -47,4 +47,10 @@
     <PackageReference Include="NAudio.Wasapi" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The BotGuard helper page, shared unchanged with the desktop and Android apps; served to the
+         hidden WebView2 by Playback/WebViewBotGuardPage.cs (docs/WINUI_PLAN.md §6). -->
+    <EmbeddedResource Include="../../../src/po_token.html" LogicalName="Soncle.po_token.html" />
+  </ItemGroup>
+
 </Project>

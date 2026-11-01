@@ -85,6 +85,19 @@ by the next one if it failed), so the app opens offline. Downloads go to the pre
 `%APPDATA%\Soncle`. Diagnostics are one-line `Trace` messages (`Soncle ...`, visible in a debugger
 or DebugView) with URLs cut out; no URL, header or token is logged.
 
+**PO tokens (built, not used for playback yet).** `Playback/WebViewBotGuardPage.cs` is the hidden
+BotGuard page of `docs/WINUI_PLAN.md` §6: a 1×1 invisible WebView2 in the window that answers
+`https://www.youtube.com/soncle-potoken*` (`AddWebResourceRequestedFilter` +
+`WebResourceRequested`) with `src/po_token.html`, embedded unchanged from the repo
+(`<EmbeddedResource LogicalName="Soncle.po_token.html">`), then `Navigate`s there (not
+`NavigateToString`, which gives the wrong origin). Every other request in that WebView gets a 404,
+as in `potoken.mjs`. `Soncle.YouTube.PoTokenMinter` drives it (Create → `runBotGuard` →
+GenerateIT → `createPoTokenMinter` → `obtainPoToken`) and closes it after 10 minutes without a
+request. The resolver is **not** given the minter: the YTMUSIC and WEB clients stay off until an
+`IPlayerScript` decipherer exists, because their URLs need deciphering as well as a token. The page
+is created only when a token is minted, and nothing mints one unless `SONCLE_POTOKEN_SELFTEST=1` is
+set (see "What to test"). The token is never logged, only its length.
+
 Not here yet, by scope: AAC-only songs,
 PO-token and deciphered clients (YTMUSIC, WEB), sign-in and the library, a queue view, lyrics, the
 Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `Soncle.Design`
@@ -116,6 +129,16 @@ Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `
    the gap was and whether anything clicked.
 10. With a typical 3–5 minute song playing, note the working set and CPU of `Soncle.Windows.exe` in
    Task Manager (Details tab), and again after a few skips; those are the first playback numbers.
+11. **Slow connection:** with a throttled connection (e.g. a phone hotspot at 1 bar) a song that
+   stalls should come back for a stretch each time, not flicker between sound and spinner every
+   moment; a song whose download gives up mid-way fades out (no click) and the next one starts.
+12. **PO token self-test** (only this build's BotGuard page; playback doesn't use it yet): in
+   PowerShell `$env:SONCLE_POTOKEN_SELFTEST = "1"; ./Soncle.Windows.exe`, then search once. In
+   DebugView (capture Win32) look for `Soncle potoken-selftest ok length=…` within a few
+   seconds (or `potoken-selftest failed …` with the reason) and `Soncle PO token minter ready (ttl
+   …s)`. A line `helper page origin is …` means the page did not get the youtube.com origin.
+   Ten minutes later, without another search, the WebView2 child processes
+   (`msedgewebview2.exe` under Soncle.Windows in Task Manager) should be gone.
 
 ## Measured (shell, `windows-latest`, 10 Oct 2026)
 

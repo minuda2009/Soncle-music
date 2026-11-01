@@ -42,7 +42,9 @@
 - Under the hood (no change you can see yet): the C# app's proof-of-origin token code now runs Google's
   BotGuard check the same way the desktop app does, so the clients that need a token can be turned on
   once the Windows app can also read YouTube's player script. Until then the Windows preview keeps using
-  only the clients that need neither.
+  only the clients that need neither. The Windows preview has the hidden page for it (WebView2, already on
+  every Windows 11 PC); it only opens for a self-test (`SONCLE_POTOKEN_SELFTEST=1`) and closes after 10
+  minutes without use.
 
 ## Unreleased: Soncle Preview for Windows plays songs (C# app)
 

@@ -86,7 +86,7 @@ public sealed partial class MainPage : Page
 
         try
         {
-            _host = new PlaybackHost();
+            _host = new PlaybackHost(WebViewBotGuardPage.Factory(BotGuardHost));
         }
         catch (Exception ex)
         {

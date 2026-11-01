@@ -23,6 +23,13 @@ namespace Soncle.Windows.Playback;
 /// this head yet, so YTMUSIC / WEB would yield nothing playable, and AAC has no decoder yet.
 /// </para>
 /// <para>
+/// The PO-token minter (<see cref="PoTokens"/>, over the hidden WebView2 page in
+/// <see cref="WebViewBotGuardPage"/>) is built but not handed to the resolver: YTMUSIC / WEB stay
+/// off until an <c>IPlayerScript</c> decipherer exists, since their URLs need deciphering too.
+/// Nothing mints a token unless <c>SONCLE_POTOKEN_SELFTEST=1</c> is set, which mints one for the
+/// session's visitor id once and logs only whether it worked and the token's length.
+/// </para>
+/// <para>
 /// The app must open offline, so nothing here touches the network at start-up: the InnerTube
 /// session (visitor data) is created on the first search or song, and a failed attempt is retried
 /// by the next one. Create it and use it on the UI thread (the view models capture it).
@@ -38,7 +45,7 @@ internal sealed partial class PlaybackHost : IDisposable
     private Task<Backend>? _backend;
     private bool _disposed;
 
-    public PlaybackHost()
+    public PlaybackHost(BotGuardPageFactory? botGuard = null)
     {
         _http = new HttpClient(new HttpClientHandler
         {
@@ -62,7 +69,11 @@ internal sealed partial class PlaybackHost : IDisposable
         Search = new SearchViewModel((q, ct) => SearchAsync(q, ct), Controller);
         Bar = new PlayerBarViewModel(Controller, Player, Search.Find);
         Controller.Failed += (_, reason) => Log($"play-failed {reason}");
+        if (botGuard is not null) PoTokens = new PoTokenMinter(botGuard, PoTokenMinter.HttpFetch(_http), log: Log);
     }
+
+    /// <summary>The PO-token minter, or null without a BotGuard page; not used for playback yet.</summary>
+    public PoTokenMinter? PoTokens { get; }
 
     public WasapiAudioOutput Output { get; }
     public EnginePlayer Player { get; }
@@ -81,6 +92,7 @@ internal sealed partial class PlaybackHost : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        PoTokens?.Reset();
         Player.Dispose();
         Output.Dispose();
         _http.Dispose();
@@ -139,7 +151,29 @@ internal sealed partial class PlaybackHost : IDisposable
         var resolver = new StreamResolver(new InnerTubeStreamClient(_http, session), accept: YouTubeStreams.OpusOnly);
         resolver.SetClients(Clients);
         Log($"session-ready from-server={session.FromServer} clients={string.Join(',', Clients)}");
+        if (PoTokens is { } minter && Environment.GetEnvironmentVariable("SONCLE_POTOKEN_SELFTEST") == "1")
+            _ = PoTokenSelfTestAsync(minter, session.VisitorData);
         return new Backend(new InnerTubeCatalogClient(_http, session), new YouTubeStreams(resolver, _downloader));
+    }
+
+    /// <summary>Mints one token for the visitor id; logs the outcome and the length, never the token.</summary>
+    private static async Task PoTokenSelfTestAsync(PoTokenMinter minter, string visitorData)
+    {
+        if (string.IsNullOrEmpty(visitorData))
+        {
+            Log("potoken-selftest skipped (no visitor id)");
+            return;
+        }
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            var token = await minter.MintAsync(visitorData).ConfigureAwait(false);
+            Log($"potoken-selftest ok length={token.Length} ms={watch.ElapsedMilliseconds}");
+        }
+        catch (Exception e)
+        {
+            Log($"potoken-selftest failed {e.GetType().Name}: {e.Message}" + (e.InnerException is { } inner ? $" ({inner.GetType().Name}: {inner.Message})" : ""));
+        }
     }
 
     private sealed record Backend(InnerTubeCatalogClient Catalog, YouTubeStreams Streams);
