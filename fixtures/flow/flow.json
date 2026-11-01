@@ -2113,5 +2113,771 @@
    "score": 0.9594,
    "sure": 1
   }
- ]
+ ],
+ "wholePool": {
+  "featScenario": {
+   "s0": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s1": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s2": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s3": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s4": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s5": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s6": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s7": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s8": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s9": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s10": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s11": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s12": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s13": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s14": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s15": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s16": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s17": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s18": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s19": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s20": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s21": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s22": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s23": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s24": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s25": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s26": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s27": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s28": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s29": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s30": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s31": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s32": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s33": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s34": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s35": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s36": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s37": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s38": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s39": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s40": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s41": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s42": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s43": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s44": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s45": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s46": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s47": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s48": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s49": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "seed": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   }
+  },
+  "featHold": {
+   "seed": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s40": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s41": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s42": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.5
+   },
+   "s43": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.6
+   },
+   "s44": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "7A",
+    "keyConf": 0.7,
+    "energy": 0.7
+   },
+   "s45": {
+    "v": 2,
+    "bpm": 120,
+    "bpmConf": 0.8,
+    "camelot": "3B",
+    "keyConf": 0.7,
+    "energy": 0.8
+   },
+   "s46": {
+    "v": 2,
+    "bpm": 121,
+    "bpmConf": 0.8,
+    "camelot": "8A",
+    "keyConf": 0.7,
+    "energy": 0.8999999999999999
+   },
+   "s47": {
+    "v": 2,
+    "bpm": 122,
+    "bpmConf": 0.8,
+    "camelot": "9A",
+    "keyConf": 0.7,
+    "energy": 0.3
+   },
+   "s48": {
+    "v": 2,
+    "bpm": 123,
+    "bpmConf": 0.8,
+    "camelot": "8B",
+    "keyConf": 0.7,
+    "energy": 0.4
+   },
+   "s49": {
+    "v": 2,
+    "bpm": 124,
+    "bpmConf": 0.8,
+    "camelot": "10A",
+    "keyConf": 0.7,
+    "energy": 0.5
+   }
+  },
+  "coverage": [
+   {
+    "known": [
+     "s0",
+     "s1",
+     "s2",
+     "s3"
+    ],
+    "failed": [
+     "s9"
+    ],
+    "expected": {
+     "total": 10,
+     "known": 4,
+     "failed": 1,
+     "pending": 5,
+     "done": false,
+     "partial": true
+    }
+   },
+   {
+    "known": [
+     "s0",
+     "s1",
+     "s2",
+     "s3",
+     "s4",
+     "s5",
+     "s6",
+     "s7",
+     "s8",
+     "s9"
+    ],
+    "failed": [],
+    "expected": {
+     "total": 10,
+     "known": 10,
+     "failed": 0,
+     "pending": 0,
+     "done": true,
+     "partial": false
+    }
+   }
+  ],
+  "analysisOrder": [
+   {
+    "size": 8,
+    "known": [
+     "s0"
+    ],
+    "next": [
+     "s5",
+     "s2",
+     "s0"
+    ],
+    "failed": [
+     "s7"
+    ],
+    "expected": [
+     "s5",
+     "s2",
+     "s1",
+     "s3",
+     "s4",
+     "s6"
+    ]
+   }
+  ],
+  "afterFailure": [
+   {
+    "id": "a",
+    "expected": "retry"
+   },
+   {
+    "id": "a",
+    "expected": "give-up"
+   },
+   {
+    "id": "b",
+    "expected": "retry"
+   }
+  ],
+  "holdUnmeasured": {
+   "seed": "seed",
+   "measuredFrom": 40,
+   "expectedFirstTen": [
+    "s40",
+    "s47",
+    "s41",
+    "s49",
+    "s43",
+    "s46",
+    "s44",
+    "s42",
+    "s48",
+    "s45"
+   ],
+   "expectedOrder": [
+    "s40",
+    "s47",
+    "s41",
+    "s49",
+    "s43",
+    "s46",
+    "s44",
+    "s42",
+    "s48",
+    "s45",
+    "s0",
+    "s1",
+    "s2",
+    "s3",
+    "s4",
+    "s5",
+    "s6",
+    "s7",
+    "s8",
+    "s9",
+    "s10",
+    "s11",
+    "s12",
+    "s13",
+    "s14",
+    "s15",
+    "s16",
+    "s17",
+    "s18",
+    "s19",
+    "s20",
+    "s21",
+    "s22",
+    "s23",
+    "s24",
+    "s25",
+    "s26",
+    "s27",
+    "s28",
+    "s29",
+    "s30",
+    "s31",
+    "s32",
+    "s33",
+    "s34",
+    "s35",
+    "s36",
+    "s37",
+    "s38",
+    "s39"
+   ],
+   "pick": {
+    "track": "s40",
+    "known": 10,
+    "total": 50,
+    "partial": true
+   }
+  },
+  "scenario": {
+   "seed": "seed",
+   "expectedMeasured": 50,
+   "expectedKnown": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50
+   ],
+   "expectedPartial": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false
+   ]
+  }
+ }
 }

@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { keyCompat, tempoCompat, transition, planFlow, contextFor } from '../../renderer/flow/flow.js';
+import { keyCompat, tempoCompat, transition, planFlow, contextFor, flowCoverage, analysisOrder, afterFailure, pickNext } from '../../renderer/flow/flow.js';
 import { analyze, camelotOf } from '../../renderer/flow/analyze.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -97,5 +97,81 @@ const trans = [];
   trans.push({ a: a.id, b: b.id, fa, fb, score: r4(tr.score), sure: r4(tr.sure) });
 }
 
-fs.writeFileSync(path.join(out, 'flow.json'), JSON.stringify({ keyCompat: keyTable, tempoCompat: tempoTable, planFlow: cases, transition: trans }, null, 1) + '\n');
+// ---- whole-pool measuring (roadmap item 8): coverage, measuring order, retry, holdUnmeasured ----
+// The C# port of flowCoverage/analysisOrder/afterFailure/pickNext (and planFlow's holdUnmeasured)
+// must match these numbers exactly.
+const radioPool = (n) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, title: 'Song ' + i, artists: [{ name: 'Artist ' + i }], duration: 200 }));
+const camelots = ['8A', '9A', '8B', '10A', '7A', '3B'];
+const featFor = (i) => ({ v: 2, bpm: 120 + (i % 5), bpmConf: 0.8, camelot: camelots[i % camelots.length], keyConf: 0.7, energy: 0.3 + (i % 7) / 10 });
+
+const wholePool = {};
+// The two whole-pool cases assign features differently, exactly as the JS tests do: the scenario
+// measures song i with featFor(i); the holdUnmeasured case measures only the last ten, s40+i with
+// featFor(i).
+wholePool.featScenario = {};
+for (let i = 0; i < 50; i++) wholePool.featScenario['s' + i] = featFor(i);
+wholePool.featScenario.seed = featFor(0);
+wholePool.featHold = { seed: featFor(0) };
+for (let i = 0; i < 10; i++) wholePool.featHold['s' + (40 + i)] = featFor(i);
+
+{
+  const pool = radioPool(10);
+  const feats = new Map(pool.slice(0, 4).map((t, i) => [t.id, featFor(i)]));
+  wholePool.coverage = [
+    { known: [...feats.keys()], failed: ['s9'], expected: flowCoverage(pool, (id) => feats.get(id) || null, new Set(['s9'])) },
+    { known: pool.map((t) => t.id), failed: [], expected: flowCoverage(pool, () => featFor(0)) },
+  ];
+  const order = analysisOrder(radioPool(8), (id) => (id === 's0' ? {} : null), { next: [radioPool(8)[5], radioPool(8)[2], radioPool(8)[0]], failed: new Set(['s7']) });
+  wholePool.analysisOrder = [{ size: 8, known: ['s0'], next: ['s5', 's2', 's0'], failed: ['s7'], expected: order.map((t) => t.id) }];
+}
+
+{
+  const tries = new Map();
+  wholePool.afterFailure = [
+    { id: 'a', expected: afterFailure(tries, 'a') },
+    { id: 'a', expected: afterFailure(tries, 'a') },
+    { id: 'b', expected: afterFailure(tries, 'b') },
+  ];
+}
+
+{
+  // only the LAST ten songs are measured, and YouTube lists them as the least relevant
+  const pool = radioPool(50);
+  const seed = { id: 'seed', title: 'Seed', duration: 200 };
+  const feats = new Map(pool.slice(40).map((t, i) => [t.id, featFor(i)]));
+  feats.set('seed', featFor(0));
+  const feat = (id) => feats.get(id) || null;
+  const held = planFlow(seed, pool, feat, { holdUnmeasured: true });
+  const pick = pickNext(seed, pool, feat);
+  wholePool.holdUnmeasured = {
+    seed: seed.id, measuredFrom: 40,
+    expectedFirstTen: held.slice(0, 10).map((x) => x.track.id),
+    expectedOrder: held.map((x) => x.track.id),
+    pick: { track: pick.track.id, known: pick.known, total: pick.total, partial: pick.partial },
+  };
+}
+
+{
+  // a 50-song radio measured one song at a time: every pick comes from measured songs, and the
+  // last pick is made with the whole pool known
+  const pool = radioPool(50);
+  const seed = { id: 'seed', title: 'Seed', duration: 200 };
+  const feats = new Map([['seed', featFor(0)]]);
+  const feat = (id) => feats.get(id) || null;
+  const failed = new Set();
+  let queue = analysisOrder(pool, feat, { next: pool.slice(0, 3), failed });
+  const known = [], partial = [];
+  let measured = 0;
+  while (queue.length) {
+    const t = queue.shift();
+    feats.set(t.id, featFor(Number(t.id.slice(1))));
+    measured++;
+    const pick = pickNext(seed, pool, feat, { failed });
+    known.push(pick.known); partial.push(pick.partial);
+    queue = analysisOrder(pool, feat, { next: [], failed });
+  }
+  wholePool.scenario = { seed: seed.id, expectedMeasured: measured, expectedKnown: known, expectedPartial: partial };
+}
+
+fs.writeFileSync(path.join(out, 'flow.json'), JSON.stringify({ keyCompat: keyTable, tempoCompat: tempoTable, planFlow: cases, transition: trans, wholePool }, null, 1) + '\n');
 console.log('wrote fixtures/flow');
