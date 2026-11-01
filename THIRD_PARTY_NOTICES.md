@@ -85,6 +85,7 @@ built on and that ship inside its APK.
 | [AndroidX libraries](https://developer.android.com/jetpack/androidx) (via the `Xamarin.AndroidX.*` bindings, MIT) | Apache-2.0 |
 | [Roboto](https://github.com/googlefonts/roboto) font, when bundled by Uno Material (`Uno.Fonts.Roboto`) | Apache-2.0 (Roboto 2.x) / SIL OFL-1.1 (Roboto 3.x) |
 | Concentus, the C# Opus decoder | BSD-3-Clause (see "Algorithms and data" below) |
+| [TagLib#](https://github.com/mono/taglib-sharp) (`TagLibSharp`), reading local files' tags, artwork and lyrics | LGPL-2.1 |
 
 ## C# / .NET Windows preview dependencies (`uno/heads/Soncle.Windows`)
 

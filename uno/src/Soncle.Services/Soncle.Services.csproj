@@ -10,4 +10,8 @@
     <ProjectReference Include="../Soncle.Core/Soncle.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="TagLibSharp" />
+  </ItemGroup>
+
 </Project>
