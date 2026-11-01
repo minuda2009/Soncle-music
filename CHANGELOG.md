@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done
+
+- **The C# port of Soncle's services is finished.** `Soncle.Services` now also has the **local
+  music library** (`src/local.mjs`) and **Discord Rich Presence** (`src/discord.mjs`), the last two
+  files in the migration's transfer map. That closes out the portable libraries the plan calls for
+  (`Soncle.Core`, `YouTube`, `Streams`, `Flow`, `Audio`, `Audio.Opus`, `Services`, `App`).
+- **Local files** keep the JS behaviour exactly: the same `lc_` + SHA-1 ids (so an existing
+  `local-library.json` keeps working), the same file shape, "loose" files that survive a rescan, the
+  same six-way parallel scan, and the same album-artist → album → disc → track sort. Tag reading is
+  behind a seam; the app uses **TagLib#** (LGPL-2.1, added to `THIRD_PARTY_NOTICES.md`) for title,
+  artists, album, track/disc, year, genre, duration, a codec line, ReplayGain as `loudnessDb`,
+  embedded artwork and embedded lyrics — the same fields the JS gets from `music-metadata`.
+- **Discord** keeps the JS protocol: the opcode framing, the handshake, `READY`, the close and the
+  20-second retry, and the same rule that cover art is only forwarded from known YouTube image
+  hosts. It stays off until a client id is configured, as today.
+- Tests: 21 → 55 in `Soncle.Services.Tests` — the id scheme against the JS formula, the library
+  bookkeeping with a fake reader, the Discord wire format and presence rules with a fake socket, and
+  the tag reader against real WAV files written by the test. Two bugs the tests caught were fixed
+  before they could ship: a missing `}` in the LRC-timestamp regex, and a rescan that could be
+  blocked by a finished scan.
+- The Electron and Android apps are unchanged; this is the C# app only.
+
 ## Unreleased: CHANGELOG history restored, Flow radio's whole-pool logic in C#
 
 - **The changelog is complete again.** Merging the open pull requests (#66) dropped six "Unreleased"

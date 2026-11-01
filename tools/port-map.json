@@ -9,6 +9,8 @@
   "src/defaults.mjs": ["uno/src/Soncle.Core/Store"],
   "src/legacy.mjs": ["uno/src/Soncle.Core/Store", "uno/src/Soncle.Services/CarryOver.cs"],
   "src/autoeq.mjs": ["uno/src/Soncle.Services/AutoEq.cs"],
+  "src/local.mjs": ["uno/src/Soncle.Services/LocalLibrary.cs", "uno/src/Soncle.Services/TagLibTagReader.cs"],
+  "src/discord.mjs": ["uno/src/Soncle.Services/DiscordRpc.cs"],
   "src/spotify.mjs": ["uno/src/Soncle.Services/Import.cs"],
   "src/preload.cjs": ["uno/src/Soncle.Core/Contracts"],
   "src/yt.mjs": ["uno/src/Soncle.YouTube"],

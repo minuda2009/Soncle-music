@@ -240,11 +240,11 @@ The roadmap's next desktop version (smart crossfade, Flow full-pool analysis) st
 | `src/streamproxy.mjs` (132) | R | `Soncle.Streams/` (with the `SoncleStreams.java` design, §1) | downloader tests vs fake googlevideo + `streamproxy` test cases |
 | `src/autoeq.mjs` (128) | P | `Soncle.Services/AutoEq.cs` | same profile parsed to the same filters |
 | `src/spotify.mjs` (192) | P | `Soncle.Services/Import.cs` | existing spotify/CSV fixtures |
-| `src/local.mjs` (236) | P | `Soncle.Services/LocalLibrary.cs` (+ `FileSystemWatcher`) | local test folder → same tracks JSON |
+| `src/local.mjs` (236) | P | `Soncle.Services/LocalLibrary.cs` (+ `TagLibTagReader.cs`; `FileSystemWatcher` later) | local test folder → same tracks JSON |
 | `src/legacy.mjs` (70) | P | `Soncle.Services/CarryOver.cs` (now also from `%APPDATA%\Soncle`) | legacy tests + an Electron profile copy |
 | `src/browser-signin.mjs` (97) | P | `Soncle.Windows/BrowserSignIn.cs` (CDP over pipe) | manual sign-in by minuda2009; cookie never logged |
 | `src/ducking.mjs` (148) | R | `Soncle.Windows/Ducking.cs` (WASAPI session events) | another app's sound lowers Soncle |
-| `src/discord.mjs` (127) | P | `Soncle.Services/Discord.cs` | stays hidden until Soncle has a client id |
+| `src/discord.mjs` (127) | P | `Soncle.Services/DiscordRpc.cs` | stays hidden until Soncle has a client id |
 | `src/main.mjs` (830) | R | `Soncle.Windows/` (`App.xaml.cs`, `Shell`, tray, SMTC, taskbar, downloads, store, lyrics) | §4 Windows rows |
 | `renderer/engine.js` (761) | R | `Soncle.Audio/` (`Deck.cs`, `MasterChain.cs`, `Transitions.cs`, `Eq.cs`) | crossfade/gapless reference tests (§5) |
 | `renderer/audio/worklets.js` (219) | P | `Soncle.Audio/Dsp/` (`TruePeakLimiter.cs`, `LoudnessMeter.cs`) | worklet tests: no overs, −23 LUFS tone, same meter readings ±0.1 dB |
@@ -304,6 +304,8 @@ Its own section markers give the split. Logic goes into view models and services
 | `src/defaults.mjs`, `src/legacy.mjs`, main.mjs store (M03) | ported (`uno-migration`) | — |
 | `renderer/devices.js` (M09c) | ported (`uno-migration`) | `androidOutputLabel` ported too (`DeviceClassifier.AndroidOutputLabel`, `openhands/uno-android-label`, checked against the JS in `fixtures/devices/classify.json`) |
 | `src/autoeq.mjs` (M09a) | ported (`uno-migration`) | — |
+| `src/local.mjs` (M09, local files) | ported (`openhands/uno-services-local-discord`) | `Soncle.Services.LocalLibrary` keeps the JS behaviour: the `lc_` + SHA-1 id scheme, `local-library.json` shape, `loose` files, the 6-way scan, the album-artist/album/disc/track sort and the same mtime+size re-index skip. Tag reading is behind `IAudioTagReader`; the app uses `TagLibTagReader` (TagLibSharp 2.3.0, LGPL-2.1, added to `THIRD_PARTY_NOTICES.md`) for title/artists/album/track/disc/year/genre/duration/codec/ReplayGain (`loudnessDb`)/artwork/lyrics — the same fields `music-metadata` gives the JS. Tested with real WAV files written by the test and a fake reader for the bookkeeping |
+| `src/discord.mjs` (M09) | ported (`openhands/uno-services-local-discord`) | `Soncle.Services.DiscordRpc`: the little-endian opcode framing, the op-0 handshake, `READY`, the op-2 close and the 20 s retry, and the same rule that artwork is only forwarded from known YouTube image hosts. The socket is behind `IDiscordTransport`, so tests use a fake. Stays off until a client id is set (`SONCLE_DISCORD_CLIENT_ID`), as in the JS |
 | `src/spotify.mjs` (M09b) | ported (`uno-migration`) | — |
 | `src/main.mjs` lyrics + `parseLrc` (M09d) | ported (`uno-migration`) | — |
 | `src/legacy.mjs` carry-over + backups (M09e) | ported (`uno-migration`) | — |
