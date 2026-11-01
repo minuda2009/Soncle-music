@@ -13,31 +13,36 @@ its own.
   (`NavigationView`, `Left`) when the window is at least 600 effective px wide (tablet, landscape
   foldable, desktop mode). Both drive the same selection;
 - the **player bar** with the `docs/DESIGN.md` §4.1 empty state: "Nothing playing" and a short
-  explanation, never a blank square with `0:00 / 0:00`;
-- **sound**: the **Test sound** button plays the bundled 8 s synthetic clip
-  (`fixtures/flow/sample.webm`, linked into the build as an embedded resource, not copied) on
-  repeat, through the path every song will take:
-  Concentus Opus decode (`Soncle.Audio.Opus.WebmOpusClip`) -> `Soncle.Audio.Engine` (master chain,
-  limiter last) -> `Soncle.Audio.Output.OutputPump` -> `AudioTrackOutput`
-  (`Platforms/Android/AudioTrackOutput.cs`, the `Soncle.Core.Platform.IAudioOutput` seam on
-  `AudioTrack`: float PCM, 48 kHz stereo, one dedicated thread, preallocated buffer, blocking
-  writes). It asks for audio focus first and stops when another app takes it. Start ramps the
-  first block up from silence and a stop ramps one last block down and lets the track play out
-  what is queued (`Soncle.Audio.Output.GainRamp`), so pause and resume neither click nor skip; the
-  render thread does that and releases the track and focus itself, so the UI thread never waits for
-  the device. A device failure shows as an error in the player bar, not as a pause. Decoding runs off the
-  UI thread. Only the output is Android code; `Playback/SamplePlayer.cs` is plain .NET so the
-  Windows head can reuse it with a WASAPI output;
+  explanation, never a blank square with `0:00 / 0:00`; once a song is picked it shows the title,
+  the artists and the time, with play/pause, previous/next and a seek bar;
+- a **search box** and a **results list**: type a song, press Enter, tap a result to play it with
+  the rest of the results as the queue;
+- **songs**: playback goes through the shared `Soncle.App.PlaybackSession` — search -> resolve
+  (`Soncle.YouTube`) -> download + streaming decode (`Soncle.Streams` + `StreamingOpusSource`) ->
+  `Soncle.Audio.Engine` (master chain, limiter last) -> `Soncle.Audio.Output.OutputPump` ->
+  `AudioTrackOutput` (`Platforms/Android/AudioTrackOutput.cs`, the
+  `Soncle.Core.Platform.IAudioOutput` seam on `AudioTrack`: float PCM, 48 kHz stereo, one dedicated
+  thread, preallocated buffer, blocking writes). It asks for audio focus first and stops when
+  another app takes it. Start ramps the first block up from silence and a stop ramps one last block
+  down and lets the track play out what is queued (`Soncle.Audio.Output.GainRamp`), so pause and
+  resume neither click nor skip; the render thread does that and releases the track and focus
+  itself, so the UI thread never waits for the device. A device failure shows as an error in the
+  player bar, not as a pause. Decoding runs off the UI thread. Only the output is Android code:
+  `Playback/AndroidPlaybackHost.cs` supplies just the output and the cache folder, and the same
+  wiring runs on Windows with a WASAPI output;
 - the **start-up measurement** for the `docs/DESIGN.md` §7.2 gate: process start to first Uno frame,
   logged once and shown quietly on the Settings placeholder;
-- a **demo launch** for CI: `--es soncle.demo play` starts the test sound without a tap.
+- a **demo launch** for CI: `--es soncle.demo play` searches for a fixed song and plays the first
+  result without a tap, so the smoke test can prove real playback.
 
 ### Log lines (`adb logcat -s Soncle`)
 
 | Line | When |
 | --- | --- |
 | `first-frame-ms=<n>` | first `CompositionTarget.Rendering` after process start |
-| `sample-decoded ms=<n> frames=<n>` | first play, after the clip is decoded |
+| `session-ready from-server=<bool> clients=<list>` | the anonymous InnerTube session was created (first search) |
+| `search-failed <error>` | a search threw |
+| `play-failed <error>` | a song could not be resolved or played |
 | `audio-started sr=<sr> buffer-frames=<n>` | the AudioTrack started |
 | `audio-stopped frames=<total> underruns=<n>` | pause, focus loss or shutdown (`AudioTrack.UnderrunCount`) |
 | `audio-focus-denied`, `audio-focus-lost <kind>` | audio focus refused or taken by another app |
@@ -49,8 +54,12 @@ its own.
   `SoncleMediaService` Java binding is a later increment, so the sound may stop when Android
   reclaims a backgrounded app;
 - the **BotGuard WebView** binding (PO tokens), and the `MainActivity.java` timers/autoplay port;
-- **real songs**: streams via `Soncle.Streams` + `Soncle.YouTube`, and **AAC** decode via
-  `MediaCodec` (only Opus/WebM through Concentus today);
+- **AAC** decode via `MediaCodec` (only Opus/WebM through Concentus today, so a song YouTube
+  offers only as AAC says it can't be played);
+- **PO tokens and deciphering**: only the two clients that need neither are used, so some songs
+  may not resolve;
+- **phone playback measurements** (CPU, memory, battery) and background playback that survives
+  Android reclaiming the app;
 - the **`Soncle.App` pages**: every destination shows one placeholder;
 - **icons in the bottom bar and the rail**: items are text-only because the repo has no
   Material Symbols font yet (`Soncle.Design`, plan stage 3, brings it, outlined at weight 600);

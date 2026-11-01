@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later -->
-<!-- No permissions: the test sound is bundled and nothing goes online yet. -->
+<!-- INTERNET: search and stream songs from YouTube Music. Nothing is sent but the ordinary
+     anonymous InnerTube requests the JS apps make; no account and no cookies. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
   <application android:allowBackup="true" android:supportsRtl="true">
   </application>
 </manifest>
