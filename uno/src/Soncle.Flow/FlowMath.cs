@@ -26,10 +26,20 @@ public sealed record FlowOptions
     public FlowContext? Context { get; init; }
     public FlowTaste? Taste { get; init; }
     public bool Lookahead { get; init; } = true;
+    /// <summary>Rank songs without features behind every measured one (partial-data radios).</summary>
+    public bool HoldUnmeasured { get; init; }
+    /// <summary>Songs given up on (failed to measure), so they are not counted as pending.</summary>
+    public IReadOnlySet<string>? Failed { get; init; }
 }
 
 /// <summary>One planned step: the chosen track and the transition score/confidence.</summary>
 public sealed record FlowStep(string TrackId, double? Score, double Sure);
+
+/// <summary>How much of a radio's pool has been measured (see <c>flowCoverage</c>).</summary>
+public readonly record struct FlowCoverage(int Total, int Known, int Failed, int Pending, bool Done, bool Partial);
+
+/// <summary>The next song to commit to, plus how much of the pool that choice was made from.</summary>
+public sealed record FlowPick(string TrackId, int Known, int Total, bool Partial, double? Score);
 
 /// <summary>
 /// Flow radio ordering, a direct port of <c>renderer/flow/flow.js</c>: order a pool so each
@@ -176,6 +186,10 @@ public static partial class FlowMath
                 if (f && famRun >= 2) s -= 0.08;
                 if (!f && newRun >= 3 && a == 0) s -= 0.05;
             }
+            // while the pool is only partly measured, an unmeasured song must not win just because
+            // YouTube listed it early: every measured candidate ranks ahead of it (it stays in the
+            // tail as a preview)
+            if (o.HoldUnmeasured && cf is null) s -= 0.6;
             var ar = ArtistOf(c);
             if (ar.Length > 0 && recentArtists.Contains(ar)) s -= 0.12;
             if (c.AlbumName is not null && p.AlbumName is not null && c.AlbumName == p.AlbumName) s -= 0.04;
@@ -208,6 +222,70 @@ public static partial class FlowMath
             prev = pick; prevF = feat(pick.Id); step++;
         }
         return result;
+    }
+
+    /// <summary>
+    /// How much of a radio's pool has been measured. <paramref name="failed"/> is the set of ids
+    /// given up on. <c>Done</c> means nothing is left to measure (everything is known or given up
+    /// on).
+    /// </summary>
+    public static FlowCoverage FlowCoverageOf(IReadOnlyList<FlowTrack> pool, Func<string, FlowFeatures?> feat, IReadOnlySet<string>? failed = null)
+    {
+        var known = 0; var gaveUp = 0;
+        foreach (var t in pool)
+        {
+            if (feat(t.Id) is not null) known++;
+            else if (failed is not null && failed.Contains(t.Id)) gaveUp++;
+        }
+        var total = pool.Count;
+        return new FlowCoverage(total, known, gaveUp, total - known - gaveUp, known + gaveUp == total, known + gaveUp < total);
+    }
+
+    /// <summary>
+    /// Songs still to measure, in the order to measure them: the songs lined up for the next slots
+    /// first, then the rest of the pool in YouTube's relevance order. Songs already known or given
+    /// up on are left out.
+    /// </summary>
+    public static List<FlowTrack> AnalysisOrder(IReadOnlyList<FlowTrack> pool, Func<string, FlowFeatures?> feat, IReadOnlyList<FlowTrack>? next = null, IReadOnlySet<string>? failed = null)
+    {
+        var seen = new HashSet<string>();
+        var result = new List<FlowTrack>();
+        var all = new List<FlowTrack>();
+        if (next is not null) all.AddRange(next);
+        all.AddRange(pool);
+        foreach (var t in all)
+        {
+            if (t?.Id is null) continue;
+            if (feat(t.Id) is not null) continue;
+            if (failed is not null && failed.Contains(t.Id)) continue;
+            if (seen.Add(t.Id)) result.Add(t);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// After a failed measurement: try once more later, then give up (so one bad stream is not a
+    /// permanent skip).
+    /// </summary>
+    public static string AfterFailure(IDictionary<string, int> tries, string id, int max = 2)
+    {
+        var n = (tries.TryGetValue(id, out var v) ? v : 0) + 1;
+        tries[id] = n;
+        return n < max ? "retry" : "give-up";
+    }
+
+    /// <summary>
+    /// The next song to commit to, chosen from everything measured so far. <c>Known</c>/<c>Total</c>
+    /// say how much of the pool that choice was made from.
+    /// </summary>
+    public static FlowPick? PickNext(FlowTrack from, IReadOnlyList<FlowTrack> rest, Func<string, FlowFeatures?> feat, FlowOptions? o = null)
+    {
+        o ??= new FlowOptions();
+        var cov = FlowCoverageOf(rest, feat, o.Failed);
+        var plan = PlanFlow(from, rest, feat, o with { HoldUnmeasured = true });
+        if (plan.Count == 0) return null;
+        var first = plan[0];
+        return new FlowPick(first.TrackId, cov.Known, cov.Total, cov.Partial, first.Score);
     }
 
     /// <summary>Human-friendly label for chips: "124 BPM · 8A".</summary>
