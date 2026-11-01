@@ -19,6 +19,12 @@ namespace Soncle.Windows.Playback;
 /// <see cref="ExecAsync"/> and <see cref="Dispose"/> may be called from any thread. A script's
 /// result comes back through <c>chrome.webview.postMessage</c> (so promises are awaited), and is
 /// never logged: it can be a token.</para>
+/// <para>Each page gets its own throw-away WebView2 profile (an explicit user-data folder under
+/// %TEMP%\Soncle-potoken, deleted after the page closes, best effort; leftovers of earlier runs are
+/// swept before this run's first page), the counterpart of potoken.mjs's in-memory
+/// <c>session.fromPartition('soncle-potoken')</c>: nothing BotGuard stores on the youtube.com
+/// origin outlives the page, and the folder is writable even when the app runs from a read-only
+/// one.</para>
 /// </summary>
 internal sealed class WebViewBotGuardPage : IBotGuardPage
 {
@@ -29,6 +35,9 @@ internal sealed class WebViewBotGuardPage : IBotGuardPage
     private readonly DispatcherQueue _ui;
     private readonly WebView2 _view;
     private readonly Dictionary<long, TaskCompletionSource<JsonNode?>> _calls = new();
+    private static readonly string ProfilesRoot = Path.Combine(Path.GetTempPath(), "Soncle-potoken");
+    private static int _swept;
+    private readonly string _profile = Path.Combine(ProfilesRoot, Guid.NewGuid().ToString("N"));
     private CoreWebView2? _core;
     private long _next;
     private int _closed;
@@ -71,8 +80,12 @@ internal sealed class WebViewBotGuardPage : IBotGuardPage
 
     private async Task LoadAsync(CancellationToken ct)
     {
+        SweepProfiles();
+        Directory.CreateDirectory(_profile);
+        var env = await CoreWebView2Environment.CreateWithOptionsAsync("", _profile, new CoreWebView2EnvironmentOptions());
+        ct.ThrowIfCancellationRequested();
         _host.Children.Add(_view);
-        await _view.EnsureCoreWebView2Async();
+        await _view.EnsureCoreWebView2Async(env);
         ct.ThrowIfCancellationRequested();
         var core = _view.CoreWebView2 ?? throw new InvalidOperationException("WebView2 did not start");
         _core = core;
@@ -221,9 +234,51 @@ internal sealed class WebViewBotGuardPage : IBotGuardPage
             {
                 PlaybackHost.Log($"potoken-page-close-failed {e.GetType().Name}");
             }
+            DeleteProfileLater(_profile);
         }
         if (_ui.HasThreadAccess) Tear();
-        else _ui.TryEnqueue(Tear);
+        else if (!_ui.TryEnqueue(Tear)) DeleteProfileLater(_profile);
+    }
+
+    /// <summary>The browser processes let go of the folder a moment after <c>Close()</c>; tries for about 10 s.</summary>
+    private static void DeleteProfileLater(string dir) => _ = Task.Run(async () =>
+    {
+        for (var i = 0; i < 10; i++)
+        {
+            await Task.Delay(1000).ConfigureAwait(false);
+            if (TryDelete(dir)) return;
+        }
+    });
+
+    private static bool TryDelete(string dir)
+    {
+        try
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;   // still in use; a later sweep gets it
+        }
+    }
+
+    /// <summary>
+    /// Once per run, before this run's first page: deletes the profiles earlier runs left behind
+    /// (a crash, or a delete that lost the race). Never while a page of this run is open.
+    /// </summary>
+    private static void SweepProfiles()
+    {
+        if (Interlocked.Exchange(ref _swept, 1) != 0) return;
+        try
+        {
+            if (!Directory.Exists(ProfilesRoot)) return;
+            foreach (var dir in Directory.EnumerateDirectories(ProfilesRoot)) TryDelete(dir);
+        }
+        catch (Exception)
+        {
+            // best effort
+        }
     }
 
     private static byte[] LoadHtml()

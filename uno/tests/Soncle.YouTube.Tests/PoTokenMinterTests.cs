@@ -191,10 +191,13 @@ public class PoTokenMinterTests
         Assert.Single(rig.Pages);
     }
 
-    [Fact]
-    public async Task AnInterpreterGivenAsAUrlIsFetchedFirst()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]   // an empty inline script is fetched too, like !SafeScriptWrappedValue in the JS
+    public async Task AnInterpreterGivenAsAUrlIsFetchedFirst(bool emptyInline)
     {
-        var rig = new Rig { CreateBody = CreateBody(null, new JsonArray("//www.google.com/js/bg/interp.js")) };
+        var inline = emptyInline ? JsonValue.Create("") : null;
+        var rig = new Rig { CreateBody = CreateBody(inline, new JsonArray("//www.google.com/js/bg/interp.js")) };
         await rig.Minter.MintAsync("v");
         Assert.Contains(rig.Requests, r => r.Url == "https://www.google.com/js/bg/interp.js" && r.Body is null);
         var run = rig.Page.Codes.Single(c => c.StartsWith("runBotGuard(", StringComparison.Ordinal));
@@ -393,6 +396,22 @@ public class PoTokenMinterTests
         rig.Minter.Reset();
         Assert.True(rig.Page.Disposed);
         Assert.Equal(Token("v", 2), await rig.Minter.MintAsync("v"));
+    }
+
+    [Fact]
+    public async Task AResetDuringInitDoesNotArmTheTwoMinuteCooldown()
+    {
+        var rig = new Rig { HoldCreate = new() };
+        var first = rig.Minter.MintAsync("v");
+        await Until(() => rig.Creates == 1, "no init");
+        rig.Minter.Reset();
+        await Assert.ThrowsAnyAsync<Exception>(() => first);
+        Assert.True(rig.Page.Disposed, "the reset init closed its page");
+
+        // the next caller starts a fresh init right away instead of failing fast
+        rig.HoldCreate = null;
+        Assert.Equal(Token("v", 2), await rig.Minter.MintAsync("v"));
+        Assert.Equal(2, rig.Pages.Count);
     }
 
     [Fact]

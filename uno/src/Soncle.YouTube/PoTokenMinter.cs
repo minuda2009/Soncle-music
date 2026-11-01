@@ -179,8 +179,12 @@ public sealed class PoTokenMinter
                     return Task.FromException<Minter>(new InvalidOperationException("PO token provider unavailable"));
                 var cts = new CancellationTokenSource();
                 _initCts = cts;
-                _starting = StartAsync(cts);
-                return _starting;
+                var starting = StartAsync(cts);
+                // every caller may have given up through WaitAsync(ct): observe a late fault
+                _ = starting.ContinueWith(static t => _ = t.Exception, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                _starting = starting;
+                return starting;
             }
         }
         finally
@@ -228,9 +232,12 @@ public sealed class PoTokenMinter
             _ = IdleLoopAsync(st);
             return st;
         }
-        catch
+        catch (Exception e)
         {
-            lock (_gate) _failedAt = _clock.NowMs;
+            // a Reset() during init is not a failure: no 2-minute cooldown for the next caller
+            // (the timeout cancels too, but throws TimeoutException, so it still arms it)
+            if (e is TimeoutException || !cts.IsCancellationRequested)
+                lock (_gate) _failedAt = _clock.NowMs;
             throw;
         }
         finally
@@ -254,7 +261,7 @@ public sealed class PoTokenMinter
             if (origin != Origin) _log("helper page origin is " + origin);
 
             var ch = BotGuard.ParseChallenge(await BgRequest(BotGuard.CreateUrl, ArrayOf(BotGuard.RequestKey), ct).ConfigureAwait(false));
-            if (ch.Script is null && ch.ResourceUrl is { } resource)
+            if (string.IsNullOrEmpty(ch.Script) && ch.ResourceUrl is { } resource)   // !SafeScriptWrappedValue in the JS
             {
                 var u = resource.StartsWith("//", StringComparison.Ordinal) ? "https:" + resource : resource;
                 var (status, text) = await _fetch(u, new Dictionary<string, string> { ["User-Agent"] = UserAgent }, null, ct).ConfigureAwait(false);

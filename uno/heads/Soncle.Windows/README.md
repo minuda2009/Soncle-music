@@ -139,6 +139,14 @@ Sound page, tray / close to tray, rail collapse, the other `Soncle.App` pages, `
    …s)`. A line `helper page origin is …` means the page did not get the youtube.com origin.
    Ten minutes later, without another search, the WebView2 child processes
    (`msedgewebview2.exe` under Soncle.Windows in Task Manager) should be gone.
+   While the page is open, `%TEMP%\Soncle-potoken` holds one folder (its throw-away profile);
+   a few seconds after the page closes it should be empty again, and nothing should appear next to
+   `Soncle.Windows.exe` (no `Soncle.Windows.exe.WebView2` folder).
+13. **The BotGuard page reaches nothing but YouTube's two BotGuard calls:** during step 12, open
+   Resource Monitor (`resmon`), Network tab, and tick `msedgewebview2.exe`: it should show no TCP
+   connections of its own (every request inside the page is answered with a 404 by the app; the
+   BotGuard calls go through `Soncle.Windows.exe`). A self-test that still says `ok` with that
+   blocking in place is the check that the page has what it needs.
 
 ## Measured (shell, `windows-latest`, 10 Oct 2026)
 

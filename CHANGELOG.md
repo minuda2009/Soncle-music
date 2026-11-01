@@ -43,8 +43,9 @@
   BotGuard check the same way the desktop app does, so the clients that need a token can be turned on
   once the Windows app can also read YouTube's player script. Until then the Windows preview keeps using
   only the clients that need neither. The Windows preview has the hidden page for it (WebView2, already on
-  every Windows 11 PC); it only opens for a self-test (`SONCLE_POTOKEN_SELFTEST=1`) and closes after 10
-  minutes without use.
+  every Windows 11 PC); it only opens for a self-test (`SONCLE_POTOKEN_SELFTEST=1`), closes after 10
+  minutes without use, and keeps nothing afterwards (its browser profile is a temporary folder that is
+  deleted when it closes).
 
 ## Unreleased: Soncle Preview for Windows plays songs (C# app)
 
