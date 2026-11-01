@@ -3,6 +3,7 @@ using Soncle.App;
 using Soncle.App.Playback;
 using Soncle.App.ViewModels;
 using Soncle.Core.Playback;
+using Soncle.YouTube;
 
 namespace Soncle.Windows.Playback;
 
