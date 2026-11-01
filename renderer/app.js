@@ -225,6 +225,7 @@ function makeLru(max) {
   const m = new Map();
   return {
     has: (k) => m.has(k),
+    delete: (k) => m.delete(k),
     get: (k) => { if (!m.has(k)) return undefined; const v = m.get(k); m.delete(k); m.set(k, v); return v; },
     set: (k, v) => { if (m.has(k)) m.delete(k); m.set(k, v); if (m.size > max) m.delete(m.keys().next().value); }
   };
@@ -1884,6 +1885,7 @@ function lyricsTools(source) {
   const btn = (label, title, fn) => h('button', { class: 'ly-btn', title, onclick: fn }, label);
   return h('div', { class: 'ly-tools' },
     h('span', { class: 'lyrics-src' }, source ? 'Lyrics from ' + source : ''),
+    versionsButton(),
     cardButton(),
     h('div', { class: 'ly-adj', title: 'Adjust lyrics timing for this song ( [ and ] keys )' },
       icon('ff'),
@@ -1893,6 +1895,34 @@ function lyricsTools(source) {
       btn('+0.1', 'Later ( ] )', () => adjustLyricsOffset(0.1)),
       btn('+0.5', 'Show lyrics 0.5 s later', () => adjustLyricsOffset(0.5)),
       btLyricsDelay() ? h('span', { class: 'bt-tag', title: 'Bluetooth delay compensation is applied' }, icon('bluetooth'), `+${Math.round(btLyricsDelay() * 1000)}ms`) : null));
+}
+
+// ---- lyric versions: the other LRCLIB versions of this song, and which one to use ----
+const lyricsNeedAttention = (L) => !!L && !L.chosen && (L.confident === false || L.issues?.length > 0);
+function versionsButton() {
+  const L = P.lyrics;
+  if (!L?.variants || L.variants.length < 2) return null;
+  const hint = lyricsNeedAttention(L);
+  return h('button', { class: 'ly-btn ly-versions' + (hint ? ' hint' : ''), title: hint ? 'Not sure this is the right version of the song: choose one' : 'Other versions of these lyrics', onclick: () => lyricsVersionsDialog() }, icon('lyrics'), hint ? 'Check version' : 'Versions');
+}
+function lyricsVersionsDialog() {
+  const L = P.lyrics, t = P.current;
+  if (!L?.variants || !t) return;
+  const mmss = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
+  const reasons = { 'runs-past-end': 'The timing of these lyrics runs past the end of this song, so it is probably another version.', 'ends-early': 'These lyrics end long before the song does; they may be a different or partial version.' };
+  const choose = async (id) => {
+    DB.lyricsChoice = DB.lyricsChoice || {};
+    if (id === null) delete DB.lyricsChoice[t.id]; else DB.lyricsChoice[t.id] = id;
+    persist('lyricsChoice');
+    lyricsCache.delete(t.id); closeModal();
+    await lyricsFor(t);
+  };
+  modal(h('div', { class: 'dialog lv-dialog' }, h('h3', null, 'Lyrics versions'),
+    h('div', { class: 'lv-note' }, (L.issues || []).map((i) => reasons[i]).filter(Boolean).join(' ') || (L.confident === false ? 'Several versions look alike. Pick the one that matches what you hear; Soncle remembers it for this song.' : 'Soncle picked the closest match. Choose another if the words or the timing are off.')),
+    h('div', { class: 'lv-list' }, L.variants.map((v) => h('button', { class: 'lv-row' + (v.id === L.id ? ' on' : ''), onclick: () => choose(v.id) },
+      h('div', { class: 'lv-main' }, h('b', null, v.title), h('span', null, [v.artist, v.album].filter(Boolean).join(' · '))),
+      h('div', { class: 'lv-side' }, h('span', null, mmss(v.duration)), h('span', { class: 'lv-tag' + (v.synced ? ' on' : '') }, v.synced ? 'Synced' : 'Text only'))))),
+    h('div', { class: 'd-actions' }, DB.lyricsChoice?.[t.id] !== undefined ? h('button', { class: 'text-btn', onclick: () => choose(null) }, 'Back to automatic') : null, h('button', { class: 'text-btn', onclick: closeModal }, 'Close'))));
 }
 
 // ---- lyric card: words in mixed sizes as an image or a silent video (for Reels and Stories) ----
@@ -3090,8 +3120,8 @@ async function lyricsFor(t) {
   P.lyrics = { loading: true };
   if (npLyrics()) renderLyrics();
   let res = null;
-  try { res = await api.lyrics(slim(t)); } catch {}
-  const val = res ? { lines: res.synced ? parseLrc(res.synced) : null, plain: res.plain, source: res.source } : { none: true };
+  try { res = await api.lyrics({ ...slim(t), lyricsId: DB.lyricsChoice?.[t.id] }); } catch {}
+  const val = res ? { lines: res.synced ? parseLrc(res.synced) : null, plain: res.plain, source: res.source, id: res.id, variants: res.variants || [], confident: res.confident !== false, chosen: !!res.chosen, issues: res.issues || [] } : { none: true };
   lyricsCache.set(t.id, val);
   if (P.current?.id !== t.id) return;
   P.lyrics = val;
@@ -3116,7 +3146,7 @@ function renderLyrics() {
   if (!L || L.loading) return panel.replaceChildren(loading());
   if (L.none || (!L.lines?.length && !L.plain)) return panel.replaceChildren(h('div', { class: 'lyrics-empty' }, icon('lyrics'), h('h3', null, 'No lyrics found'), h('div', null, 'Lyrics for this song aren’t available.')));
   if (!L.lines?.length) {
-    panel.replaceChildren(h('div', { class: 'lyrics plain unsynced' }, L.plain.split(/\n/).map((x) => h('div', { class: 'lyric-line' }, x || ' '))), h('div', { class: 'ly-tools' }, h('span', { class: 'lyrics-src' }, L.source ? 'Lyrics from ' + L.source : ''), cardButton()));
+    panel.replaceChildren(h('div', { class: 'lyrics plain unsynced' }, L.plain.split(/\n/).map((x) => h('div', { class: 'lyric-line' }, x || ' '))), h('div', { class: 'ly-tools' }, h('span', { class: 'lyrics-src' }, L.source ? 'Lyrics from ' + L.source : ''), versionsButton(), cardButton()));
     return;
   }
   const stage = h('div', { class: 'ly-stage' + (S().lyricsGlow ? ' glow' : '') });
@@ -4285,6 +4315,7 @@ async function init() {
   engine.setChannel({ mono: !!S().mono, balance: S().balance || 0 });
   if (S().outputDevice && S().outputDevice !== 'default') engine.sinkId = S().outputDevice;
   DB.lyricsOffsets = DB.lyricsOffsets || {};
+  DB.lyricsChoice = DB.lyricsChoice || {};
   DB.eqPresets = DB.eqPresets || [];
   DB.deviceProfiles = DB.deviceProfiles || {};
   applyAppearance();
