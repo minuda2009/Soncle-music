@@ -12,8 +12,9 @@
   "src/spotify.mjs": ["uno/src/Soncle.Services/Import.cs"],
   "src/preload.cjs": ["uno/src/Soncle.Core/Contracts"],
   "src/yt.mjs": ["uno/src/Soncle.YouTube"],
-  "src/botguard.mjs": ["uno/src/Soncle.YouTube"],
-  "src/potoken.mjs": ["uno/src/Soncle.YouTube"],
+  "src/botguard.mjs": ["uno/src/Soncle.YouTube/BotGuard.cs", "uno/src/Soncle.YouTube/PoTokenMinter.cs"],
+  "src/potoken.mjs": ["uno/src/Soncle.YouTube/PoTokenMinter.cs"],
+  "src/po_token.html": ["uno/src/Soncle.YouTube/PoTokenMinter.cs"],
   "src/streamproxy.mjs": ["uno/src/Soncle.Streams"],
   "mobile/android/app/src/main/java/com/minuda2009/soncle/SoncleStreams.java": ["uno/src/Soncle.Streams"]
 }

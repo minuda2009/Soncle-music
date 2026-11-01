@@ -39,6 +39,10 @@
 - What to check on Windows: time from picking a song to the first sound, a song over 20 minutes,
   seeking far ahead right after a song starts, and turning the network off and on mid-song.
   `uno/heads/Soncle.Windows/README.md` has the steps.
+- Under the hood (no change you can see yet): the C# app's proof-of-origin token code now runs Google's
+  BotGuard check the same way the desktop app does, so the clients that need a token can be turned on
+  once the Windows app can also read YouTube's player script. Until then the Windows preview keeps using
+  only the clients that need neither.
 
 ## Unreleased: Soncle Preview for Windows plays songs (C# app)
 

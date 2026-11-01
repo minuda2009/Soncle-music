@@ -66,14 +66,37 @@ public static class BotGuard
             cd = raw is JsonArray a && a.Count > 0 ? a[0] : null;
         }
         var arr2 = cd as JsonArray;
-        string? At(int i) => arr2 is not null && i < arr2.Count ? arr2[i]?.GetValue<string>() : null;
+        JsonNode? Node(int i) => arr2 is not null && i < arr2.Count ? arr2[i] : null;
+        string? At(int i) => Node(i) is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
+        // str(x): the first string in an array
         string? Str(JsonNode? x) => x is JsonArray inner ? inner.OfType<JsonValue>().FirstOrDefault(v => v.TryGetValue<string>(out _))?.GetValue<string>() : null;
-        var interp = arr2 is not null && arr2.Count > 1 ? arr2[1] : null;
-        var interpObj = interp as JsonObject;
-        return new Challenge(
-            At(0),
-            Str(interp),
-            interpObj?["privateDoNotAccessOrElseTrustedResourceUrlWrappedValue"]?.GetValue<string>(),
-            At(3), At(4), At(5), At(7));
+        return new Challenge(At(0), Str(Node(1)), Str(Node(2)), At(3), At(4), At(5), At(7));
+    }
+
+    /// <summary>The challenge as the object <c>runBotGuard(challengeData)</c> in po_token.html takes (the field names of <c>parseChallenge</c>).</summary>
+    public static JsonObject ChallengeJson(Challenge ch) => new()
+    {
+        ["messageId"] = ch.MessageId,
+        ["interpreterJavascript"] = new JsonObject
+        {
+            ["privateDoNotAccessOrElseSafeScriptWrappedValue"] = ch.Script,
+            ["privateDoNotAccessOrElseTrustedResourceUrlWrappedValue"] = ch.ResourceUrl,
+        },
+        ["interpreterHash"] = ch.InterpreterHash,
+        ["program"] = ch.Program,
+        ["globalName"] = ch.GlobalName,
+        ["clientExperimentsStateBlob"] = ch.ClientExperimentsStateBlob,
+    };
+
+    /// <summary>The integrity token's lifetime from GenerateIT's second field, seconds (<c>Number(it[1]) || 3600</c>).</summary>
+    public static int Ttl(JsonNode? field)
+    {
+        double n = 0;
+        if (field is JsonValue v)
+        {
+            if (v.GetValueKind() == JsonValueKind.Number) double.TryParse(v.ToJsonString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n);
+            else if (v.TryGetValue<string>(out var s) && double.TryParse(s.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var p)) n = p;
+        }
+        return double.IsFinite(n) && n != 0 ? (int)Math.Clamp(n, int.MinValue, int.MaxValue) : 3600;
     }
 }
