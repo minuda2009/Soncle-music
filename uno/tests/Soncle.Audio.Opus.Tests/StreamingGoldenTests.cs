@@ -26,7 +26,7 @@ public class StreamingGoldenTests
         var got = new List<float>(whole.InterleavedStereo.Length);
         for (var spins = 0; spins < 100_000; spins++)
         {
-            if (!source.DecodeComplete && source.DecodedEndFrame - source.Position < l.Length)
+            if (!source.DecodeComplete && source.DecodedEndFrame - source.Position < l.Length + StreamingOpusSource.ResumeRampFrames)
             {
                 await Task.Delay(1);
                 continue;

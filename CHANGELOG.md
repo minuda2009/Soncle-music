@@ -31,6 +31,8 @@
 - If the connection drops mid-song, the sound fades out once the downloaded part runs out, the player
   bar shows its spinner while it waits, and the song fades back in where it stopped when the network
   returns. Seeking far ahead of the download works too (that part is fetched straight away).
+- A song whose download fails before it starts shows "Couldn't play this song." instead of skipping, and
+  going back to an earlier song can no longer cut off the one playing.
 - What to check on Windows: time from picking a song to the first sound, a song over 20 minutes,
   seeking far ahead right after a song starts, and turning the network off and on mid-song.
   `uno/heads/Soncle.Windows/README.md` has the steps.

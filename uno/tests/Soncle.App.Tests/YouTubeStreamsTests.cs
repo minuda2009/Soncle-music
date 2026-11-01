@@ -74,7 +74,7 @@ public class YouTubeStreamsTests : IDisposable
         var s = (StreamingOpusSource)song;
         for (var spins = 0; spins < 5000; spins++)
         {
-            if (s.DecodedEndFrame - s.Position < 480 && !s.DecodeComplete) { await Task.Delay(2); continue; }
+            if (s.DecodedEndFrame - s.Position < 480 + StreamingOpusSource.ResumeRampFrames && !s.DecodeComplete) { await Task.Delay(2); continue; }
             var n = song.Read(l, r, 480);
             total += n;
             if (n < 480) return total;

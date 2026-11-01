@@ -21,7 +21,9 @@ public readonly record struct SongProgress(long Have, long Length, bool Done, bo
 /// <item>an expired URL (403) is refreshed for the same length only;</item>
 /// <item>a seek far past what has arrived is served straight from the network;</item>
 /// <item>a song fetched ahead of time waits until the one playing is complete;</item>
-/// <item>the cache keeps four songs and is cleared at start.</item>
+/// <item>the cache keeps four songs and is cleared at start. The oldest goes first, where opening
+/// a reader or registering again makes a song new, and a song with an open reader (the one
+/// playing streams from it for as long as it is loaded) is never evicted.</item>
 /// </list>
 /// </summary>
 public sealed class SongDownloader
@@ -66,6 +68,7 @@ public sealed class SongDownloader
                 // download; the download task is already in flight, so don't start a second one
                 existing.Source = source;
                 existing.Pump();
+                Touch(songKey);
                 return;
             }
             Evict();
@@ -101,8 +104,13 @@ public sealed class SongDownloader
     public Stream OpenRead(string songKey, long position)
     {
         Song? song;
-        lock (_gate) _songs.TryGetValue(songKey, out song);
-        if (song is null) throw new KeyNotFoundException($"song '{songKey}' is not registered");
+        lock (_gate)
+        {
+            if (!_songs.TryGetValue(songKey, out song)) throw new KeyNotFoundException($"song '{songKey}' is not registered");
+            // in use: the newest, and pinned until the reader is disposed
+            Touch(songKey);
+            song._readers++;
+        }
 
         // The reader makes this song the priority, so a prefetch waits for it to finish.
         song.MarkWanted();
@@ -110,6 +118,17 @@ public sealed class SongDownloader
         if (!song.Cancelled && song.Failure is null && position <= song.Have + Ahead && position <= song.Length)
             return new CacheReadStream(song, position);
         return new NetworkReadStream(song, position);
+    }
+
+    private void Touch(string songKey)
+    {
+        _order.Remove(songKey);
+        _order.Add(songKey);
+    }
+
+    private void Release(Song song)
+    {
+        lock (_gate) song._readers--;
     }
 
     private string PathFor(string songKey)
@@ -122,11 +141,14 @@ public sealed class SongDownloader
 
     private void Evict()
     {
-        // keep Keep songs; cancel the oldest first (never the one just registered)
+        // keep Keep songs; cancel the oldest first (never the one just registered, never one
+        // that is being read: then the cache holds more for a while)
         while (_order.Count >= Keep)
         {
-            var oldest = _order[0];
-            _order.RemoveAt(0);
+            var i = _order.FindIndex(k => !_songs.TryGetValue(k, out var s) || s._readers == 0);
+            if (i < 0) return;
+            var oldest = _order[i];
+            _order.RemoveAt(i);
             if (_songs.Remove(oldest, out var old)) old.Cancel();
         }
     }
@@ -163,6 +185,7 @@ public sealed class SongDownloader
         private readonly CancellationTokenSource _cts = new();
 
         internal long _have;
+        internal int _readers;   // open read streams (under the gate)
         internal bool _done;
         internal bool _cancelled;
         internal string? _failure;
@@ -351,6 +374,7 @@ public sealed class SongDownloader
         private readonly long _end;
         private long _pos;
         private FileStream? _file;
+        private int _released;
 
         internal CacheReadStream(Song song, long start)
         {
@@ -411,6 +435,7 @@ public sealed class SongDownloader
         protected override void Dispose(bool disposing)
         {
             if (disposing) _file?.Dispose();
+            if (Interlocked.Exchange(ref _released, 1) == 0) _song._owner.Release(_song);
             base.Dispose(disposing);
         }
     }
@@ -428,6 +453,7 @@ public sealed class SongDownloader
         private Stream? _current;
         private int _failures;
         private int _emptyReopens;
+        private int _released;
 
         internal NetworkReadStream(Song song, long start)
         {
@@ -520,6 +546,7 @@ public sealed class SongDownloader
         protected override void Dispose(bool disposing)
         {
             if (disposing) _current?.Dispose();
+            if (Interlocked.Exchange(ref _released, 1) == 0) _song._owner.Release(_song);
             base.Dispose(disposing);
         }
     }

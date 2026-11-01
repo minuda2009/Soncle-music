@@ -155,7 +155,7 @@ public class StreamingOpusSourceTests
         while (all.Count / 2 < maxFrames)
         {
             var want = (int)Math.Min(block, maxFrames - all.Count / 2);
-            await Ahead(s, want);
+            await Ahead(s, want + StreamingOpusSource.ResumeRampFrames);   // a block plus the fade-out reserve
             var n = s.Read(l, r, want);
             for (var i = 0; i < n; i++) { all.Add(l[i]); all.Add(r[i]); }
             if (n < want) break;
@@ -241,17 +241,24 @@ public class StreamingOpusSourceTests
         Assert.InRange(s.LengthFrames!.Value, 7 * Sr, 9 * Sr);
     }
 
+    /// <summary>Waits until the decoder has used up what has arrived; returns the decoded end.</summary>
+    private static async Task<long> Settled(StreamingOpusSource s)
+    {
+        long last;
+        do { last = s.DecodedEndFrame; await Task.Delay(30); } while (s.DecodedEndFrame != last);
+        return last;
+    }
+
     [Fact]
     public async Task AnUnderrunPlaysSilenceReportsBufferingAndFadesBackIn()
     {
+        const int R = StreamingOpusSource.ResumeRampFrames;
         var bytes = Bytes("flow/sample.webm");
         var d = new FakeDownload(bytes) { Have = 12 * 1024 };
         using var s = Source(d, new ConstCodec());
         await s.Ready;
-        // let the decoder use up what has arrived
-        long last;
-        do { last = s.DecodedEndFrame; await Task.Delay(30); } while (s.DecodedEndFrame != last);
-        Assert.True(last > 480);
+        var last = await Settled(s);
+        Assert.True(last > 4 * R);
 
         var l = new float[480];
         var r = new float[480];
@@ -259,30 +266,189 @@ public class StreamingOpusSourceTests
         while (!s.IsBuffering && blocks++ < 1000) Assert.Equal(480, s.Read(l, r, 480));
         Assert.True(s.IsBuffering);
         Assert.False(s.Ended);
-        Assert.Equal(last, s.Position);            // the position doesn't run on through the silence
-        var n = (int)(last % 480);
-        if (n > 1)
-        {
-            Assert.True(l[n - 1] < 0.01f, "faded out before the gap");
-            Assert.True(l[0] > l[n - 1]);
-        }
+        // the block that ran low faded out over the whole reserve, from full level to silence
+        Assert.True(l[0] > ConstCodec.Level * 0.99f, $"fade starts at {l[0]}");
         Assert.Equal(0f, l[479]);
+        for (var i = 1; i < 480; i++) Assert.True(l[i] < l[i - 1], "a fade, not a step");
+        // what is left of the reserve stays in the ring for after the stall
+        Assert.InRange(s.Position, last - R, last);
+        var stalledAt = s.Position;
 
-        // still dry: a block of silence, still buffering
+        // still dry: a block of silence, still buffering, the position doesn't run on
         Assert.Equal(480, s.Read(l, r, 480));
         Assert.All(l, x => Assert.Equal(0f, x));
         Assert.True(s.IsBuffering);
-        Assert.Equal(last, s.Position);
+        Assert.Equal(stalledAt, s.Position);
 
         // the download catches up: the audio comes back with a fade, no jump
         d.Have = bytes.Length;
-        await Ahead(s, 960);
+        await Ahead(s, 960 + R);
         Assert.Equal(480, s.Read(l, r, 480));
         Assert.False(s.IsBuffering);
         Assert.True(l[0] <= ConstCodec.Level / 400, $"first resumed sample {l[0]}");
         Assert.Equal(ConstCodec.Level, l[479], 6);
         for (var i = 1; i < 480; i++) Assert.True(Math.Abs(l[i] - l[i - 1]) < ConstCodec.Level / 200, "a ramp, not a step");
-        Assert.Equal(last + 480, s.Position);
+        Assert.Equal(stalledAt + 480, s.Position);
+    }
+
+    [Theory]
+    [InlineData(480)]
+    [InlineData(128)]
+    [InlineData(1000)]
+    [InlineData(64)]
+    [InlineData(2048)]
+    public async Task AStallNeverStepsTheGainWhereverItFallsOnTheBlockGrid(int block)
+    {
+        var bytes = Bytes("flow/sample.webm");
+        var d = new FakeDownload(bytes) { Have = 12 * 1024 };
+        using var s = Source(d, new ConstCodec());
+        await s.Ready;
+        var last = await Settled(s);
+
+        var l = new float[block];
+        var r = new float[block];
+        var played = new List<float>();
+        void Play(int count)
+        {
+            for (var b = 0; b < count; b++)
+            {
+                Assert.Equal(block, s.Read(l, r, block));
+                played.AddRange(l);
+            }
+        }
+        var blocks = 0;
+        while (!s.IsBuffering && blocks++ < 10_000) Play(1);
+        Play(2 + 2 * StreamingOpusSource.ResumeRampFrames / block);   // the fade ends, then silence
+        Assert.True(s.IsBuffering);
+        Assert.Equal(0f, played[^1]);
+        Assert.InRange(s.Position, last - block, last);   // less than a block stays in the ring for later
+
+        d.Have = bytes.Length;
+        var resume = 2 + StreamingOpusSource.ResumeRampFrames / block;   // the whole fade-in and a bit
+        await Ahead(s, (resume + 1) * block + StreamingOpusSource.ResumeRampFrames);
+        Play(resume);
+        Assert.False(s.IsBuffering);
+        Assert.Equal(ConstCodec.Level, played[^1], 6);
+
+        // full level -> faded out -> silence -> faded in, with no step anywhere (the song's start,
+        // sample 0, is Engine.Load's fade-in)
+        for (var i = 1; i < played.Count; i++)
+            Assert.True(Math.Abs(played[i] - played[i - 1]) <= ConstCodec.Level / 400, $"a step of {played[i] - played[i - 1]} at frame {i} (block {block})");
+    }
+
+    /// <summary>An opener over <paramref name="d"/> that fails while <see cref="Broken"/> is set, or (cache reads) past <see cref="FailAt"/>.</summary>
+    private sealed class Flaky(FakeDownload d)
+    {
+        public volatile bool Broken;
+        public long FailAt = long.MaxValue;
+        public Stream Open(long offset)
+        {
+            if (Broken) throw new IOException("network gone");
+            return new Failing(d.Open(offset), offset, this);
+        }
+
+        private sealed class Failing(Stream inner, long pos, Flaky f) : Stream
+        {
+            private long _pos = pos;
+            public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                var room = Volatile.Read(ref f.FailAt) - _pos;
+                if (room <= 0) throw new IOException("stopped");
+                var n = await inner.ReadAsync(buffer[..(int)Math.Min(buffer.Length, room)], cancellationToken);
+                _pos += n;
+                return n;
+            }
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => inner.Length;
+            public override long Position { get => _pos; set => throw new NotSupportedException(); }
+            public override void Flush() { }
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing) inner.Dispose();
+                base.Dispose(disposing);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ADownloadThatFailsBeforeTheFirstAudioFaultsReady()
+    {
+        var bytes = Bytes("flow/sample.webm");
+        var head = new WebmOpusStreamReader(new MemoryStream(bytes));
+        head.ReadHead();
+        var d = new FakeDownload(bytes) { Have = bytes.Length };
+        // the head arrives, then the download stops a few bytes into the first cluster
+        var flaky = new Flaky(d) { FailAt = head.FirstCluster + 200 };
+        using var s = new StreamingOpusSource(flaky.Open, new HashCodec());
+        var e = await Assert.ThrowsAsync<IOException>(() => s.Ready);
+        Assert.Equal("stopped", e.Message);
+    }
+
+    [Fact]
+    public async Task AFailureMidSongEndsItAndASeekToTheSameSpotRetries()
+    {
+        var bytes = Bytes("flow/sample.webm");
+        var whole = OpusWebmDecoder.Decode(bytes, new HashCodec());
+        var d = new FakeDownload(bytes) { Have = bytes.Length };
+        var flaky = new Flaky(d) { FailAt = bytes.Length / 2 };
+        using var s = new StreamingOpusSource(flaky.Open, new HashCodec());
+        await s.Ready;
+        var got = await ReadAsync(s);
+        Assert.True(s.Ended);
+        Assert.NotNull(s.Failure);
+        Assert.True(got.Length / 2 < whole.Frames);
+        SameSamples(whole.InterleavedStereo, 0, got);
+
+        // a seek fails right away (no network), before anything is read
+        flaky.Broken = true;
+        s.Seek(2 * Sr);
+        await Until(() => s.DecodeComplete, "the failed seek never ended");
+        Assert.Equal("network gone", s.Failure);
+        Assert.Equal(0, s.Read(new float[480], new float[480], 480));
+
+        // the network is back: the same seek again retries (not swallowed as a repeat)
+        flaky.Broken = false;
+        flaky.FailAt = long.MaxValue;
+        s.Seek(2 * Sr);
+        SameSamples(whole.InterleavedStereo, 2 * Sr, await ReadAsync(s, Sr));
+        Assert.Null(s.Failure);
+    }
+
+    [Fact]
+    public async Task ASeekPastTheRealEndDoesNotBecomeTheLength()
+    {
+        var bytes = Bytes("flow/sample.webm");
+        var whole = OpusWebmDecoder.Decode(bytes, new HashCodec());
+        var d = new FakeDownload(bytes) { Have = bytes.Length };
+        // an overestimate (a slider maximum past the end)
+        using var s = new StreamingOpusSource(d.Open, new HashCodec(), estimatedFrames: 30 * Sr);
+        await s.Ready;
+        s.Seek(20 * Sr);
+        Assert.Empty(await ReadAsync(s));
+        Assert.True(s.Ended);
+        Assert.Equal(whole.Frames, s.LengthFrames);
+
+        s.Seek(Sr);
+        Assert.Equal(whole.Frames - Sr, (await ReadAsync(s)).Length / 2);
+        Assert.Equal(whole.Frames, s.LengthFrames);
+    }
+
+    [Fact]
+    public async Task DisposeWhileTheHeadIsStillDownloadingEndsTheLoad()
+    {
+        var bytes = Bytes("flow/sample.webm");
+        var d = new FakeDownload(bytes) { Have = 16 };   // not even the EBML header
+        var s = Source(d, new HashCodec());
+        await Task.Delay(20);
+        Assert.False(s.Ready.IsCompleted);
+        s.Dispose();
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => s.Ready.WaitAsync(TimeSpan.FromSeconds(5)));
     }
 
     [Fact]

@@ -58,7 +58,13 @@ Streaming start, in short (`uno/src/Soncle.Audio/StreamingOpusSource.cs`):
   before it; a seek **far past the download** is read straight from the network at that byte
   offset while the cache keeps filling. Files without Cues in front re-read from the first cluster;
 - the length shown is the file's Duration until the real end is decoded, and only the real end
-  ends a song, so an estimate can't cut one short.
+  ends a song, so an estimate can't cut one short;
+- a download that fails before the first audio shows "Couldn't play this song." (it doesn't skip
+  silently); one that fails mid-song ends the song there, and seeking tries again;
+- the song playing is never dropped from the download cache while it streams from it (the cache
+  keeps four songs, oldest-used first);
+- the decode thread sleeps while the ring is full and waits for a seek at the end, instead of
+  polling: 16 idle songs went from about 5.7 % to 0.4 % of one core in the Linux test harness.
 
 Playback CPU and memory are not measured yet: pending on minuda2009's PC (step 7 below).
 

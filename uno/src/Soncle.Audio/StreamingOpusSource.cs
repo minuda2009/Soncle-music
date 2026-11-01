@@ -11,10 +11,12 @@ namespace Soncle.Audio;
 /// DiscardPadding, mono as dual mono), so a song read start to end is sample-for-sample the
 /// whole-file decode.
 /// <list type="bullet">
-/// <item><see cref="Read"/> never blocks, locks, allocates or touches the network. When the ring
-/// is dry before the end it fades the last frames out, plays silence, reports
-/// <see cref="IsBuffering"/> and fades back in over <see cref="ResumeRampFrames"/> when audio is
-/// there again (so an underrun never clicks).</item>
+/// <item><see cref="Read"/> never blocks, locks, allocates or touches the network. It holds back
+/// <see cref="ResumeRampFrames"/> frames before the end, so when the ring runs low it fades out
+/// over that reserve (across blocks if they are short), plays silence, reports
+/// <see cref="IsBuffering"/> and fades back in over <see cref="ResumeRampFrames"/> once a block
+/// plus the reserve is there again. However the stall falls on the block grid, the gain never
+/// steps.</item>
 /// <item><see cref="Seek"/> is lock-free: it bumps a request generation (a seqlock with the
 /// frame); the decode thread notices it, aborts a read that waits for bytes, reopens the bytes at
 /// the cluster of the last cue at least <see cref="PreRollSamples"/> before the target (the start
@@ -26,8 +28,12 @@ namespace Soncle.Audio;
 /// the estimate (Info Duration, or the caller's), never less than what is decoded. The end is
 /// <see cref="Ended"/>, so an estimate that is too short never ends the song early.</item>
 /// </list>
-/// A failure after the start (the download gave up, a damaged packet) ends the song where it is
-/// (<see cref="Failure"/> says why); a seek tries again.
+/// A failure before the first audio faults <see cref="Ready"/> (the song can't be loaded). A
+/// failure after it (the download gave up, a damaged packet) ends the song where it is
+/// (<see cref="Failure"/> says why); a seek, also to the same spot, tries again.
+/// <para>The decode thread doesn't poll: with the ring full it sleeps until about a quarter of it
+/// has played (up to <see cref="MaxIdleMs"/> at a time), at the end or after a failure it waits for
+/// a <see cref="Seek"/> or <see cref="Dispose"/>, which wake it (also out of a wait for bytes).</para>
 /// </summary>
 /// <remarks>
 /// Threading: <see cref="Read"/>, <see cref="Seek"/> and the <see cref="Position"/> setter are the
@@ -44,7 +50,11 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     public const int PreRollSamples = 3840;
     /// <summary>The fade-in after an underrun and the fade-out before one, frames (10 ms).</summary>
     public const int ResumeRampFrames = 480;
-    private const int IdleMs = 2;
+    /// <summary>Audio decoded before <see cref="Ready"/>, frames (100 ms: a few blocks plus the fade-out reserve).</summary>
+    public const int ReadyFrames = 4800;
+    /// <summary>The longest the decode thread sleeps between checks when nothing wakes it, ms.</summary>
+    public const int MaxIdleMs = 50;
+    private const int ByteWaitMs = 250;
 
     private readonly Func<long, Stream> _open;
     private readonly IOpusDecoderFactory _codec;
@@ -55,6 +65,8 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     private readonly int _capacity;
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Thread _thread;
+    private readonly AutoResetEvent _wake = new(false);   // Seek / Dispose -> decode thread
+    private readonly WaitHandle[] _waits = new WaitHandle[2];
 
     // request (consumer -> producer): a seqlock, odd while being written
     private long _reqSeq;
@@ -65,7 +77,6 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     private long _segStartFrame;
     private long _write;
     private long _eosGen = -1;
-    private long _eosWrite;
     private long _exactLength = -1;
     private long _infoFrames = -1;
     private long _decodedEnd;
@@ -80,7 +91,10 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     private bool _adopted;
     private long _pos;
     private long _sinceSeek;
-    private int _rampLeft;
+    private int _rampLeft;   // fade-in frames still to go
+    private int _fadeLen;    // the fade-out under way (0 = none)
+    private int _fadeLeft;
+    private bool _dry;       // faded out, silent until a block plus the reserve is decoded
 
     /// <param name="open">Opens the song's bytes at an absolute offset (reads may wait for bytes still on the way).</param>
     /// <param name="codec">The Opus codec.</param>
@@ -99,11 +113,15 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
         _capacity = cap;
         _mask = cap - 1;
         _ring = new float[cap * 2];
+        _waits[1] = _wake;
         _thread = new Thread(Run) { IsBackground = true, Name = "Soncle decode-ahead" };
         _thread.Start();
     }
 
-    /// <summary>Done once the head is parsed and the first audio is decoded (or the song turned out empty); faults when the file can't play.</summary>
+    /// <summary>
+    /// Done once the head is parsed and the first <see cref="ReadyFrames"/> are decoded (or the song
+    /// ended sooner); faults when the file can't play or its bytes fail before that.
+    /// </summary>
     public Task Ready => _ready.Task;
 
     public int SampleRate => SampleRate48k;
@@ -165,8 +183,9 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
     public void Seek(long frame)
     {
         frame = Math.Max(0, frame);
-        // idempotent: the renderer and Engine.Load seek to the same frame up to three times
-        if (frame == _pos && _sinceSeek == 0) return;
+        // idempotent: the renderer and Engine.Load seek to the same frame up to three times; but
+        // not once that generation has ended (e.g. failed), so a seek to the same spot retries
+        if (frame == _pos && _sinceSeek == 0 && Volatile.Read(ref _eosGen) != _gen) return;
         var s = _reqSeq;
         Interlocked.Exchange(ref _reqSeq, s + 1);
         Interlocked.Exchange(ref _reqFrame, frame);
@@ -175,8 +194,12 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
         _adopted = false;
         Volatile.Write(ref _pos, frame);
         _sinceSeek = 0;
+        _rampLeft = 0;
+        _fadeLen = _fadeLeft = 0;
+        _dry = false;
         _ended = false;
         _buffering = true;   // until the decoder has audio at the new spot
+        Wake();
     }
 
     /// <summary>Copies decoded audio; never blocks or allocates. Returns <paramref name="frames"/> except at the real end.</summary>
@@ -196,57 +219,102 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
             eos = Volatile.Read(ref _eosGen) == _gen;
             avail = Volatile.Read(ref _write) - _readIdx;
         }
-        var n = (int)Math.Min(frames, avail);
+        // enough for this block while keeping the fade-out reserve (none needed at the end)
+        var enough = eos || avail >= frames + ResumeRampFrames;
+
+        if (_dry)
+        {
+            if (!enough) return Silence(left, right, 0, frames);
+            _dry = false;
+            _rampLeft = ResumeRampFrames;
+        }
+
+        if (_fadeLen == 0)
+        {
+            if (enough)
+            {
+                var n = Copy(left, right, 0, (int)Math.Min(frames, avail));
+                if (n == frames)
+                {
+                    _buffering = false;
+                    return n;
+                }
+                // the real end
+                _ended = true;
+                _buffering = false;
+                return n;
+            }
+            // running low: fade out over what is left of the reserve, then silence
+            _fadeLen = _fadeLeft = (int)Math.Min(ResumeRampFrames, avail);
+            _buffering = true;
+            if (_fadeLen == 0)
+            {
+                _dry = true;
+                return Silence(left, right, 0, frames);
+            }
+        }
+
+        // fading out (possibly over several short blocks); the fade-in, if still running, goes on underneath
+        var k = Copy(left, right, 0, Math.Min(frames, _fadeLeft));
+        for (var i = 0; i < k; i++)
+        {
+            var g = (_fadeLeft - 1 - i) / (float)_fadeLen;
+            left[i] *= g; right[i] *= g;
+        }
+        _fadeLeft -= k;
+        _buffering = true;
+        if (_fadeLeft > 0) return k;   // k == frames
+        _fadeLen = 0;
+        _dry = true;
+        return Silence(left, right, k, frames);
+    }
+
+    /// <summary>Copies <paramref name="count"/> ring frames to [at, at + count) and applies the fade-in.</summary>
+    private int Copy(Span<float> left, Span<float> right, int at, int count)
+    {
         var read = _readIdx;
         var ring = _ring;
-        for (var i = 0; i < n; i++)
+        for (var i = 0; i < count; i++)
         {
-            var at = (int)((read + i) & _mask) * 2;
-            left[i] = ring[at];
-            right[i] = ring[at + 1];
+            var r = (int)((read + i) & _mask) * 2;
+            left[at + i] = ring[r];
+            right[at + i] = ring[r + 1];
         }
-        if (_rampLeft > 0 && n > 0)
+        if (_rampLeft > 0)
         {
-            // fading back in after an underrun
-            var k = Math.Min(n, _rampLeft);
+            var k = Math.Min(count, _rampLeft);
             for (var i = 0; i < k; i++)
             {
                 var g = (ResumeRampFrames - _rampLeft + 1) / (float)ResumeRampFrames;
-                left[i] *= g; right[i] *= g;
+                left[at + i] *= g; right[at + i] *= g;
                 _rampLeft--;
             }
         }
-        Volatile.Write(ref _readIdx, read + n);
-        Volatile.Write(ref _pos, _pos + n);
-        _sinceSeek += n;
+        Volatile.Write(ref _readIdx, read + count);
+        Volatile.Write(ref _pos, _pos + count);
+        _sinceSeek += count;
+        return count;
+    }
 
-        if (n == frames)
-        {
-            _buffering = false;
-            return n;
-        }
-        if (eos)
-        {
-            _ended = true;
-            _buffering = false;
-            return n;
-        }
-
-        // underrun: fade out what we have, then silence until the decoder catches up
-        var tail = Math.Min(n, ResumeRampFrames);
-        for (var i = 0; i < tail; i++)
-        {
-            var g = (tail - 1 - i) / (float)tail;
-            left[n - tail + i] *= g; right[n - tail + i] *= g;
-        }
-        left[n..frames].Clear();
-        right[n..frames].Clear();
-        _rampLeft = ResumeRampFrames;
+    private int Silence(Span<float> left, Span<float> right, int from, int frames)
+    {
+        left[from..frames].Clear();
+        right[from..frames].Clear();
         _buffering = true;
         return frames;
     }
 
-    public void Dispose() => _disposed = true;
+    public void Dispose()
+    {
+        _disposed = true;
+        Wake();
+    }
+
+    private void Wake()
+    {
+        // the decode thread disposes the event when it ends; a late Seek may race with that
+        try { _wake.Set(); } catch (ObjectDisposedException) { }
+    }
 
     // ------------------------------------------------------------------ producer (decode thread)
 
@@ -278,7 +346,9 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
         var vt = stream.ReadAsync(buffer, _cts.Token);
         if (vt.IsCompletedSuccessfully) return vt.Result;
         var t = vt.AsTask();
-        while (!((IAsyncResult)t).AsyncWaitHandle.WaitOne(IdleMs * 5))
+        _waits[0] = ((IAsyncResult)t).AsyncWaitHandle;
+        // woken by the bytes, or by Seek / Dispose
+        while (WaitHandle.WaitAny(_waits, ByteWaitMs) != 0)
         {
             if (!ShouldStop) continue;
             _cts.Cancel();
@@ -335,6 +405,7 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
             long t0Ns = -1;                              // the first packet's time (the stream's sample 0)
             var counterFromTime = false;
             var eos = false;
+            long streamEnd = -1;                         // stream sample after the last kept one (-1 = no packet yet)
             _curGen = 0;
             PublishSegment(0, 0);
             _interruptible = true;
@@ -348,6 +419,8 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
                     {
                         _curGen = g;
                         eos = false;
+                        streamEnd = -1;
+                        _failure = null;
                         skipTo = f + head.PreSkip;
                         var (pos, fromCue) = ClusterFor(reader, skipTo, t0Ns);
                         if (fromCue && t0Ns < 0) t0Ns = reader.Cues![0].TimeNs;
@@ -356,19 +429,33 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
                         PublishSegment(g, f);
                         Reopen(pos);
                         reader.Reopen(ReadBytes, pos);
-                        dec.Dispose();
+                        dec?.Dispose();
+                        dec = null;   // not disposed twice (finally) if Create throws
                         dec = _codec.Create(SampleRate48k, ch);
                         continue;
                     }
-                    if (eos || FreeFrames() < OpusToc.MaxSamples)
+                    if (eos)
                     {
-                        Thread.Sleep(IdleMs);
+                        // nothing to do until a seek or Dispose
+                        _wake.WaitOne(ByteWaitMs);
+                        continue;
+                    }
+                    if (FreeFrames() < OpusToc.MaxSamples)
+                    {
+                        // full: sleep until about a quarter of the ring has played, then decode a burst
+                        var need = _capacity / 4 - FreeFrames();
+                        _wake.WaitOne((int)Math.Clamp(need * 1000 / SampleRate48k, 2, MaxIdleMs));
+                        while (FreeFrames() < _capacity / 4 && !_disposed && Volatile.Read(ref _reqSeq) == _curGen)
+                        {
+                            need = _capacity / 4 - FreeFrames();
+                            _wake.WaitOne((int)Math.Clamp(need * 1000 / SampleRate48k, 2, MaxIdleMs));
+                        }
                         continue;
                     }
                     if (!reader.Next(out var packet, out var timeNs, out var discardNs))
                     {
                         eos = true;
-                        PublishEnd(failed: false);
+                        PublishEnd(failed: false, streamEnd < 0 ? -1 : Math.Max(0, streamEnd - head.PreSkip));
                         continue;
                     }
                     if (t0Ns < 0) t0Ns = timeNs;
@@ -382,11 +469,18 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
                     }
                     // a packet we cannot size (0 samples) is skipped, like an empty one
                     if (samples == 0) continue;
+                    if (dec is null) throw new InvalidOperationException("no Opus decoder");   // its Create failed; a seek retries
                     var n = dec.Decode(packet.Span, pcm, OpusToc.MaxSamples);
                     if (n <= 0) throw new InvalidDataException($"the Opus decoder refused a packet (code {n})");
                     var from = counter < skipTo ? (int)Math.Min(n, skipTo - counter) : 0;
                     var to = n;
-                    if (discardNs > 0) to = (int)Math.Max(from, n - discardNs * SampleRate48k / 1_000_000_000L);
+                    var keep = n;
+                    if (discardNs > 0)
+                    {
+                        keep = (int)Math.Max(0, n - discardNs * SampleRate48k / 1_000_000_000L);
+                        to = Math.Max(from, keep);
+                    }
+                    streamEnd = counter + keep;
                     counter += n;
                     var w = _write;
                     for (var i = from; i < to; i++, w++)
@@ -397,15 +491,17 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
                     }
                     Volatile.Write(ref _write, w);
                     Volatile.Write(ref _decodedEnd, _segStartFrame + (w - _segStart));
-                    if (w > _segStart) _ready.TrySetResult();
+                    if (w - _segStart >= ReadyFrames) _ready.TrySetResult();
                 }
                 catch (Interrupted) { /* a seek or Dispose: the loop picks it up */ }
                 catch (Exception e) when (e is not Interrupted)
                 {
                     if (_disposed) break;
-                    // the song ends where it is; a later seek tries again
                     _failure = e.Message;
                     eos = true;
+                    // before the first audio the song can't be loaded; after it, the song ends
+                    // where it is and a later seek tries again
+                    _ready.TrySetException(e);
                     PublishEnd(failed: true);
                 }
             }
@@ -421,6 +517,7 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
             CloseStream();
             dec?.Dispose();
             _cts.Dispose();
+            _wake.Dispose();
             _ready.TrySetException(new ObjectDisposedException(nameof(StreamingOpusSource)));
         }
     }
@@ -451,10 +548,18 @@ public sealed class StreamingOpusSource : IBufferingSource, IDisposable
         Volatile.Write(ref _segGen, gen);
     }
 
-    private void PublishEnd(bool failed)
+    /// <param name="failed">Decoding stopped on an error (the length stays unknown).</param>
+    /// <param name="endFrame">Where the decoded packets end, frames (-1 = no packet decoded), for a segment that wrote nothing (a seek past the end).</param>
+    private void PublishEnd(bool failed, long endFrame = -1)
     {
-        if (!failed && _exactLength < 0) Volatile.Write(ref _exactLength, _segStartFrame + (_write - _segStart));
-        Volatile.Write(ref _eosWrite, _write);
+        if (!failed && _exactLength < 0)
+        {
+            var written = _write - _segStart;
+            // a seek past the real end writes nothing: the end is where its packets stopped, not
+            // the seek target (and unknown if it decoded none)
+            var exact = written > 0 ? _segStartFrame + written : endFrame >= 0 ? Math.Min(endFrame, _segStartFrame) : -1;
+            if (exact >= 0) Volatile.Write(ref _exactLength, exact);
+        }
         Volatile.Write(ref _eosGen, _curGen);
         _ready.TrySetResult();
     }
