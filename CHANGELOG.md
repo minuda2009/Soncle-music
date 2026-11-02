@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased: the C# app honours your sound settings (EQ, loudness, width)
+
+- **Your EQ and sound settings now apply in the C# app.** The preview read `library.json` but
+  played everything flat: the 10-band EQ, the preamp, loudness compensation, stereo width,
+  crossfeed and mono/balance are now read from the library file and put on the engine before a
+  song's first block, so a song sounds the same as in the desktop and Android apps.
+- The defaults are the same as the JS apps (normalise on, −14 LUFS, no EQ, width 100 %, no
+  crossfeed), so nothing changes for a fresh install.
+- The limiter stays last whatever the settings: a test drives +12 dB on every EQ band with no
+  preamp and checks the output neither clips nor goes silent.
+- Both heads use their own `library.json` (the previews never read the shipping app's settings).
+
+## Unreleased: Soncle Uno for Android plays songs (C# app)
+
+- **The Android preview build can now search and play.** It was the shell plus a test sound; it now
+  has a **search box**, a **results list** and a working **player bar** (play/pause, previous/next
+  and a seek bar), and it plays real songs through the same path the Windows preview runs: search →
+  resolve → stream while it downloads → the C# engine (limiter last) → the phone's audio output.
+- **One composition root for both heads.** The Windows head's playback wiring moved into the shared
+  `Soncle.App` (`PlaybackSession`); each head now supplies only its sound device and its own cache
+  folder. That is the point of the migration, so Windows and Android can no longer drift apart.
+- Still signed out, and still **no account and no cookies**: the same anonymous requests the JS apps
+  make. The app opens offline — nothing touches the network until the first search.
+- Not there yet, unchanged from before: only songs YouTube offers as WebM/Opus play (AAC-only ones
+  say they can't be played), no PO token and no deciphering (so only the two clients that need
+  neither are used), the pages themselves are still placeholders, and there are no lock-screen or
+  notification controls yet (sound may stop in the background). Playback CPU and memory on a phone
+  are still to be measured.
+- What to check on your phone: type a song, tap it, and check that it starts, that play/pause,
+  previous/next and the seek bar work, and that nothing stutters.
+
 ## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done
 
 - **The C# port of Soncle's services is finished.** `Soncle.Services` now also has the **local

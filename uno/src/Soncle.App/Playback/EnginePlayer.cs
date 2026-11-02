@@ -52,6 +52,13 @@ public sealed class EnginePlayer : IPlayer, IDisposable
 
     public PlaybackState State { get; private set; } = PlaybackState.Idle;
 
+    /// <summary>
+    /// The user's sound settings (EQ, preamp, loudness compensation, width, crossfeed, mono/balance),
+    /// applied to every song's engine as it loads. Null = the defaults (normalised to
+    /// <see cref="NormTarget"/>, no EQ). Set it before loading songs.
+    /// </summary>
+    public SoundSettings? Sound { get; set; }
+
     /// <summary>The id of the loaded song (null before the first load).</summary>
     public string? CurrentId { get; private set; }
 
@@ -114,7 +121,7 @@ public sealed class EnginePlayer : IPlayer, IDisposable
                     if (pcm.SampleRate != rate)
                         throw new NotSupportedException($"the song is {pcm.SampleRate} Hz but the output runs at {rate} Hz");
                     var start = Math.Max(0, double.IsFinite(startAt) ? startAt : 0);
-                    var built = new LoadedSong(pcm, lufs, start);
+                    var built = new LoadedSong(pcm, lufs, start, Sound);
                     ct.ThrowIfCancellationRequested();
                     return built;
                 }
