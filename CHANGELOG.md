@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased: the C# app honours your sound settings (EQ, loudness, width)
+
+- **Your EQ and sound settings now apply in the C# app.** The preview read `library.json` but
+  played everything flat: the 10-band EQ, the preamp, loudness compensation, stereo width,
+  crossfeed and mono/balance are now read from the library file and put on the engine before a
+  song's first block, so a song sounds the same as in the desktop and Android apps.
+- The defaults are the same as the JS apps (normalise on, −14 LUFS, no EQ, width 100 %, no
+  crossfeed), so nothing changes for a fresh install.
+- The limiter stays last whatever the settings: a test drives +12 dB on every EQ band with no
+  preamp and checks the output neither clips nor goes silent.
+- Both heads use their own `library.json` (the previews never read the shipping app's settings).
+
 ## Unreleased: Soncle Uno for Android plays songs (C# app)
 
 - **The Android preview build can now search and play.** It was the shell plus a test sound; it now

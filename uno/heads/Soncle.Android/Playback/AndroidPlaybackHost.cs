@@ -18,9 +18,10 @@ internal sealed class AndroidPlaybackHost : IDisposable
 {
     private readonly PlaybackSession _session;
 
-    public AndroidPlaybackHost(string cacheDirectory)
+    public AndroidPlaybackHost(string cacheDirectory, string libraryJsonPath)
     {
         _session = new PlaybackSession(new AudioTrackOutput(48000), cacheDirectory, botGuard: null, Log);
+        _session.LoadSoundSettings(libraryJsonPath);
     }
 
     public PlaybackSession Session => _session;

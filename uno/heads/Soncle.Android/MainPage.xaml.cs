@@ -35,8 +35,8 @@ public sealed partial class MainPage : Page
         InitializeComponent();
 
         // The app's own private folder (Android: /data/data/<pkg>/files); never shared storage.
-        var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "streams");
-        _host = new AndroidPlaybackHost(cache);
+        var data = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        _host = new AndroidPlaybackHost(Path.Combine(data, "streams"), Path.Combine(data, "library.json"));
         _host.Output.Interrupted += (_, reason) => DispatcherQueue.TryEnqueue(() => OnInterrupted(reason));
         _clock.Tick += (_, _) => _host.Tick();
 

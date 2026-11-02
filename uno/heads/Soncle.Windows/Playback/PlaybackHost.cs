@@ -24,6 +24,10 @@ internal sealed class PlaybackHost : IDisposable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Soncle Preview", "streams");
         _session = new PlaybackSession(new WasapiAudioOutput(), cache, botGuard, Log);
+        // the preview keeps its own library.json beside its cache, so the shipping app's settings
+        // are never touched
+        var library = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Soncle Preview", "library.json");
+        _session.LoadSoundSettings(library);
         if (botGuard is not null && Environment.GetEnvironmentVariable("SONCLE_POTOKEN_SELFTEST") == "1")
             _ = _session.PoTokenSelfTestAsync();
     }

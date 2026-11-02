@@ -10,13 +10,16 @@ namespace Soncle.App.Playback;
 /// </summary>
 internal sealed class LoadedSong
 {
-    public LoadedSong(IAudioSource source, double? lufs, double startAtSeconds)
+    public LoadedSong(IAudioSource source, double? lufs, double startAtSeconds, SoundSettings? sound = null)
     {
         Source = source;
         Lufs = lufs;
         SampleRate = source.SampleRate;
         Engine = new Engine(source.SampleRate);
         Engine.SetNormalize(true, EnginePlayer.NormTarget);
+        // the user's sound settings (EQ, preamp, loudness compensation, width…) go on before the
+        // song is loaded, so the very first block already carries them
+        sound?.ApplyTo(Engine);
         Engine.Load(source, lufs, startAtSeconds);
         Pump = new OutputPump(Engine) { Source = source };
         Flush = new float[Engine.Master.Limiter.Delay * 2];

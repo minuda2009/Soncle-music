@@ -79,6 +79,31 @@ public sealed partial class PlaybackSession : IDisposable
     public SearchViewModel Search { get; }
     public PlayerBarViewModel Bar { get; }
 
+    /// <summary>
+    /// The user's sound settings (EQ, normalisation, loudness compensation, width…), read from
+    /// <c>library.json</c> and applied to every song's engine, so the C# app sounds like the JS apps.
+    /// Null until <see cref="LoadSoundSettings"/> is called; the defaults apply before that.
+    /// </summary>
+    public SoundSettings? Sound { get; private set; }
+
+    /// <summary>Reads the sound settings from a library file and applies them to new songs.</summary>
+    /// <param name="libraryJsonPath">The <c>library.json</c> the head uses; a missing file gives the defaults.</param>
+    public void LoadSoundSettings(string libraryJsonPath)
+    {
+        string? json = null;
+        try
+        {
+            if (File.Exists(libraryJsonPath)) json = File.ReadAllText(libraryJsonPath);
+        }
+        catch (Exception e)
+        {
+            Log($"settings-read-failed {e.GetType().Name}");
+        }
+        Sound = SoundSettings.FromLibraryJson(json);
+        Player.Sound = Sound;
+        Log($"sound-settings eq={Sound.EqEnabled} norm={Sound.Normalize} target={Sound.NormTarget}");
+    }
+
     /// <summary>One line for the debugger / trace listeners; URLs are cut out (they carry tokens).</summary>
     public Action<string> Log { get; }
 
