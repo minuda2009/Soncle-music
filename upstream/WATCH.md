@@ -1,4 +1,4 @@
-# Upstream watch · 2026-11-02
+# Upstream watch · 2026-11-09
 
 New releases and relevant changes in projects Soncle learns from. Nothing here is applied automatically.
 
@@ -15,11 +15,12 @@ _The library Soncle uses for every YouTube request. Most 'YouTube changed someth
 ## yt-dlp (yt-dlp/yt-dlp)
 _Early warning: yt-dlp usually reacts within hours when YouTube changes stream clients, client versions or PO token rules._
 
-- Release **2026.10.26**, 2026-10-26: https://github.com/yt-dlp/yt-dlp/releases/tag/2026.10.26
+- Nothing relevant since last week.
 
 ## metrolist (MetrolistGroup/Metrolist)
 _Releases and fix commits of the upstream Android app (file-level porting is handled by tools/upstream-sync.mjs)._
 
 
-Relevant commits (1 of 1):
-- [`ed5d480`](https://github.com/MetrolistGroup/Metrolist/commit/ed5d480f8f2e75ff3e7fbf76731ed704ca4c6dc6) translation: update upstream strings _(stream)_
+Relevant commits (2 of 2):
+- [`e6fea3b`](https://github.com/MetrolistGroup/Metrolist/commit/e6fea3b36c68841bad21daa6252e1d69ecd3afbe) fix(playback): upgrade InnerTubeX to v0.11.2 _(fix, playback)_
+- [`16e3810`](https://github.com/MetrolistGroup/Metrolist/commit/16e3810e95ee660303c996e21cb4abbbb63225fd) fix(i18n): remove duplicate Discord resource definitions _(fix)_
