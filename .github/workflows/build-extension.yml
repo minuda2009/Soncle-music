@@ -32,13 +32,13 @@ jobs:
           echo "ZIP=extension/soncle-companion-$V.zip" >> "$GITHUB_ENV"
 
       - name: Upload the zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: soncle-companion-zip
           path: ${{ env.ZIP }}
 
       - name: Upload extension artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: extension-dist
           path: extension/dist
