@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       # The version comes from uno/global.json.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: uno/global.json
       - name: Build

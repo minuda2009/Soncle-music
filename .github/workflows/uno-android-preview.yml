@@ -39,7 +39,7 @@ jobs:
           java-version: 21
       # The SDK and the Uno.Sdk version come from uno/global.json. Every dotnet command below runs in
       # uno/ so that global.json picks the SDK band the android workload is installed for.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: uno/global.json
       - name: Install the .NET for Android workload
@@ -143,7 +143,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: uno/global.json
       - name: Install the .NET for Android workload
