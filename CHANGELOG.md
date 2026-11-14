@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased: agent-friendly repo — one check command, clearer guides
+
+- **`npm run check`** runs every check an agent can run on one machine, in CI's order, and prints
+  one line per step: the JS tests, the lint, the drift check, and the C# build (`-warnaserror`) and
+  tests when the .NET SDK is present. It says what it skipped and why instead of failing, so a
+  sandbox without the SDK or libicu still gets a useful answer. (`node tools/check.mjs`, or `--js` /
+  `--csharp` for one half.)
+- **`AGENTS.md`** gains a fast "where to look" index, a **C# / `uno/` workflow** section (golden-diff
+  tests, `port-map.json`, the ledger, JS rounding), and an **environment gotchas** section written
+  from real turns: install .NET 10 + libicu (and why not to use invariant globalization), the
+  Windows/Android heads only build on Windows / with the Android SDK, and which CI workflow a push
+  triggers.
+- **`docs/tasks/README.md`** explains how the task files are written, and `docs/DEVELOPING.md`
+  points contributors at `npm run check`. Documentation only; no app behaviour changes.
+
 ## Unreleased: `Soncle.App` foundation — layered settings, queue with origins, command registry, notifications
 
 - **The portable `Soncle.App` foundation from `docs/DESIGN.md` §5 is in place** (C# app only; the

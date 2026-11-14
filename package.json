@@ -13,6 +13,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test \"test/*.test.mjs\"",
+    "check": "node tools/check.mjs",
     "lint": "eslint src renderer tools mobile/src mobile/build.mjs mobile/tools extension",
     "dist": "electron-builder --x64",
     "dist:win": "electron-builder --win --x64",
