@@ -1,0 +1,1087 @@
+{
+ "cleanTitle": [
+  {
+   "input": "Numb (Official Video)",
+   "out": "Numb"
+  },
+  {
+   "input": "Café (Live) – Remastered",
+   "out": "Café (Live) – Remastered"
+  },
+  {
+   "input": "Amber Harbour [Audio]",
+   "out": "Amber Harbour"
+  },
+  {
+   "input": "Song (feat. X) ft. Y",
+   "out": "Song ft. Y"
+  },
+  {
+   "input": "",
+   "out": ""
+  },
+  {
+   "input": "A  B\tC",
+   "out": "A  B\tC"
+  }
+ ],
+ "norm": [
+  {
+   "input": "Café (Live) – Remastered",
+   "out": "cafe remastered"
+  },
+  {
+   "input": "AC/DC & Friends",
+   "out": "ac dc and friends"
+  },
+  {
+   "input": "  Hello, World!  ",
+   "out": "hello world"
+  },
+  {
+   "input": "Übermensch (Deluxe)",
+   "out": "ubermensch"
+  }
+ ],
+ "flagsOf": [
+  {
+   "input": "Song (Live at the Hall)",
+   "out": [
+    "live"
+   ]
+  },
+  {
+   "input": "Track - Remix",
+   "out": [
+    "remix"
+   ]
+  },
+  {
+   "input": "Thing (Sped Up)",
+   "out": [
+    "sped up"
+   ]
+  },
+  {
+   "input": "Plain Song",
+   "out": []
+  },
+  {
+   "input": "A Cover of X (cover)",
+   "out": [
+    "cover"
+   ]
+  },
+  {
+   "input": "Radio Edit",
+   "out": [
+    "radio edit"
+   ]
+  }
+ ],
+ "titleSimilarity": [
+  {
+   "a": "Amber Harbour",
+   "b": "amber harbour (Official Video)",
+   "out": 1
+  },
+  {
+   "a": "Amber Harbour",
+   "b": "Harbour Lights",
+   "out": 0.5
+  },
+  {
+   "a": "Numb",
+   "b": "Numb",
+   "out": 1
+  },
+  {
+   "a": "",
+   "b": "Numb",
+   "out": 0
+  },
+  {
+   "a": "One Two Three",
+   "b": "One Two Four",
+   "out": 0.6666666666666666
+  }
+ ],
+ "score": [
+  {
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "candidate": {
+    "id": 1,
+    "trackName": "Amber Harbour",
+    "artistName": "The Quiet Band",
+    "albumName": "Meadow",
+    "duration": 190,
+    "instrumental": false,
+    "plainLyrics": "x",
+    "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+   },
+   "score": 103
+  },
+  {
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "candidate": {
+    "id": 2,
+    "trackName": "Amber Harbour (Live)",
+    "artistName": "The Quiet Band",
+    "albumName": "Meadow",
+    "duration": 243,
+    "instrumental": false,
+    "plainLyrics": "x",
+    "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+   },
+   "score": 33
+  },
+  {
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "candidate": {
+    "id": 3,
+    "trackName": "Amber Harbour",
+    "artistName": "Someone Else",
+    "albumName": "Meadow",
+    "duration": 200,
+    "instrumental": false,
+    "plainLyrics": "x",
+    "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+   },
+   "score": 50
+  },
+  {
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "candidate": {
+    "id": 4,
+    "trackName": "Amber Harbour",
+    "artistName": "The Quiet Band",
+    "albumName": "Meadow",
+    "duration": 190,
+    "instrumental": false,
+    "plainLyrics": "words",
+    "syncedLyrics": null
+   },
+   "score": 93
+  },
+  {
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "candidate": {
+    "id": 5,
+    "trackName": "Amber Harbour",
+    "artistName": "The Quiet Band",
+    "albumName": "Meadow",
+    "duration": 190,
+    "instrumental": true,
+    "plainLyrics": "x",
+    "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+   },
+   "score": 53
+  },
+  {
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "candidate": {
+    "id": 6,
+    "trackName": "Amber Harbour (Sped Up)",
+    "artistName": "The Quiet Band",
+    "albumName": "Meadow",
+    "duration": 175,
+    "instrumental": false,
+    "plainLyrics": "x",
+    "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+   },
+   "score": 48
+  }
+ ],
+ "rank": [
+  {
+   "name": "studio-beats-live",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "list": [
+    {
+     "id": 2,
+     "trackName": "Amber Harbour (Live)",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 243,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 3,
+     "trackName": "Amber Harbour",
+     "artistName": "Someone Else",
+     "albumName": "Meadow",
+     "duration": 200,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 1,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    }
+   ],
+   "ranked": [
+    {
+     "id": 1,
+     "score": 103
+    },
+    {
+     "id": 3,
+     "score": 50
+    },
+    {
+     "id": 2,
+     "score": 33
+    }
+   ],
+   "confident": true,
+   "variants": [
+    {
+     "id": 1,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 190,
+     "synced": true,
+     "score": 103
+    },
+    {
+     "id": 3,
+     "title": "Amber Harbour",
+     "artist": "Someone Else",
+     "album": "Meadow",
+     "duration": 200,
+     "synced": true,
+     "score": 50
+    },
+    {
+     "id": 2,
+     "title": "Amber Harbour (Live)",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 243,
+     "synced": true,
+     "score": 33
+    }
+   ]
+  },
+  {
+   "name": "all-versions",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "list": [
+    {
+     "id": 1,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 2,
+     "trackName": "Amber Harbour (Live)",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 243,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 3,
+     "trackName": "Amber Harbour",
+     "artistName": "Someone Else",
+     "albumName": "Meadow",
+     "duration": 200,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 4,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "words",
+     "syncedLyrics": null
+    },
+    {
+     "id": 5,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": true,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 6,
+     "trackName": "Amber Harbour (Sped Up)",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 175,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    }
+   ],
+   "ranked": [
+    {
+     "id": 1,
+     "score": 103
+    },
+    {
+     "id": 4,
+     "score": 93
+    },
+    {
+     "id": 5,
+     "score": 53
+    },
+    {
+     "id": 3,
+     "score": 50
+    },
+    {
+     "id": 6,
+     "score": 48
+    },
+    {
+     "id": 2,
+     "score": 33
+    }
+   ],
+   "confident": true,
+   "variants": [
+    {
+     "id": 1,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 190,
+     "synced": true,
+     "score": 103
+    },
+    {
+     "id": 4,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 190,
+     "synced": false,
+     "score": 93
+    },
+    {
+     "id": 5,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 190,
+     "synced": true,
+     "score": 53
+    },
+    {
+     "id": 3,
+     "title": "Amber Harbour",
+     "artist": "Someone Else",
+     "album": "Meadow",
+     "duration": 200,
+     "synced": true,
+     "score": 50
+    },
+    {
+     "id": 6,
+     "title": "Amber Harbour (Sped Up)",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 175,
+     "synced": true,
+     "score": 48
+    },
+    {
+     "id": 2,
+     "title": "Amber Harbour (Live)",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 243,
+     "synced": true,
+     "score": 33
+    }
+   ]
+  },
+  {
+   "name": "text-only-only",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "list": [
+    {
+     "id": 4,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "words",
+     "syncedLyrics": null
+    }
+   ],
+   "ranked": [
+    {
+     "id": 4,
+     "score": 93
+    }
+   ],
+   "confident": true,
+   "variants": [
+    {
+     "id": 4,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 190,
+     "synced": false,
+     "score": 93
+    }
+   ]
+  },
+  {
+   "name": "poor-match",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "list": [
+    {
+     "id": 9,
+     "trackName": "Other Thing",
+     "artistName": "Nobody",
+     "albumName": "Meadow",
+     "duration": 400,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    }
+   ],
+   "ranked": [
+    {
+     "id": 9,
+     "score": -22
+    }
+   ],
+   "confident": false,
+   "variants": [
+    {
+     "id": 9,
+     "title": "Other Thing",
+     "artist": "Nobody",
+     "album": "Meadow",
+     "duration": 400,
+     "synced": true,
+     "score": -22
+    }
+   ]
+  },
+  {
+   "name": "empty",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "list": [],
+   "ranked": [],
+   "confident": false,
+   "variants": []
+  },
+  {
+   "name": "close-call",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "list": [
+    {
+     "id": 1,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    {
+     "id": 2,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow (Deluxe)",
+     "duration": 191,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    }
+   ],
+   "ranked": [
+    {
+     "id": 1,
+     "score": 103
+    },
+    {
+     "id": 2,
+     "score": 103
+    }
+   ],
+   "confident": false,
+   "variants": [
+    {
+     "id": 1,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow",
+     "duration": 190,
+     "synced": true,
+     "score": 103
+    },
+    {
+     "id": 2,
+     "title": "Amber Harbour",
+     "artist": "The Quiet Band",
+     "album": "Meadow (Deluxe)",
+     "duration": 191,
+     "synced": true,
+     "score": 103
+    }
+   ]
+  }
+ ],
+ "sync": [
+  {
+   "input": {
+    "synced": "[00:08.00] ribbon falcon timber river\n[00:14.00] saffron nimbus amber whisper\n[00:20.00] kettle wander velvet violet\n[00:26.00] nimbus amber whisper nectar\n[00:32.00] timber river willow juniper\n[00:38.00] harbour candle compass quartz\n[00:44.00] meadow ribbon falcon timber\n[00:50.00] thunder pebble lagoon yonder\n[00:56.00] summit drizzle raven quiet\n[01:02.00] glacier opal harbour candle\n[01:08.00] drizzle raven quiet canyon\n[01:14.00] lagoon yonder orchard saffron\n[01:20.00] timber river willow juniper\n[01:26.00] vortex thunder pebble lagoon\n[01:32.00] amber whisper nectar prism\n[01:38.00] copper ember kettle wander\n[01:44.00] ribbon falcon timber river\n[01:50.00] ember kettle wander velvet\n[01:56.00] nectar prism lantern summit\n[02:02.00] lagoon yonder orchard saffron",
+    "duration": 190
+   },
+   "issues": []
+  },
+  {
+   "input": {
+    "synced": "[00:08.00] ribbon falcon timber river\n[00:20.00] saffron nimbus amber whisper\n[00:32.00] kettle wander velvet violet\n[00:44.00] nimbus amber whisper nectar\n[00:56.00] timber river willow juniper\n[01:08.00] harbour candle compass quartz\n[01:20.00] meadow ribbon falcon timber\n[01:32.00] thunder pebble lagoon yonder\n[01:44.00] summit drizzle raven quiet\n[01:56.00] glacier opal harbour candle\n[02:08.00] drizzle raven quiet canyon\n[02:20.00] lagoon yonder orchard saffron\n[02:32.00] timber river willow juniper\n[02:44.00] vortex thunder pebble lagoon\n[02:56.00] amber whisper nectar prism\n[03:08.00] copper ember kettle wander\n[03:20.00] ribbon falcon timber river\n[03:32.00] ember kettle wander velvet\n[03:44.00] nectar prism lantern summit\n[03:56.00] lagoon yonder orchard saffron",
+    "duration": 190
+   },
+   "issues": [
+    "runs-past-end"
+   ]
+  },
+  {
+   "input": {
+    "synced": "[00:08.00] ribbon falcon timber river\n[00:14.00] saffron nimbus amber whisper\n[00:20.00] kettle wander velvet violet\n[00:26.00] nimbus amber whisper nectar",
+    "duration": 190
+   },
+   "issues": [
+    "ends-early"
+   ]
+  },
+  {
+   "input": {
+    "synced": null,
+    "duration": 190
+   },
+   "issues": []
+  },
+  {
+   "input": {
+    "synced": "[00:08.00] ribbon falcon timber river\n[00:14.00] saffron nimbus amber whisper\n[00:20.00] kettle wander velvet violet\n[00:26.00] nimbus amber whisper nectar",
+    "duration": 60
+   },
+   "issues": []
+  }
+ ],
+ "find": [
+  {
+   "name": "exact-plus-searches",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "routes": {
+    "/api/get?": {
+     "id": 1,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    "search?track_name": [
+     {
+      "id": 1,
+      "trackName": "Amber Harbour",
+      "artistName": "The Quiet Band",
+      "albumName": "Meadow",
+      "duration": 190,
+      "instrumental": false,
+      "plainLyrics": "x",
+      "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+     },
+     {
+      "id": 2,
+      "trackName": "Amber Harbour (Live)",
+      "artistName": "The Quiet Band",
+      "albumName": "Meadow",
+      "duration": 243,
+      "instrumental": false,
+      "plainLyrics": "x",
+      "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+     }
+    ],
+    "search?q=": [
+     {
+      "id": 3,
+      "trackName": "Amber Harbour",
+      "artistName": "Someone Else",
+      "albumName": "Meadow",
+      "duration": 190,
+      "instrumental": false,
+      "plainLyrics": "x",
+      "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+     }
+    ]
+   },
+   "candidates": [
+    1,
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "name": "no-title",
+   "song": {
+    "title": "",
+    "artists": []
+   },
+   "routes": {},
+   "candidates": []
+  },
+  {
+   "name": "nothing-found",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "routes": {
+    "/api/get?": {},
+    "search?track_name": [],
+    "search?q=": []
+   },
+   "candidates": [
+    null
+   ]
+  }
+ ],
+ "get": [
+  {
+   "name": "picks-best-synced",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "routes": {
+    "/api/get?": {
+     "id": 1,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    "search?track_name": [
+     {
+      "id": 2,
+      "trackName": "Amber Harbour (Live)",
+      "artistName": "The Quiet Band",
+      "albumName": "Meadow",
+      "duration": 243,
+      "instrumental": false,
+      "plainLyrics": "x",
+      "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+     }
+    ],
+    "search?q=": []
+   },
+   "result": {
+    "synced": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit",
+    "plain": "x",
+    "source": "LRCLIB",
+    "id": 1,
+    "score": 103,
+    "confident": true,
+    "chosen": false,
+    "issues": [],
+    "variants": [
+     {
+      "id": 1,
+      "title": "Amber Harbour",
+      "artist": "The Quiet Band",
+      "album": "Meadow",
+      "duration": 190,
+      "synced": true,
+      "score": 103
+     },
+     {
+      "id": 2,
+      "title": "Amber Harbour (Live)",
+      "artist": "The Quiet Band",
+      "album": "Meadow",
+      "duration": 243,
+      "synced": true,
+      "score": 33
+     }
+    ]
+   }
+  },
+  {
+   "name": "text-only-falls-through",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "routes": {
+    "/api/get?": {
+     "id": 4,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "words",
+     "syncedLyrics": null
+    },
+    "search?track_name": [],
+    "search?q=": []
+   },
+   "result": {
+    "synced": null,
+    "plain": "words",
+    "source": "LRCLIB",
+    "id": 4,
+    "score": 93,
+    "confident": true,
+    "chosen": false,
+    "issues": [],
+    "variants": [
+     {
+      "id": 4,
+      "title": "Amber Harbour",
+      "artist": "The Quiet Band",
+      "album": "Meadow",
+      "duration": 190,
+      "synced": false,
+      "score": 93
+     }
+    ]
+   }
+  },
+  {
+   "name": "nothing",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "routes": {
+    "/api/get?": {},
+    "search?track_name": [],
+    "search?q=": []
+   },
+   "result": null
+  },
+  {
+   "name": "instrumental",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "routes": {
+    "/api/get?": {
+     "id": 5,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": true,
+     "plainLyrics": null,
+     "syncedLyrics": null
+    },
+    "search?track_name": [],
+    "search?q=": []
+   },
+   "result": null
+  },
+  {
+   "name": "prefer-id-fetched",
+   "song": {
+    "title": "Amber Harbour",
+    "artists": [
+     {
+      "name": "The Quiet Band"
+     }
+    ],
+    "album": {
+     "name": "Meadow"
+    },
+    "duration": 190
+   },
+   "preferId": 2,
+   "routes": {
+    "/api/get?": {
+     "id": 1,
+     "trackName": "Amber Harbour",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 190,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    },
+    "search?track_name": [
+     {
+      "id": 2,
+      "trackName": "Amber Harbour (Live)",
+      "artistName": "The Quiet Band",
+      "albumName": "Meadow",
+      "duration": 243,
+      "instrumental": false,
+      "plainLyrics": "x",
+      "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+     }
+    ],
+    "search?q=": [],
+    "/api/get/2": {
+     "id": 2,
+     "trackName": "Amber Harbour (Live)",
+     "artistName": "The Quiet Band",
+     "albumName": "Meadow",
+     "duration": 243,
+     "instrumental": false,
+     "plainLyrics": "x",
+     "syncedLyrics": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit"
+    }
+   },
+   "result": {
+    "synced": "[00:08.00] thunder pebble lagoon yonder\n[00:14.00] summit drizzle raven quiet\n[00:20.00] glacier opal harbour candle\n[00:26.00] drizzle raven quiet canyon\n[00:32.00] lagoon yonder orchard saffron\n[00:38.00] timber river willow juniper\n[00:44.00] vortex thunder pebble lagoon\n[00:50.00] amber whisper nectar prism\n[00:56.00] copper ember kettle wander\n[01:02.00] ribbon falcon timber river\n[01:08.00] ember kettle wander velvet\n[01:14.00] nectar prism lantern summit\n[01:20.00] lagoon yonder orchard saffron\n[01:26.00] nimbus amber whisper nectar\n[01:32.00] raven quiet canyon hollow\n[01:38.00] zephyr marble glacier opal\n[01:44.00] thunder pebble lagoon yonder\n[01:50.00] marble glacier opal harbour\n[01:56.00] canyon hollow umber copper\n[02:02.00] nectar prism lantern summit",
+    "plain": "x",
+    "source": "LRCLIB",
+    "id": 2,
+    "score": 33,
+    "confident": true,
+    "chosen": true,
+    "issues": [],
+    "variants": [
+     {
+      "id": 1,
+      "title": "Amber Harbour",
+      "artist": "The Quiet Band",
+      "album": "Meadow",
+      "duration": 190,
+      "synced": true,
+      "score": 103
+     },
+     {
+      "id": 2,
+      "title": "Amber Harbour (Live)",
+      "artist": "The Quiet Band",
+      "album": "Meadow",
+      "duration": 243,
+      "synced": true,
+      "score": 33
+     }
+    ]
+   }
+  }
+ ]
+}

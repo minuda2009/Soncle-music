@@ -99,6 +99,49 @@ public static partial class Lyrics
         return a;
     }
 
+    /// <summary>
+    /// The full engine path: ranks every LRCLIB version (see <see cref="LyricsEngine"/>), honours the
+    /// person's chosen version, and falls back to the YouTube Music lookup only when LRCLIB has no
+    /// synced lyrics — the same order as <c>src/main.mjs</c>'s <c>lyrics()</c>. Maps onto the
+    /// <see cref="Core.Models.LyricsResult"/> the UI renders.
+    /// </summary>
+    public static async Task<Core.Models.LyricsResult> GetWithEngineAsync(
+        Core.Models.Track track, LyricsFetch fetch, Func<int, Task> wait, long? preferId = null,
+        Func<Task<(string? Plain, string? Source)?>>? ytFallback = null)
+    {
+        var artists = track.Artists.Select(a => a.Name).Where(n => !string.IsNullOrEmpty(n)).ToList();
+        var t = new LyricsTrack
+        {
+            Title = track.Title,
+            Artists = artists,
+            AlbumName = track.Album,
+            Duration = track.Duration > 0 ? track.Duration : null,
+        };
+        var r = await LyricsEngine.GetAsync(t, fetch, wait, preferId);
+        if (!string.IsNullOrEmpty(r?.Synced)) return Map(r!);
+        if (ytFallback is not null)
+        {
+            try
+            {
+                var b = await ytFallback();
+                if (b is not null && !string.IsNullOrEmpty(b.Value.Plain))
+                    return new Core.Models.LyricsResult { Plain = b.Value.Plain, Source = Regex.Replace(b.Value.Source ?? "YouTube Music", "^Source:\\s*", "", RegexOptions.IgnoreCase) };
+            }
+            catch { /* fall through */ }
+        }
+        return r is null ? new Core.Models.LyricsResult() : Map(r);
+    }
+
+    private static Core.Models.LyricsResult Map(LyricsEngineResult r) => new()
+    {
+        Synced = r.Synced, Plain = r.Plain, Source = r.Source, Id = r.Id, Score = r.Score,
+        Confident = r.Confident, Chosen = r.Chosen, Issues = r.Issues.ToList(),
+        Variants = r.Variants.Select(v => new Core.Models.LyricsVariant
+        {
+            Id = v.Id, Title = v.Title, Artist = v.Artist, Album = v.Album, Duration = v.Duration, Synced = v.Synced, Score = v.Score,
+        }).ToList(),
+    };
+
     // ---------- LRC parsing ----------
     [GeneratedRegex(@"\[(\d+):(\d+(?:\.\d+)?)\]")]
     private static partial Regex LrcTagRx();

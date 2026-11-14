@@ -78,5 +78,11 @@ shaped by time of day and your taste. When it has no data it falls back to YouTu
 
 ## Contributing
 
-Issues and pull requests are welcome. Please run `npm test` and `npm run lint` before opening one.
+Issues and pull requests are welcome. Before opening one, run **`npm run check`** — it runs the JS
+tests, the lint, the drift check and (when the .NET SDK is present) the C# build and tests, and says
+what it skipped and why. By hand that is `npm test` and `npm run lint`, plus
+`cd uno && dotnet build Soncle.sln -warnaserror && dotnet test Soncle.sln` for C# changes.
 For anything that changes how the app looks, include a screenshot.
+
+Agent-specific rules (branches, the C# workflow, environment gotchas) are in
+[AGENTS.md](../AGENTS.md).

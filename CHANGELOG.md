@@ -1,5 +1,63 @@
 # Changelog
 
+## Unreleased: agent-friendly repo — one check command, clearer guides
+
+- **`npm run check`** runs every check an agent can run on one machine, in CI's order, and prints
+  one line per step: the JS tests, the lint, the drift check, and the C# build (`-warnaserror`) and
+  tests when the .NET SDK is present. It says what it skipped and why instead of failing, so a
+  sandbox without the SDK or libicu still gets a useful answer. (`node tools/check.mjs`, or `--js` /
+  `--csharp` for one half.)
+- **`AGENTS.md`** gains a fast "where to look" index, a **C# / `uno/` workflow** section (golden-diff
+  tests, `port-map.json`, the ledger, JS rounding), and an **environment gotchas** section written
+  from real turns: install .NET 10 + libicu (and why not to use invariant globalization), the
+  Windows/Android heads only build on Windows / with the Android SDK, and which CI workflow a push
+  triggers.
+- **`docs/tasks/README.md`** explains how the task files are written, and `docs/DEVELOPING.md`
+  points contributors at `npm run check`. Documentation only; no app behaviour changes.
+
+## Unreleased: `Soncle.App` foundation — layered settings, queue with origins, command registry, notifications
+
+- **The portable `Soncle.App` foundation from `docs/DESIGN.md` §5 is in place** (C# app only; the
+  Electron and Android apps are unchanged). These are the pieces the pages and the Windows head are
+  built on, and they are pure C#, so they build and test on Linux:
+  - **Layered settings** (`Settings/LayeredSettings.cs`): effective settings = base ⊕ device profile
+    ⊕ focus overlay ⊕ transient, resolved per key, top wins; the resolver reports which layer set a
+    value, so the UI can say "set by HD 600 profile". Ending focus simply drops the overlay — nothing
+    to restore and nothing to recover after a crash (replaces the JS app's `focusBackup` snapshot).
+  - **Queue with origins** (`Queue/QueueModel.cs`): every item carries where it came from
+    (source / user / flow / autoplay) and a stable id. That gives "Up next" vs "Then from Flow",
+    Undo for Clear queue, "Flow stopped re-arranging · Resume" when you drag, and shuffle as an
+    ordering view that puts the original order back.
+  - **Command registry** (`Commands/CommandRegistry.cs`): one list of commands (title, icon,
+    shortcut, when-it-can-run, extra search words) that Ctrl+K, keyboard accelerators, menus,
+    tooltips and the `?` shortcut list all read from, so a command is never wired twice.
+  - **Notification service** (`Notifications/NotificationService.cs`): levels (silent / info /
+    action / important), a priority queue, duplicates within a few seconds merged, and an action
+    message never replaced by an info one — replacing the 88 direct `toast()` calls.
+- 15 new tests in `Soncle.App.Tests` (one per `DESIGN.md` rule): top-wins and end-focus-returns-
+  exactly, sections/clear-undo/drag-locks/shuffle-round-trip, the palette's when-filter and word
+  search, and the notification levels. `dotnet build -warnaserror` clean; `dotnet test` 373 passing.
+- The ledger (`docs/WINUI_PLAN.md` §12.5) gains a `Soncle.App` foundation table.
+
+## Unreleased: lyrics engine ported to C#; roadmap for fixing out-of-sync lyrics
+
+- **The C# app gets the better lyrics engine.** `Soncle.Services.LyricsEngine` is a line-for-line
+  port of `src/lyrics-engine.mjs`: it finds every LRCLIB version of a song (exact lookup plus two
+  searches), scores each against what is playing (title, artist, album, length, live/remix tags,
+  whether the timing runs past the end), picks the best and returns the others so the person can
+  choose. It also reports its confidence and what is wrong with a synced file, and remembers the
+  version the person picked. `Lyrics.GetWithEngineAsync` runs it in the same order as the JS app:
+  LRCLIB first, YouTube Music's own lyrics only when LRCLIB has no synced version. Checked
+  against the JS with a new golden fixture (`fixtures/lyrics/engine.json`, scores equal to six
+  decimal places); the Electron and Android apps are unchanged, and `src/lyrics-engine.mjs` is now
+  in `tools/port-map.json` so the drift check keeps the two in step.
+- **Roadmap: fix lyrics that are out of sync, by listening.** A new `ROADMAP.md` section plans the
+  missing half of `src/lyrics-align.mjs` — a small, on-device speech model that hears the song
+  playing and re-times (or re-finds) lyrics that are for the wrong edit of a song. The maths
+  (word alignment, offset and drift fitting, version matching) already exists and is tested; the
+  model is opt-in, downloaded once, and never uploads anything. No code changes yet.
+- The Electron and Android apps are unchanged; this is the C# port and docs only.
+
 ## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done
 
 - **The C# port of Soncle's services is finished.** `Soncle.Services` now also has the **local

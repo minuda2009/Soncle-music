@@ -19,15 +19,90 @@ agents write, test and ship the code. Licence: GPL-3.0-or-later.
   `docs/tasks/uno/`, start with its README). `CHANGELOG.md` gets an entry for every change
   that ships.
 
+### Where to look (fast index)
+| I need to… | Go to |
+| --- | --- |
+| understand the whole app | `docs/DEVELOPING.md` (architecture, env vars, test list) |
+| change the desktop UI/audio | `renderer/app.js` (UI), `renderer/engine.js` + `renderer/audio/worklets.js` (audio), `src/main.mjs` (Electron wiring) |
+| change YouTube access or streaming | `src/yt.mjs`, `src/streamproxy.mjs`, `src/potoken.mjs` |
+| change Flow radio | `renderer/flow/` (`analyze.js`, `flow.js`) |
+| change the phone app | `mobile/src/backend.js` (the `window.api`), `mobile/android/.../SonclePlugin.java` |
+| work on the C# migration | `uno/src/**` + `uno/tests/**` (portable, Linux-testable); read `docs/WINUI_PLAN.md` §12 for the transfer map and §12.5 for what is already ported |
+| know what is agreed for UI/UX/structure | `docs/DESIGN.md` (wins over the plan) |
+| find a task to do | `docs/tasks/` (one file per handed-out task; the C# ones are in `docs/tasks/uno/`) |
+| see what is planned | `ROADMAP.md` |
+| regenerate test fixtures | `tools/fixtures/export-*.mjs` (each writes a JSON file under `fixtures/`) |
+| understand the test layout | `test/*.test.mjs` (JS), `uno/tests/**` (C#); shared data in `fixtures/` |
+
+Every `fixtures/**` JSON that a C# test reads is produced by a script in `tools/fixtures/`; never
+hand-edit a fixture — change the exporter and regenerate, so the JS and C# stay in step.
+
 ## Setup and checks (all must pass before you push)
+
+**One command runs everything this machine can run** (JS tests, lint, drift check, and the C#
+libraries when the .NET SDK is present). Use it before every push; it prints what it skipped and why:
+
 ```bash
-ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --ignore-scripts   # root
-npm test        # node:test; the sign-in test is skipped unless SONCLE_SIGNIN_BROWSER is set
-npm run lint    # must be clean
+npm run check          # everything;  or: node tools/check.mjs --js / --csharp
 ```
+
+What it runs, and the same commands by hand:
+
+```bash
+ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --ignore-scripts   # root, once
+npm test        # node:test; the sign-in test is skipped unless SONCLE_SIGNIN_BROWSER is set
+npm run lint    # must be clean (0 errors; 3 known warnings in tools/fixtures are pre-existing)
+node tools/drift-check.mjs   # a ported JS file must not change without its C# side (see below)
+
+cd uno && dotnet build Soncle.sln -warnaserror && dotnet test Soncle.sln   # the C# libraries
+```
+
 For Android changes also: `cd mobile && npm ci && npm run sync` (the APK itself is built by GitHub
 Actions; you don't need the Android SDK). Real YouTube may not be reachable from your sandbox:
 test with the offline mock and fixtures, never against a real account.
+
+### Environment gotchas (they cost real turns; read once)
+- **The .NET SDK is not installed by default.** Install .NET 10 (the version is pinned in
+  `uno/global.json`). On Linux, `dotnet` also needs **libicu** or it aborts at startup with
+  *"Couldn't find a valid ICU package"* — `apt-get install libicu76`, or unpack the `.deb` and set
+  `LD_LIBRARY_PATH`. Do **not** work around it with `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1`:
+  `String.Normalize` then throws, and the lyrics engine needs it.
+- **`uno/heads/Soncle.Windows` and `uno/heads/Soncle.Android` do not build on Linux.** The Windows
+  head fails with `UNOB0014` (Uno's SDK and WinAppSDK's XAML compiler are Windows-only); the Android
+  head needs the Android SDK. Both are built by CI (`windows-preview.yml`,
+  `uno-android-preview.yml`) — do not spend turns trying them locally. The **libraries** under
+  `uno/src/**` and `uno/tests/**` are plain `net10.0` and build and test anywhere; that is where the
+  agent-verifiable C# work lives.
+- **CI runs three separate worlds** and a push only triggers the ones whose `paths:` match:
+  `CI` (npm test + lint + drift) and `uno.yml` (build + test) run for almost everything;
+  `android.yml` / `android-preview.yml` for `mobile/**`, `renderer/**`, `src/**`, `assets/**`;
+  `windows-preview.yml` / `uno-android-preview.yml` for `uno/**`. Touch nothing outside `uno/` and
+  the JS apps are untouched.
+
+## C# / `uno/` work (the migration)
+
+The C# port of the app lives in `uno/`. Read `docs/WINUI_PLAN.md` (the plan and the file-by-file
+transfer map) and, **before any UI, UX or `uno/` app work**, `docs/DESIGN.md` (the agreed decisions;
+where it and the plan differ, DESIGN.md wins). The task files are in `docs/tasks/uno/` — start with
+its README.
+
+The rules that matter most for an agent:
+- **A port is done when its output equals the JS output on the same fixtures**, not when it
+  compiles. Every ported unit gets a golden-diff test that reads `fixtures/…` and compares with the
+  JS-produced expected file. Add the fixture exporter under `tools/fixtures/` and commit the JSON.
+- **Register every new port in `tools/port-map.json`** (JS file → C# paths). The CI `drift` job fails
+  when a ported JS file changes and its C# side and the ledger (`docs/WINUI_PLAN.md` §12.5) are both
+  left alone. When you port something, also update the ledger row.
+- **Keep the JS names and the order of operations.** Where the JS and C# round differently, port the
+  JS behaviour exactly (e.g. `Math.round(x)` is `floor(x + 0.5)` in C#, not `Math.Round`).
+- **Port, don't reinvent, and don't silently fix JS bugs** — write them in the PR and add a failing
+  JS test if you can.
+- **Every new C# file starts with the Soncle header** (the rule below); a test
+  (`HeaderCheckTests`) enforces it.
+- **No real accounts, cookies or credentials** in code, tests, fixtures or logs. Network tests use
+  local fakes and recorded responses.
+- New third-party packages go into `THIRD_PARTY_NOTICES.md` with their licence, in the same PR.
+  Allowed licences are GPL-3.0-compatible (MIT, BSD, Apache-2.0, LGPL); ask before anything else.
 
 ## Git workflow (important)
 - **Never push to `main`.** Work on a branch named `openhands/<short-topic>`, e.g.
