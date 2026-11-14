@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased: `Soncle.App` foundation — layered settings, queue with origins, command registry, notifications
+
+- **The portable `Soncle.App` foundation from `docs/DESIGN.md` §5 is in place** (C# app only; the
+  Electron and Android apps are unchanged). These are the pieces the pages and the Windows head are
+  built on, and they are pure C#, so they build and test on Linux:
+  - **Layered settings** (`Settings/LayeredSettings.cs`): effective settings = base ⊕ device profile
+    ⊕ focus overlay ⊕ transient, resolved per key, top wins; the resolver reports which layer set a
+    value, so the UI can say "set by HD 600 profile". Ending focus simply drops the overlay — nothing
+    to restore and nothing to recover after a crash (replaces the JS app's `focusBackup` snapshot).
+  - **Queue with origins** (`Queue/QueueModel.cs`): every item carries where it came from
+    (source / user / flow / autoplay) and a stable id. That gives "Up next" vs "Then from Flow",
+    Undo for Clear queue, "Flow stopped re-arranging · Resume" when you drag, and shuffle as an
+    ordering view that puts the original order back.
+  - **Command registry** (`Commands/CommandRegistry.cs`): one list of commands (title, icon,
+    shortcut, when-it-can-run, extra search words) that Ctrl+K, keyboard accelerators, menus,
+    tooltips and the `?` shortcut list all read from, so a command is never wired twice.
+  - **Notification service** (`Notifications/NotificationService.cs`): levels (silent / info /
+    action / important), a priority queue, duplicates within a few seconds merged, and an action
+    message never replaced by an info one — replacing the 88 direct `toast()` calls.
+- 15 new tests in `Soncle.App.Tests` (one per `DESIGN.md` rule): top-wins and end-focus-returns-
+  exactly, sections/clear-undo/drag-locks/shuffle-round-trip, the palette's when-filter and word
+  search, and the notification levels. `dotnet build -warnaserror` clean; `dotnet test` 373 passing.
+- The ledger (`docs/WINUI_PLAN.md` §12.5) gains a `Soncle.App` foundation table.
+
 ## Unreleased: lyrics engine ported to C#; roadmap for fixing out-of-sync lyrics
 
 - **The C# app gets the better lyrics engine.** `Soncle.Services.LyricsEngine` is a line-for-line
