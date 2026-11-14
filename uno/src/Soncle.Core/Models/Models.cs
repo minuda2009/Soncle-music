@@ -98,6 +98,23 @@ public sealed class LyricsResult
     public string? Synced { get; set; }
     public string? Plain { get; set; }
     public string? Source { get; set; }
+    public long? Id { get; set; }
+    public double Score { get; set; }
+    public bool Confident { get; set; }
+    public bool Chosen { get; set; }
+    public List<string> Issues { get; set; } = new();
+    public List<LyricsVariant> Variants { get; set; } = new();
+}
+
+public sealed class LyricsVariant
+{
+    public long? Id { get; set; }
+    public string? Title { get; set; }
+    public string? Artist { get; set; }
+    public string Album { get; set; } = "";
+    public int Duration { get; set; }
+    public bool Synced { get; set; }
+    public double Score { get; set; }
 }
 
 public sealed class StreamInfo

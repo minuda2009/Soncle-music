@@ -14,6 +14,7 @@
   "src/spotify.mjs": ["uno/src/Soncle.Services/Import.cs"],
   "src/preload.cjs": ["uno/src/Soncle.Core/Contracts"],
   "src/yt.mjs": ["uno/src/Soncle.YouTube"],
+  "src/lyrics-engine.mjs": ["uno/src/Soncle.Services/LyricsEngine.cs", "uno/src/Soncle.Services/Lyrics.cs"],
   "src/botguard.mjs": ["uno/src/Soncle.YouTube/BotGuard.cs", "uno/src/Soncle.YouTube/PoTokenMinter.cs"],
   "src/potoken.mjs": ["uno/src/Soncle.YouTube/PoTokenMinter.cs", "uno/heads/Soncle.Windows/Playback/WebViewBotGuardPage.cs"],
   "src/po_token.html": ["uno/src/Soncle.YouTube/PoTokenMinter.cs", "uno/heads/Soncle.Windows/Playback/WebViewBotGuardPage.cs"],

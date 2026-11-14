@@ -157,6 +157,73 @@ experimental, and described honestly as an effect, not a remix.
   like Flow today.
 - No extra CPU while simply listening: alignment work happens once per transition.
 
+## Next version: fix lyrics that are out of sync by listening (local AI)
+
+Reported 14 Nov 2026: "some songs, or for some versions of songs, lyrics are out of sync". The words
+are right but the timing is wrong — the file is for another edit of the song (a live cut, a radio
+edit, a sped-up upload, a re-recording) or its timestamps are simply off. The engine already ranks
+LRCLIB versions (`src/lyrics-engine.mjs`) and already tells the person when it isn't sure
+(`syncIssues`, the "Check version" hint), but nothing can *fix* a timing that is wrong.
+
+### What is already built (the maths, tested, shipping)
+`src/lyrics-align.mjs` holds everything except the ears. Given the words a speech model heard in the
+song that is playing — `[{ t0, t1, text }]` per word — it can:
+- `alignWords` / `alignLines` — line up the lyric words with the heard words, surviving misheard
+  letters ("harbor" for "harbour") and words the model dropped (a DP alignment, not a diff);
+- `coverageOf` — say which candidate version's *text* the recording actually contains, which is the
+  honest way to tell a live cut from the studio song;
+- `fitTiming` / `applyTiming` — a robust fit of `heard = a · lyric + b` (a constant offset, plus a
+  small speed difference when the evidence is clear and within 3 %), so a file that is 2.5 s late,
+  or 2 % slow, comes back into time;
+- `identifyQuery` — pick a few distinctive heard words to ask LRCLIB for a song that has no lyrics;
+- `transcriptToLines` — as a last resort, write out what was heard, labelled as automatic;
+- `improveLyrics` — the whole flow: pick the version, retime it, or transcribe.
+
+All of it is tested with made-up songs (`test/lyrics-engine.test.mjs`), and nothing is listened to
+yet: **the model itself is the missing piece**, deliberately left out until the size and the licence
+were decided (see the "Better lyrics engine" changelog entry).
+
+### Next: the ears, on the person's own device
+1. **Model.** A small Whisper-class model with word timestamps, run locally through `whisper.cpp`
+   (MIT) — `tiny`/`base`, quantised (~40–80 MB). Nothing is uploaded: the model reads the song the
+   app is already playing, and no audio is written to disk. First try the OS's own on-device
+   recognisers (`Windows.Media.SpeechRecognition` with a downloaded language pack;
+   `SpeechRecognizer.createOnDeviceSpeechRecognizer` on Android 12+) because they cost no download —
+   but they are built for dictation, so a bundled model is the real answer for singing.
+2. **Downloaded on demand, never bundled.** The installer and the APK stay as they are; the model is
+   fetched once, on first use, with a hash check, and cached. Settings says its size before it is
+   fetched.
+3. **The audio it hears.** The decoded PCM the Flow analysis already produces (the same few hundred
+   KB per song through the WebM Cues index, whole song for this), downmixed to mono 16 kHz. Later, an
+   optional vocal-isolation pass (a small source-separation model) if plain mixed audio is not
+   accurate enough.
+4. **When it runs.** Only for the song playing now, and only when it is worth it:
+   - LRCLIB has no synced version, or the sync looks wrong (`runs-past-end`, `ends-early`, or a
+     fitted drift the app notices while playing);
+   - the person presses **Realign from the recording** in the lyrics view (the manual path, always
+     available);
+   - never on battery unless asked, one song at a time, low priority, and never during a blend —
+     the same rules Flow already follows.
+5. **What it does with the answer.** Feeds the heard words to `improveLyrics`, which either picks a
+   better LRCLIB version, retimes the current one, or transcribes. The corrected timing is saved per
+   song (an offset *and* a speed factor, extending today's `lyricsOffsets`), so it is done once.
+6. **Honesty in the UI.** The source line says how the timing was arrived at — "Lyrics from LRCLIB ·
+   timed by listening" — and a transcription says it is automatic and may have mistakes, exactly as
+   `lyrics-align.mjs` already labels it. **Versions** still lists the untouched files so the person
+   can go back; "Back to automatic" clears the fitted timing too.
+7. **When unsure, fall back.** Below the coverage and fit-confidence thresholds the app keeps today's
+   lyrics and says it could not improve them. No guessing, as everywhere else in Soncle.
+8. **Tests.** Synthetic "recordings" from made-up songs at several offsets, drifts and coverage
+   levels (the existing fixtures extend to these); a real short clip checked against a hand-timed
+   reference; and a test that a failed or refused model leaves today's lyrics untouched.
+9. **Costs to keep in check.** Model download size and time on first use; memory while transcribing;
+   CPU time per song (measure and write the numbers in the PR); and a hard rule that playback is
+   never interrupted by the work.
+
+- **Accept when** a file that is 2.5 s late and one that is 2 % slow both come back in sync on a real
+  recording, a version mismatch is detected and the right version offered, the model download is
+  opt-in with its size stated, and nothing is uploaded.
+
 ## Parallel track: Soncle Companion (browser extension)
 
 An unofficial extension that brings some Soncle features to the real YouTube Music in the browser, for
