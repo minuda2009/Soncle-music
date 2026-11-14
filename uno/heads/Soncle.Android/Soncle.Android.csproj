@@ -45,14 +45,9 @@
     <ProjectReference Include="../../src/Soncle.Core/Soncle.Core.csproj" />
     <ProjectReference Include="../../src/Soncle.Audio/Soncle.Audio.csproj" />
     <ProjectReference Include="../../src/Soncle.Audio.Opus/Soncle.Audio.Opus.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- The 8 s synthetic test clip, linked from fixtures/ (not copied) and read with
-         Assembly.GetManifestResourceStream (Playback/SamplePlayer.cs). -->
-    <EmbeddedResource Include="../../../fixtures/flow/sample.webm"
-                      Link="Assets/sample.webm"
-                      LogicalName="Soncle.sample.webm" />
+    <ProjectReference Include="../../src/Soncle.Streams/Soncle.Streams.csproj" />
+    <ProjectReference Include="../../src/Soncle.YouTube/Soncle.YouTube.csproj" />
+    <ProjectReference Include="../../src/Soncle.App/Soncle.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>

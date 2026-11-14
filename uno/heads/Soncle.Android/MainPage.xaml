@@ -8,18 +8,33 @@
 
     <!-- The adaptive shell (docs/DESIGN.md §3.1): the four destinations in a bottom bar on a phone,
          in a rail when the window is at least 600 effective px wide (MainPage.xaml.cs switches it),
-         and the player bar (§4.1) above the bottom bar. -->
+         the search box, and the player bar (§4.1) above the bottom bar. -->
     <Grid utu:SafeArea.Insets="VisibleBounds">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- Search in the title area (docs/DESIGN.md §3.1: search at the top of Home on a phone).
+             Enter searches; a pick plays it with the results as the queue. -->
+        <AutoSuggestBox x:Name="SearchBox"
+                        Grid.Row="0"
+                        Margin="12,8"
+                        PlaceholderText="Search songs"
+                        AutomationProperties.Name="Search songs"
+                        TextChanged="OnSearchTextChanged"
+                        QuerySubmitted="OnSearchSubmitted">
+            <AutoSuggestBox.QueryIcon>
+                <SymbolIcon Symbol="Find" />
+            </AutoSuggestBox.QueryIcon>
+        </AutoSuggestBox>
+
         <!-- The rail. On narrow windows its pane is hidden and only the content shows. Items are
              text-only until Soncle.Design brings the Material Symbols font (README, known gaps). -->
         <NavigationView x:Name="Rail"
-                        Grid.Row="0"
+                        Grid.Row="1"
                         PaneDisplayMode="Left"
                         OpenPaneLength="180"
                         IsPaneVisible="False"
@@ -34,13 +49,14 @@
                 <NavigationViewItem Content="Settings" />
             </NavigationView.MenuItems>
 
-            <!-- Pages arrive with Soncle.App; the shell shows one placeholder per destination. -->
-            <Grid Background="{ThemeResource BackgroundBrush}" Padding="24">
-                <StackPanel VerticalAlignment="Center" Spacing="8">
+            <Grid Background="{ThemeResource BackgroundBrush}">
+                <!-- One placeholder per destination; search results replace it until another
+                     destination is picked. -->
+                <StackPanel x:Name="Placeholder" Margin="24" VerticalAlignment="Center" Spacing="8">
                     <TextBlock x:Name="DestinationTitle"
                                Text="Home"
                                Style="{StaticResource HeadlineMedium}" />
-                    <TextBlock Text="The pages arrive with Soncle.App. This Android build is the shell and a test sound."
+                    <TextBlock Text="Search for a song above and pick it to play. Pages arrive with Soncle.App."
                                TextWrapping="WrapWholeWords"
                                Style="{StaticResource BodyMedium}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}" />
@@ -51,12 +67,61 @@
                                Style="{StaticResource BodySmall}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}" />
                 </StackPanel>
+
+                <!-- Search results. -->
+                <Grid x:Name="ResultsPanel" Visibility="Collapsed" Padding="12" RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ProgressRing x:Name="SearchSpinner"
+                                  Grid.Row="0"
+                                  Width="24" Height="24"
+                                  IsActive="False"
+                                  Visibility="Collapsed"
+                                  HorizontalAlignment="Left" />
+                    <ListView x:Name="ResultsList"
+                              Grid.Row="1"
+                              SelectionMode="None"
+                              IsItemClickEnabled="True"
+                              ItemClick="OnResultClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnSpacing="12" Padding="0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Artwork arrives with Soncle.Design; the tinted square keeps the row's shape. -->
+                                    <Border Width="48" Height="48"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource SurfaceVariantBrush}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Style="{StaticResource TitleSmall}" />
+                                        <TextBlock Text="{Binding Artists}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Style="{StaticResource BodySmall}"
+                                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <TextBlock x:Name="SearchMessage"
+                               Grid.Row="2"
+                               TextWrapping="WrapWholeWords"
+                               Style="{StaticResource BodySmall}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                </Grid>
             </Grid>
         </NavigationView>
 
-        <!-- Player bar: the empty state is a message, never a blank square with 0:00 / 0:00
-             (docs/DESIGN.md §4.1). The tinted square appears only once the test sound is loaded. -->
-        <Grid Grid.Row="1"
+        <!-- Player bar (docs/DESIGN.md §4.1): the empty state is a message, never a blank square with
+             0:00 / 0:00. Play/pause, previous/next and a seek bar work on the current song. -->
+        <Grid Grid.Row="2"
               Margin="8,4"
               Padding="12,8"
               CornerRadius="16"
@@ -71,29 +136,39 @@
                     Width="48" Height="48"
                     CornerRadius="8"
                     Visibility="Collapsed"
-                    Background="{ThemeResource PrimaryBrush}" />
+                    Background="{ThemeResource PrimaryBrush}">
+                <Image x:Name="NowArtImage" Stretch="UniformToFill" />
+            </Border>
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock x:Name="NowTitle"
                            Text="Nothing playing"
                            TextTrimming="CharacterEllipsis"
                            Style="{StaticResource TitleSmall}" />
                 <TextBlock x:Name="NowDetail"
-                           Text="Your library is empty in this preview build. Test sound plays a short built-in clip."
+                           Text="Search for a song above, then pick it to play."
                            TextWrapping="WrapWholeWords"
                            MaxLines="2"
                            Style="{StaticResource BodySmall}"
                            Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <Slider x:Name="SeekBar"
+                        Margin="0,4,0,0"
+                        Minimum="0"
+                        Maximum="1"
+                        Visibility="Collapsed"
+                        ValueChanged="OnSeekValueChanged" />
             </StackPanel>
-            <Button x:Name="PlayButton"
-                    Grid.Column="2"
-                    Content="Test sound"
-                    Click="OnPlayClick"
-                    Style="{StaticResource FilledButtonStyle}" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <ProgressRing x:Name="BarSpinner" Width="20" Height="20" IsActive="False" Visibility="Collapsed" />
+                <Button x:Name="PrevButton" Content="Prev" Click="OnPrevClick" IsEnabled="False" />
+                <Button x:Name="PlayButton" Content="Play" Click="OnPlayPauseClick" IsEnabled="False"
+                        Style="{StaticResource FilledButtonStyle}" />
+                <Button x:Name="NextButton" Content="Next" Click="OnNextClick" IsEnabled="False" />
+            </StackPanel>
         </Grid>
 
         <!-- The bottom bar (phones). Hidden when the rail shows. -->
         <utu:TabBar x:Name="BottomBar"
-                    Grid.Row="2"
+                    Grid.Row="3"
                     SelectedIndex="0"
                     Style="{StaticResource BottomTabBarStyle}">
             <utu:TabBar.Items>
