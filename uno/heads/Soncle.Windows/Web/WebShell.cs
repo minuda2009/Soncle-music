@@ -186,6 +186,26 @@ internal sealed partial class WebShell : IDisposable
         s.IsPasswordAutosaveEnabled = false;
         s.IsWebMessageEnabled = true;
 
+        // Output-device names (per-device sound profiles need them): Chromium shows them to a page
+        // that holds the microphone permission. The Electron app granted the equivalent
+        // ("speaker-selection"); no Soncle code ever calls getUserMedia, so nothing is recorded.
+        try
+        {
+            await core.Profile.SetPermissionStateAsync(CoreWebView2PermissionKind.Microphone, Origin, CoreWebView2PermissionState.Allow);
+        }
+        catch (Exception ex)
+        {
+            Log($"device-names-permission-failed {ex.GetType().Name}");
+        }
+        core.PermissionRequested += (_, e) =>
+        {
+            var ours = e.Uri.StartsWith(Origin + "/", StringComparison.OrdinalIgnoreCase);
+            e.State = ours && e.PermissionKind is CoreWebView2PermissionKind.ClipboardRead or CoreWebView2PermissionKind.Microphone
+                ? CoreWebView2PermissionState.Allow
+                : CoreWebView2PermissionState.Deny;
+            e.Handled = true;
+        };
+
         core.AddWebResourceRequestedFilter(Origin + "/*", CoreWebView2WebResourceContext.All);
         core.WebResourceRequested += OnResourceRequested;
         core.WebMessageReceived += OnMessage;
