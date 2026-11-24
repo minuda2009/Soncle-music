@@ -170,7 +170,11 @@ internal sealed partial class WebShell : IDisposable
         var options = new CoreWebView2EnvironmentOptions
         {
             // songs start from the player bar's own gesture or from media keys
-            AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required --disable-features=HardwareMediaKeyHandling,MediaSessionService",
+            // Trimmed: no Edge services the app never uses (translate, autofill, sync, component
+            // updates, background networking, spare renderers); one renderer process for one page.
+            AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required"
+                + " --disable-features=HardwareMediaKeyHandling,MediaSessionService,Translate,AutofillServerCommunication,OptimizationHints,SpareRendererForSitePerProcess,msSmartScreenProtection,msEdgeShopping"
+                + " --disable-background-networking --disable-component-update --disable-sync --disable-default-apps --no-first-run --renderer-process-limit=1",
         };
         var env = await CoreWebView2Environment.CreateWithOptionsAsync("", Path.Combine(DataFolder, "WebView2"), options);
         await _view.EnsureCoreWebView2Async(env);
@@ -182,6 +186,9 @@ internal sealed partial class WebShell : IDisposable
         s.AreDevToolsEnabled = true;                 // preview build: F12 for diagnosis
         s.IsStatusBarEnabled = false;
         s.IsZoomControlEnabled = false;
+        s.IsPinchZoomEnabled = false;
+        s.IsSwipeNavigationEnabled = false;
+        s.IsBuiltInErrorPageEnabled = false;
         s.IsGeneralAutofillEnabled = false;
         s.IsPasswordAutosaveEnabled = false;
         s.IsWebMessageEnabled = true;
@@ -249,6 +256,7 @@ internal sealed partial class WebShell : IDisposable
         {
             _media = new WebMediaSession(_window, _window.DispatcherQueue, (action, seekTime) =>
             {
+                Wake(core);
                 var data = new JsonObject { ["action"] = action };
                 if (seekTime is { } t) data["seekTime"] = t;
                 Reply(core, new JsonObject { ["type"] = "event", ["event"] = "mediaAction", ["data"] = data });
@@ -259,11 +267,56 @@ internal sealed partial class WebShell : IDisposable
             // the app plays without media keys rather than not opening
             Log($"media-session-unavailable {e.GetType().Name}");
         }
+        _window.AppWindow.Changed += (_, e) =>
+        {
+            if (e.DidPresenterChange || e.DidVisibilityChange) _ = UpdateMemoryAsync();
+        };
         core.Navigate(Origin + "/index.html");
         Log("started");
     }
 
     private bool _flushed;
+    private bool _playing;
+    private bool _suspended;
+
+    private bool Minimized => _window.AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } || !_window.AppWindow.IsVisible;
+
+    /// <summary>
+    /// Minimised: WebView2 trims its memory ("low" target). Minimised and nothing playing: the page
+    /// is suspended outright (no timers, no rendering) and wakes when the window comes back. Media
+    /// keys go through the native media session, which wakes it too.
+    /// </summary>
+    private async Task UpdateMemoryAsync()
+    {
+        if (_view.CoreWebView2 is not { } core) return;
+        try
+        {
+            var min = Minimized;
+            core.MemoryUsageTargetLevel = min ? CoreWebView2MemoryUsageTargetLevel.Low : CoreWebView2MemoryUsageTargetLevel.Normal;
+            if (min && !_playing && !_suspended)
+            {
+                _view.Visibility = Visibility.Collapsed;   // suspension needs a hidden WebView
+                _suspended = await core.TrySuspendAsync();
+                if (!_suspended) _view.Visibility = Visibility.Visible;
+            }
+            else if (!min && _suspended)
+            {
+                Wake(core);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"memory-update-failed {ex.GetType().Name}");
+        }
+    }
+
+    private void Wake(CoreWebView2 core)
+    {
+        if (!_suspended) return;
+        _suspended = false;
+        _view.Visibility = Visibility.Visible;
+        try { core.Resume(); } catch (Exception ex) { Log($"resume-failed {ex.GetType().Name}"); }
+    }
 
     /// <summary>
     /// Before the window closes, the page saves what it still holds (library, Flow data — the
@@ -274,6 +327,7 @@ internal sealed partial class WebShell : IDisposable
         if (_flushed || _view.CoreWebView2 is not { } core) return;
         args.Cancel = true;
         _flushed = true;
+        WindowPlacement.Save(_window);
         try
         {
             core.PostWebMessageAsJson("{\"type\":\"pause\"}");
@@ -556,7 +610,15 @@ internal sealed partial class WebShell : IDisposable
                     break;
                 }
                 case "mediaUpdate":
-                    if (args.ValueKind == JsonValueKind.Object) _media?.Update(args);
+                    if (args.ValueKind == JsonValueKind.Object)
+                    {
+                        _media?.Update(args);
+                        _playing = args.TryGetProperty("playing", out var pl) && pl.ValueKind == JsonValueKind.True;
+                        // the taskbar and Alt+Tab show the song, like the desktop app
+                        var title = Arg("title");
+                        var artist = Arg("artist");
+                        _window.Title = _playing && title.Length > 0 ? (artist.Length > 0 ? $"{title} \u2022 {artist}" : title) : "Soncle Preview";
+                    }
                     data = new JsonObject();
                     break;
                 case "carryOver":

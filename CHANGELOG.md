@@ -22,6 +22,11 @@
 - **Local files** are back, on the C# port of the desktop app's local library (TagLib tags, cover
   art, folders, rescans, "open files", Explorer's "Open with"); your folders come over from the
   desktop app on the first start.
+- **Lighter and steadier:** the WebView2 engine runs trimmed (no translate, autofill, sync,
+  component updates or background networking; one page process), trims its memory when the window
+  is minimised and is suspended outright when minimised with nothing playing.
+- The window opens where and as big as you left it (maximised too), and the taskbar shows the
+  song that's playing, like the desktop app.
 - For now the preview keeps its library inside its own WebView profile, and has no sign-in or downloads yet. A log is kept at
   `%LOCALAPPDATA%\Soncle Preview\soncle.log`. The Electron and Android apps are unchanged.
 

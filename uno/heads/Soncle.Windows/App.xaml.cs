@@ -42,6 +42,7 @@ public partial class App : Application
         }
 
         MainWindow.SetWindowIcon();
+        Soncle.Windows.Web.WindowPlacement.Restore(MainWindow);
         MainWindow.Activate();
     }
 
