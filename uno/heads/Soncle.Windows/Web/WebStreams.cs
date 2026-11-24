@@ -10,7 +10,7 @@ namespace Soncle.Windows.Web;
 /// key, googlevideo URL, headers, length, mime) and plays <c>https://host.soncle.local/_soncle/stream/&lt;key&gt;</c>
 /// as a normal seekable file. The whole song downloads in the background in 1 MB pieces; a range
 /// is answered as soon as its pieces are in. An expired URL (HTTP 403) asks the page for a fresh
-/// one (<c>streamExpired</c>) and carries on. At most four songs are kept, in memory.
+/// one (<c>streamExpired</c>) and carries on. At most four songs are kept in memory.
 /// </summary>
 internal sealed class WebStreams
 {
