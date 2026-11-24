@@ -181,9 +181,9 @@ function nativeStreamUrl(id, force) {
       Soncle.registerStream({ key: k, error: e.message || 'stream failed' }).catch(() => {});
     });
   }
-  return location.origin + '/_soncle/stream/' + encodeURIComponent(key);
+  return (DESKTOP ? 'https://host.soncle.local' : location.origin) + '/_soncle/stream/' + encodeURIComponent(key);
 }
-if (native) {
+if (native || DESKTOP) {
   Soncle.addListener('streamExpired', async ({ key }) => {
     const cur = streamKeys.get(key);
     if (!cur?.s) return Soncle.registerStream({ key, error: 'stream expired' }).catch(() => {});
@@ -339,7 +339,8 @@ const api = {
   srcFor: (t, bust) => {
     // On the phone a reload keeps the song's download (it retries and refreshes its own URL);
     // only a song whose lookup failed is looked up again.
-    if (native) return nativeStreamUrl(t.id, false);
+    // Windows: the C# host's port of the same stream proxy (Web/WebStreams.cs)
+    if (native || DESKTOP) return nativeStreamUrl(t.id, false);
     if (bust) yt.invalidateStream(t.id);
     return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, !!bust)), quality: quality() }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
   },

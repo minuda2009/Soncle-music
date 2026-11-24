@@ -62,6 +62,7 @@ internal sealed partial class WebShell : IDisposable
     private IBotGuardPage? _botGuard;
     private WebMediaSession? _media;
     private WebLocalFiles? _local;
+    private readonly WebStreams _streams;
     private readonly HttpClient _http;
     private readonly string _root;
     private bool _disposed;
@@ -88,6 +89,11 @@ internal sealed partial class WebShell : IDisposable
         {
             Timeout = TimeSpan.FromSeconds(45),
         };
+        _streams = new WebStreams(_http, key => _window.DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_view.CoreWebView2 is { } core)
+                Reply(core, new JsonObject { ["type"] = "event", ["event"] = "streamExpired", ["data"] = new JsonObject { ["key"] = key } });
+        }));
     }
 
     /// <summary>
@@ -373,6 +379,13 @@ internal sealed partial class WebShell : IDisposable
             _ = RelayAsync(sender, e, uri, deferral);
             return;
         }
+        if (WebStreams.Handles(uri.AbsolutePath))
+        {
+            var deferral = e.GetDeferral();
+            var range = e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null;
+            _ = ServeStreamAsync(sender.Environment, e, uri, range, deferral);
+            return;
+        }
         if (WebLocalFiles.Handles(uri.AbsolutePath) && _local is { } local)
         {
             var deferral = e.GetDeferral();
@@ -381,6 +394,23 @@ internal sealed partial class WebShell : IDisposable
             return;
         }
         e.Response = ServeFile(sender.Environment, uri);
+    }
+
+    private async Task ServeStreamAsync(CoreWebView2Environment env, CoreWebView2WebResourceRequestedEventArgs e, Uri uri, string? range, global::Windows.Foundation.Deferral deferral)
+    {
+        try
+        {
+            e.Response = await _streams.ServeAsync(env, uri, range);
+        }
+        catch (Exception ex)
+        {
+            Log($"stream-serve-failed {ex.GetType().Name}");
+            try { e.Response = env.CreateWebResourceResponse(null, 500, "Internal Server Error", Cors); } catch { /* gone */ }
+        }
+        finally
+        {
+            deferral.Complete();
+        }
     }
 
     private static async Task ServeLocalAsync(CoreWebView2Environment env, CoreWebView2WebResourceRequestedEventArgs e, WebLocalFiles local, Uri uri, string? range, global::Windows.Foundation.Deferral deferral)
@@ -640,6 +670,23 @@ internal sealed partial class WebShell : IDisposable
                     break;
                 case "carryOver":
                     data = CarryOverDesktopLibrary();
+                    break;
+                case "registerStream":
+                {
+                    var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    if (args.ValueKind == JsonValueKind.Object && args.TryGetProperty("headers", out var hs) && hs.ValueKind == JsonValueKind.Object)
+                        foreach (var h in hs.EnumerateObject())
+                            if (h.Value.ValueKind == JsonValueKind.String) headers[h.Name] = h.Value.GetString() ?? "";
+                    var length = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("length", out var ln) && ln.ValueKind == JsonValueKind.Number ? ln.GetInt64() : 0;
+                    var error = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("error", out var er) && er.ValueKind == JsonValueKind.String ? er.GetString() : null;
+                    if (error is null && length <= 0) error = "stream has no length";
+                    _streams.Register(Arg("key"), Arg("url"), headers, length, Arg("mime"), error);
+                    data = new JsonObject();
+                    break;
+                }
+                case "forgetStream":
+                    _streams.Forget(Arg("key"));
+                    data = new JsonObject();
                     break;
                 case "localFolders":
                     data = local?.Folders() ?? new JsonArray();

@@ -28,6 +28,9 @@
 - **Snappier:** the app's own files load through WebView2's fast local-folder path, and only real
   requests (YouTube, lyrics, local music) go through the C# host, on their own internal address,
   without CORS preflights. Mica is back behind the sidebar and player bar, as on the desktop app.
+- **Songs stream natively:** a C# port of the Android app's stream proxy downloads each song in the
+  background in 1 MB pieces and hands the player a normal seekable file, refreshing an expired
+  link on its own: quicker starts and seeks, no work for the page while a song loads.
 - The window opens where and as big as you left it (maximised too), and the taskbar shows the
   song that's playing, like the desktop app.
 - For now the preview keeps its library inside its own WebView profile, and has no sign-in or downloads yet. A log is kept at
