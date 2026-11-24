@@ -20,7 +20,7 @@ function Snap([int]$rootId) {
     procs   = $t.Count
     privMB  = [math]::Round((($t | Measure-Object PrivateMemorySize64 -Sum).Sum) / 1MB, 1)
     wsMB    = [math]::Round((($t | Measure-Object WorkingSet64 -Sum).Sum) / 1MB, 1)
-    cpuSec  = (($t | Measure-Object TotalProcessorTime -Sum -Property { $_.TotalProcessorTime.TotalSeconds }).Sum)
+    cpuSec  = [double](($t | ForEach-Object { if ($_.TotalProcessorTime) { $_.TotalProcessorTime.TotalSeconds } else { 0 } } | Measure-Object -Sum).Sum)
   }
 }
 
