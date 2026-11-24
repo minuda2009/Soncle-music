@@ -152,6 +152,36 @@ experimental, and described honestly as an effect, not a remix.
 - Accept: kicks land within ±10 ms of the click-track beats; switching it on or off mid-song never
   clicks.
 
+### 10. YouTube reliability fixes (from the upstream study, 24 Nov 2026)
+Found in `upstream/STUDY-2026-11.md`; each one is small and lands in `src/yt.mjs` (and `Soncle.YouTube`).
+- **Last-resort stream client `IOS_PRODUCER`** after every other client fails. It only returns a
+  muxed 360p file (itag 18), so it is never cached and the song is marked lower quality.
+- **Smarter retries after a 403:** a 403 on a client without a PO token excludes only that client;
+  a 403 with a token renews the token. After a token is rejected, try the tokenless clients first.
+- **Locale:** send only `hl` language codes YouTube accepts, and map regions YouTube Music doesn't
+  serve (Sri Lanka among them) to one it does, or US, so Home and search don't come back thin.
+- **Small ones:** accept `Content-Range` in any letter case; follow googlevideo redirects in the
+  stream proxy; stop waiting on endless mix continuations (Flow's whole-pool fetch); keep greyed-out
+  playlist rows playable; let sign-in finish when YouTube Music never reports the page as loaded.
+
+### 11. Scrobbling: Last.fm and ListenBrainz
+- Scrobble after half the song or 4 minutes (Last.fm's rule), "now playing" on start.
+- Sign-in keys stay in the main process / backend like the cookie, never in the UI.
+- Scrobbles that fail (offline, signed out) are kept and sent later.
+- Level 1 in Settings → Integrations; off by default.
+
+### 12. Lyrics: romanization and more sources
+- **Romanization** for Japanese, Korean, Chinese, Cyrillic and Indic scripts, detected per line,
+  with an option to show only the romanized line.
+- **More providers** in `src/lyrics-engine.mjs`: word-synced BetterLyrics, KuGou, SimpMusic, with a
+  "pick another source" choice when the lyrics are wrong. LRCLIB stays first.
+- **Translation** (later, opt-in): with a key the user brings (DeepL or an LLM), kept out of the UI
+  like the cookie.
+
+### 13. Content filters
+Block a song or an artist, hide explicit, block AI-generated artists, minimum song length. One
+list used everywhere: Home, search, radio, and Flow's pool.
+
 ### Costs to keep in check
 - Extra analysis only for songs about to be mixed (the next 1–2 in the queue), paused on battery,
   like Flow today.
@@ -192,6 +222,32 @@ app can't yet tell what the sound is playing through (`btDevices` returns an emp
 - Accept: the profile changes within a second of plugging in or connecting Bluetooth; the phone
   speaker preset is louder and clearer with no true-peak overs; CPU cost on a phone measured and
   written down.
+
+## Plan: the hybrid Uno app (decided 24 Nov 2026)
+
+_This changes how the "Later: move to Uno Platform" section below is reached. Where they differ,
+this section wins._
+
+- **One Uno app, the current web UI inside it.** The Uno app is a native shell on Windows (WinUI 3)
+  and, later, on Android. Inside it, WebView2 shows Soncle's existing web UI (`renderer/`, built
+  with the Android web layer by `mobile/build.mjs --desktop`). The UI is not rewritten.
+- **Native where it counts.** The C# (and Java/Kotlin on Android, where Android needs it) side
+  does what touches the system or the sound: today the app files, an HTTP relay (no CORS, like
+  CapacitorHttp) and the window; next PO tokens and sign-in, the audio engine (`Soncle.Audio` on
+  WASAPI), devices and per-device profiles, media controls and notifications, downloads and local
+  files, Discord.
+- **Move in one piece at a time, measured.** Each move replaces a JS piece behind the same
+  `window.api`, with CPU, memory and size measured before and after. Native Fluent screens can
+  replace web screens later, one by one, if they earn it.
+- **Order:** (1) Windows shell at the current UI level ✅ first build 24 Nov 2026; (2) sign-in,
+  PO tokens, downloads, local files on Windows; (3) native audio engine on Windows;
+  (4) trim the Windows build (framework-dependent .NET, drop unused libraries); (5) the same Uno
+  shell on Android, replacing Capacitor; (6) then Smart mix 2 and the items above.
+- **Estimate:** about 6–9 working sessions for the whole plan.
+
+**From the upstream study (also in `upstream/STUDY-2026-11.md`), later:** Android downloads,
+home-screen widget and Android Auto, editing YouTube playlists and (optional) sending plays to
+YouTube history, Google Cast / DLNA as a plain-output mode, song recognition.
 
 ## Later: move to Uno Platform (C# / .NET): WinUI on Windows, native Android
 
