@@ -71,7 +71,7 @@ internal sealed partial class WebShell : IDisposable
     {
         _view = view;
         _window = window;
-        _botGuardFactory = Playback.WebViewBotGuardPage.Factory(botGuardHost);
+        _botGuardFactory = Playback.WebViewBotGuardPage.Factory(botGuardHost, () => _view.CoreWebView2?.Environment);   // one browser process, not two
         _root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "web"));
         _http = new HttpClient(new SocketsHttpHandler
         {
@@ -192,7 +192,7 @@ internal sealed partial class WebShell : IDisposable
             // updates, background networking, spare renderers); one renderer process for one page.
             AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required"
                 + " --disable-features=HardwareMediaKeyHandling,MediaSessionService,Translate,AutofillServerCommunication,OptimizationHints,SpareRendererForSitePerProcess,msSmartScreenProtection,msEdgeShopping"
-                + " --disable-background-networking --disable-component-update --disable-sync --disable-default-apps --no-first-run --renderer-process-limit=1",
+                + " --disable-background-networking --disable-component-update --disable-sync --disable-default-apps --no-first-run",
         };
         var env = await CoreWebView2Environment.CreateWithOptionsAsync("", Path.Combine(DataFolder, "WebView2"), options);
         await _view.EnsureCoreWebView2Async(env);

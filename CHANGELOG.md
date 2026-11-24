@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: the hidden page that makes YouTube's anti-bot tokens now runs inside
+  Soncle's own browser (a private profile of its own) instead of starting a second browser with its
+  own GPU and network processes.
 - Soncle Preview for Windows: if a song won't start through the new native stream proxy, Soncle
   now plays it through the in-page streaming path instead of failing ("no supported source"), and
   writes the reason to its log. "Playing from" in Now Playing no longer sits under the window buttons.

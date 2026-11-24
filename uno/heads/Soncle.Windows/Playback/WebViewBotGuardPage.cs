@@ -42,10 +42,13 @@ internal sealed class WebViewBotGuardPage : IBotGuardPage
     private long _next;
     private int _closed;
 
-    private WebViewBotGuardPage(Panel host, DispatcherQueue ui)
+    private readonly Func<CoreWebView2Environment?>? _shared;
+
+    private WebViewBotGuardPage(Panel host, DispatcherQueue ui, Func<CoreWebView2Environment?>? shared = null)
     {
         _host = host;
         _ui = ui;
+        _shared = shared;
         _view = new WebView2
         {
             Width = 1,
@@ -57,12 +60,15 @@ internal sealed class WebViewBotGuardPage : IBotGuardPage
     }
 
     /// <summary>A <see cref="BotGuardPageFactory"/> that puts each page into <paramref name="host"/> (an invisible panel in the window).</summary>
-    public static BotGuardPageFactory Factory(Panel host)
+    /// <param name="shared">When it returns the app's own environment, the page runs in it (an
+    /// InPrivate profile of its own, so nothing is stored and nothing is shared with the app's
+    /// pages) instead of starting a second browser, GPU and network process.</param>
+    public static BotGuardPageFactory Factory(Panel host, Func<CoreWebView2Environment?>? shared = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         return ct => OnUi(host.DispatcherQueue, async () =>
         {
-            var page = new WebViewBotGuardPage(host, host.DispatcherQueue);
+            var page = new WebViewBotGuardPage(host, host.DispatcherQueue, shared);
             try
             {
                 await page.LoadAsync(ct);
@@ -80,12 +86,24 @@ internal sealed class WebViewBotGuardPage : IBotGuardPage
 
     private async Task LoadAsync(CancellationToken ct)
     {
-        SweepProfiles();
-        Directory.CreateDirectory(_profile);
-        var env = await CoreWebView2Environment.CreateWithOptionsAsync("", _profile, new CoreWebView2EnvironmentOptions());
-        ct.ThrowIfCancellationRequested();
-        _host.Children.Add(_view);
-        await _view.EnsureCoreWebView2Async(env);
+        var shared = _shared?.Invoke();
+        if (shared is not null)
+        {
+            var options = shared.CreateCoreWebView2ControllerOptions();
+            options.ProfileName = "potoken";
+            options.IsInPrivateModeEnabled = true;
+            _host.Children.Add(_view);
+            await _view.EnsureCoreWebView2Async(shared, options);
+        }
+        else
+        {
+            SweepProfiles();
+            Directory.CreateDirectory(_profile);
+            var env = await CoreWebView2Environment.CreateWithOptionsAsync("", _profile, new CoreWebView2EnvironmentOptions());
+            ct.ThrowIfCancellationRequested();
+            _host.Children.Add(_view);
+            await _view.EnsureCoreWebView2Async(env);
+        }
         ct.ThrowIfCancellationRequested();
         var core = _view.CoreWebView2 ?? throw new InvalidOperationException("WebView2 did not start");
         _core = core;
