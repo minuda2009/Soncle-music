@@ -1,6 +1,7 @@
 // Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -63,10 +64,47 @@ internal sealed partial class WebShell : IDisposable
             UseCookies = false,
             AllowAutoRedirect = true,
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+            ConnectTimeout = TimeSpan.FromSeconds(20),
+            ConnectCallback = ConnectAsync,
         })
         {
             Timeout = TimeSpan.FromSeconds(45),
         };
+    }
+
+    /// <summary>
+    /// Connects the way Node (and so the Electron app) does: IPv4 addresses first, each with a
+    /// short timeout, then IPv6. .NET on its own tries addresses one by one with no fallback race,
+    /// so on a network that advertises IPv6 but doesn't route it every request hung until the
+    /// timeout ("TaskCanceledException" in the relay).
+    /// </summary>
+    private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext ctx, CancellationToken ct)
+    {
+        var host = ctx.DnsEndPoint.Host;
+        IPAddress[] addresses = IPAddress.TryParse(host, out var literal)
+            ? new[] { literal }
+            : await Dns.GetHostAddressesAsync(host, ct).ConfigureAwait(false);
+        var ordered = addresses.Where(a => a.AddressFamily == AddressFamily.InterNetwork)
+            .Concat(addresses.Where(a => a.AddressFamily == AddressFamily.InterNetworkV6))
+            .ToList();
+        Exception? last = null;
+        foreach (var ip in ordered)
+        {
+            var socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+            try
+            {
+                using var attempt = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                attempt.CancelAfter(TimeSpan.FromSeconds(ip.AddressFamily == AddressFamily.InterNetwork ? 6 : 4));
+                await socket.ConnectAsync(new IPEndPoint(ip, ctx.DnsEndPoint.Port), attempt.Token).ConfigureAwait(false);
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch (Exception e) when (!ct.IsCancellationRequested)
+            {
+                socket.Dispose();
+                last = e;
+            }
+        }
+        throw last ?? new SocketException((int)SocketError.HostNotFound);
     }
 
     private static string DataFolder => Path.Combine(
