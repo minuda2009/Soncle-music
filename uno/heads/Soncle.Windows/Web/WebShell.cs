@@ -322,14 +322,31 @@ internal sealed partial class WebShell : IDisposable
             }
             var status = (int)res.StatusCode;
             var stream = status is 204 or 304 || method == HttpMethod.Head ? null : new MemoryStream(bytes, writable: false).AsRandomAccessStream();
-            e.Response = env.CreateWebResourceResponse(stream, status, string.IsNullOrEmpty(res.ReasonPhrase) ? "OK" : res.ReasonPhrase, headers.ToString().TrimEnd());
+            var reason = string.IsNullOrEmpty(res.ReasonPhrase) ? "OK" : res.ReasonPhrase;
+            try
+            {
+                e.Response = env.CreateWebResourceResponse(stream, status, reason, headers.ToString().TrimEnd());
+            }
+            catch (Exception hx)
+            {
+                // WebView2 refused a header: answer with only the ones the page needs
+                Log($"relay-headers-refused {hx.GetType().Name}");
+                var basic = new StringBuilder();
+                if (res.Content.Headers.ContentType is { } ct) basic.Append("Content-Type: ").Append(ct).Append('\n');
+                if (res.Content.Headers.ContentRange is { } cr) basic.Append("Content-Range: ").Append(cr).Append('\n');
+                var again = status is 204 or 304 || method == HttpMethod.Head ? null : new MemoryStream(bytes, writable: false).AsRandomAccessStream();
+                e.Response = env.CreateWebResourceResponse(again, status, reason, basic.ToString().TrimEnd());
+            }
         }
         catch (Exception ex)
         {
-            Log($"relay-failed {ex.GetType().Name}: {Redact(ex.Message)}");
+            Log($"relay-failed {ex.GetType().Name}: {Redact(ex.Message)}" + (ex.InnerException is { } inner ? $" ({inner.GetType().Name}: {Redact(inner.Message)})" : ""));
             try
             {
-                e.Response = env.CreateWebResourceResponse(null, 502, "Bad Gateway", "");
+                // the reason travels in the status text, so the page's error message shows it
+                var why = new string(($"Relay {ex.GetType().Name}: " + Redact(ex.InnerException?.Message ?? ex.Message))
+                    .Where(ch => ch >= 0x20 && ch < 0x7F).Take(180).ToArray());
+                e.Response = env.CreateWebResourceResponse(null, 502, why, "");
             }
             catch
             {
