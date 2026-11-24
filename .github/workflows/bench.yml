@@ -1,0 +1,50 @@
+# Soncle · by minuda2009 (https://github.com/minuda2009) · GPL-3.0-or-later
+# Same Windows machine, same run: Soncle 1.0.0 (Electron) against the latest Windows preview.
+# Startup, settled memory, 10 minutes idle (memory drift + CPU). Results in the run summary.
+name: Bench (Windows)
+on:
+  workflow_dispatch:
+    inputs:
+      idle_seconds: { description: 'Idle time per app (s)', default: '600' }
+  push:
+    branches: ['openhands/**']
+    paths: ['tools/bench/**', '.github/workflows/bench.yml']
+jobs:
+  bench:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download both apps
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory apps | Out-Null
+          gh release download v1.0.0 -p 'Soncle-Setup-1.0.0.exe' -D apps -R ${{ github.repository }}
+          gh release download windows-preview -p 'Soncle-preview-win-x64.zip' -D apps -R ${{ github.repository }}
+          Expand-Archive apps/Soncle-preview-win-x64.zip apps/preview
+          Start-Process apps/Soncle-Setup-1.0.0.exe -ArgumentList '/S' -Wait
+        env: { GH_TOKEN: '${{ github.token }}' }
+      - name: Measure
+        shell: pwsh
+        run: |
+          $idle = [int]('${{ inputs.idle_seconds }}' -replace '^$','600')
+          $electron = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Soncle.exe' | Select-Object -First 1
+          $preview = Get-ChildItem apps/preview -Recurse -Filter 'Soncle.Windows.exe' | Select-Object -First 1
+          if (-not $electron -or -not $preview) { Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 | Select FullName; throw 'app not found' }
+          ./tools/bench/bench.ps1 -Exe $electron.FullName -Name 'electron-1.0.0' -IdleSeconds $idle -Out bench-electron.json
+          ./tools/bench/bench.ps1 -Exe $preview.FullName -Name 'windows-preview' -IdleSeconds $idle -Out bench-preview.json
+          $a = Get-Content bench-electron.json | ConvertFrom-Json; $b = Get-Content bench-preview.json | ConvertFrom-Json
+          $rows = @(
+            @('Window shown (s)', $a.windowShownSec, $b.windowShownSec),
+            @('Processes', $a.processes, $b.processes),
+            @('Private memory, settled (MB)', $a.settledPrivMB, $b.settledPrivMB),
+            @('Working set, settled (MB)', $a.settledWsMB, $b.settledWsMB),
+            @("Private memory after $idle s idle (MB)", $a.endPrivMB, $b.endPrivMB),
+            @('Memory drift while idle (MB)', $a.driftPrivMB, $b.driftPrivMB),
+            @('Idle CPU (% of machine)', $a.idleCpuPct, $b.idleCpuPct))
+          $md = "### Soncle on Windows: 1.0.0 vs preview`n`n| | 1.0.0 (Electron) | Preview (C# + WebView2) |`n|---|---|---|`n"
+          foreach ($r in $rows) { $md += "| $($r[0]) | $($r[1]) | $($r[2]) |`n" }
+          $md += "`nGitHub runner, no GPU, no audio device: compare the two columns, not against your laptop.`n"
+          $md | Out-File $env:GITHUB_STEP_SUMMARY -Append; $md
+      - uses: actions/upload-artifact@v4
+        with: { name: bench, path: 'bench-*.json' }
