@@ -36,6 +36,8 @@ const shim = (n) => path.join(here, 'src', 'desktop', n);
 const desktopOpts = desktop ? {
   alias: { '@capacitor/core': shim('core.js'), '@capacitor/filesystem': shim('filesystem.js'), '@capacitor/app': shim('app.js'), '@capacitor/browser': shim('browser.js'), '@capacitor/status-bar': shim('status-bar.js') },
   define: { SONCLE_DESKTOP: 'true' },
+  // first, before youtubei.js captures globalThis.fetch: the relay must already be in place
+  inject: [shim('host.js')],
 } : {};
 const common = { ...desktopOpts, bundle: true, format: 'iife', platform: 'browser', target: 'chrome100', mainFields: ['browser', 'module', 'main'], conditions: ['browser'], plugins: [noNode], legalComments: 'none', logLevel: 'warning', nodePaths: [path.join(here, 'node_modules')] };
 const backend = path.join(here, 'src', 'backend.js');

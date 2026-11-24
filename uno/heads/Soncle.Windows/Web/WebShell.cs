@@ -192,7 +192,7 @@ internal sealed partial class WebShell : IDisposable
             if (!full.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(full))
                 return env.CreateWebResourceResponse(null, 404, "Not Found", "");
             var bytes = File.ReadAllBytes(full);
-            var headers = $"Content-Type: {MimeOf(full)}\r\nCache-Control: no-cache";
+            var headers = $"Content-Type: {MimeOf(full)}\nCache-Control: no-cache";
             return env.CreateWebResourceResponse(new MemoryStream(bytes, writable: false).AsRandomAccessStream(), 200, "OK", headers);
         }
         catch (Exception ex)
@@ -277,7 +277,12 @@ internal sealed partial class WebShell : IDisposable
             foreach (var h in res.Headers.Concat(res.Content.Headers))
             {
                 if (SkipResponseHeaders.Contains(h.Key)) continue;
-                foreach (var v in h.Value) headers.Append(h.Key).Append(": ").Append(v.Replace("\r", "").Replace("\n", "")).Append("\r\n");
+                foreach (var v in h.Value)
+                {
+                    var clean = v.Replace("\r", "").Replace("\n", "");
+                    if (clean.Any(ch => ch > 0x7E)) continue;   // WebView2 rejects non-ASCII header values
+                    headers.Append(h.Key).Append(": ").Append(clean).Append('\n');
+                }
             }
             var status = (int)res.StatusCode;
             var stream = status is 204 or 304 || method == HttpMethod.Head ? null : new MemoryStream(bytes, writable: false).AsRandomAccessStream();
@@ -337,8 +342,9 @@ internal sealed partial class WebShell : IDisposable
                     ToggleMaximize();
                     break;
                 case "titlebar":
+                    // the page sends the caption *symbol* colour (light symbols on a dark page)
                     if (m.TryGetProperty("color", out var c) && c.GetString() is { } color && IsLight(color) is { } light)
-                        SetCaptionForeground(_window, dark: !light);
+                        SetCaptionForeground(_window, dark: light);
                     break;
             }
         }
