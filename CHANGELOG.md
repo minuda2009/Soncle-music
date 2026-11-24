@@ -11,8 +11,11 @@
   the window, double-click maximises, full screen, links open in your browser.
 - This is the first step of the hybrid plan: the UI stays as it is, and native parts (audio
   engine, devices, notifications, sign-in) move into C# one at a time, measured as they go.
-- For now the preview uses the stream clients that need no PO token, keeps its library inside its
-  own WebView profile, and has no sign-in, downloads or local files yet. A log is kept at
+- PO tokens come from BotGuard in a hidden WebView2 run by the C# host (the Android app does the
+  same natively), so songs play with the same stream clients as the desktop app.
+- Requests connect directly and IPv4-first, like the desktop app (Node), so a leftover system
+  proxy or half-set-up IPv6 can't make them hang.
+- For now the preview keeps its library inside its own WebView profile, and has no sign-in, downloads or local files yet. A log is kept at
   `%LOCALAPPDATA%\Soncle Preview\soncle.log`. The Electron and Android apps are unchanged.
 
 ## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done

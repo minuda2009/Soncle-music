@@ -28,7 +28,7 @@ public sealed partial class MainPage : Page
         WebShell.UseCaption(window, DragSpot);
         try
         {
-            _shell = new WebShell(Web, window);
+            _shell = new WebShell(Web, window, BotGuardHost);
             window.Closed += (_, _) => _shell?.Dispose();
             await _shell.StartAsync();
         }

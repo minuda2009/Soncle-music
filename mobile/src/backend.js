@@ -81,8 +81,9 @@ const ready = (async () => {
   cookie = (await readJson('auth.json'))?.cookie || '';
   if (cookie) yt.configure({ cookie });
   yt.setLogger((m) => log(m));
-  if (native) {
+  if (native || DESKTOP) {
     // Same stream clients and order as desktop: PO tokens come from BotGuard in a hidden
+    // (on Windows: the host's hidden WebView2, see desktop/core.js)
     // youtube.com WebView (native.js / SonclePlugin.java).
     yt.setPoTokenProvider((id) => mintPoToken(id, log));
   } else {

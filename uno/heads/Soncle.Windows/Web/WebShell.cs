@@ -5,6 +5,8 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Soncle.YouTube;
 using System.Text.RegularExpressions;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
@@ -49,14 +51,17 @@ internal sealed partial class WebShell : IDisposable
 
     private readonly WebView2 _view;
     private readonly Window _window;
+    private readonly BotGuardPageFactory _botGuardFactory;
+    private IBotGuardPage? _botGuard;
     private readonly HttpClient _http;
     private readonly string _root;
     private bool _disposed;
 
-    public WebShell(WebView2 view, Window window)
+    public WebShell(WebView2 view, Window window, Panel botGuardHost)
     {
         _view = view;
         _window = window;
+        _botGuardFactory = Playback.WebViewBotGuardPage.Factory(botGuardHost);
         _root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "web"));
         _http = new HttpClient(new SocketsHttpHandler
         {
@@ -436,6 +441,9 @@ internal sealed partial class WebShell : IDisposable
                 case "maximize":
                     ToggleMaximize();
                     break;
+                case "call":
+                    _ = CallAsync(sender, m.Clone());
+                    break;
                 case "titlebar":
                     // the page sends the caption *symbol* colour (light symbols on a dark page)
                     if (m.TryGetProperty("color", out var c) && c.GetString() is { } color && IsLight(color) is { } light)
@@ -446,6 +454,63 @@ internal sealed partial class WebShell : IDisposable
         catch (Exception ex)
         {
             Log($"message-failed {ex.GetType().Name}");
+        }
+    }
+
+    // ---- plugin calls from the page (the "Soncle" plugin's botguard* methods) -----------------
+
+    private async Task CallAsync(CoreWebView2 core, JsonElement m)
+    {
+        var id = m.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var n) ? n : 0;
+        var method = m.TryGetProperty("method", out var me) ? me.GetString() : null;
+        var args = m.TryGetProperty("args", out var a) ? a : default;
+        try
+        {
+            JsonObject data;
+            switch (method)
+            {
+                case "botguardLoad":
+                    _botGuard?.Dispose();
+                    _botGuard = null;
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+                        _botGuard = await _botGuardFactory(cts.Token);
+                    data = new JsonObject();
+                    break;
+                case "botguardExec":
+                {
+                    var code = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("code", out var c) ? c.GetString() ?? "" : "";
+                    var page = _botGuard is { IsAlive: true } p ? p : throw new InvalidOperationException("BotGuard page is not loaded");
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                    var value = await page.ExecAsync(code, cts.Token);
+                    data = new JsonObject { ["json"] = value?.ToJsonString() ?? "null" };
+                    break;
+                }
+                case "botguardReset":
+                    _botGuard?.Dispose();
+                    _botGuard = null;
+                    data = new JsonObject();
+                    break;
+                default:
+                    throw new NotSupportedException($"{method} isn't in the Windows app yet");
+            }
+            Reply(core, new JsonObject { ["type"] = "result", ["id"] = id, ["ok"] = true, ["data"] = data });
+        }
+        catch (Exception ex)
+        {
+            Log($"call-failed {method} {ex.GetType().Name}: {Redact(ex.Message)}");
+            Reply(core, new JsonObject { ["type"] = "result", ["id"] = id, ["ok"] = false, ["error"] = ex.Message });
+        }
+    }
+
+    private static void Reply(CoreWebView2 core, JsonObject msg)
+    {
+        try
+        {
+            core.PostWebMessageAsJson(msg.ToJsonString());
+        }
+        catch (Exception ex)
+        {
+            Log($"reply-failed {ex.GetType().Name}");
         }
     }
 
@@ -569,6 +634,7 @@ internal sealed partial class WebShell : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _botGuard?.Dispose();
         _http.Dispose();
     }
 }
