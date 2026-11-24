@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: minimise, maximise and close now respond to one click. They sat on top
+  of the page's drag area, so a click was taken as a title-bar click and two as a double-click
+  (restore). The app now draws its own buttons. Clicking into the window from another app also
+  reaches the page first time.
+- Soncle Preview for Windows: no more black window after a long minimise. The memory saver now waits
+  20 s before suspending, wakes on every restore or activation, and reloads the page if it won't resume.
 - Soncle Preview for Windows: Mica + acrylic. Mica stays behind the whole window; menus, the queue
   panel and dialogs now use acrylic (a tinted blur of what's behind them). Turning off Mica turns off
   both. The 1.0.0 desktop app and Android are unchanged.

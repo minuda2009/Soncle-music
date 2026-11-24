@@ -203,7 +203,26 @@ function applyTheme(hue, sat) {
 }
 function syncTitlebar() {
   const npOpen = !$('#nowPlaying').hidden;
-  api.titlebarColor(npOpen ? '#ffffff' : themeMode() === 'light' ? '#1b1b21' : '#e4e1e9');
+  const fg = npOpen ? '#ffffff' : themeMode() === 'light' ? '#1b1b21' : '#e4e1e9';
+  document.documentElement.style.setProperty('--caption-fg', fg);
+  api.titlebarColor(fg);
+}
+// Windows preview: the page draws minimise / maximise / close itself (the system ones sat on the
+// page's drag region and needed many clicks). Segoe Fluent Icons glyphs, Windows 11 sizes.
+function setupWindowControls() {
+  const btn = (cls, glyph, title, action) => h('button', { class: 'wc-btn ' + cls, title, 'aria-label': title, onclick: () => api.windowControl(action) }, glyph);
+  const bar = h('div', { id: 'winctl' },
+    btn('wc-min', '\uE921', 'Minimise', 'minimize'),
+    btn('wc-max', '\uE922', 'Maximise', 'maximize'),
+    btn('wc-close', '\uE8BB', 'Close', 'close'));
+  document.body.append(bar);
+  document.body.classList.add('own-caption');
+  api.onWindowState?.(({ maximized }) => {
+    const b = bar.querySelector('.wc-max');
+    b.textContent = maximized ? '\uE923' : '\uE922';
+    b.title = maximized ? 'Restore' : 'Maximise';
+    b.setAttribute('aria-label', b.title);
+  });
 }
 function applyStaticTheme() {
   const [hh, s] = hexToHsl(S().accent || DEFAULT_ACCENT);
@@ -4305,6 +4324,7 @@ window.addEventListener('unhandledrejection', (e) => {
 async function init() {
   DB = await api.storeGet();
   INFO = { ...INFO, ...(await api.info().catch(() => ({}))) };
+  if (INFO.preview && api.windowControl) setupWindowControls();
   LIKED = new Set(DB.liked.map((t) => t.id));
   const dls = await api.downloads().catch(() => ({ done: [], active: [] }));
   dls.done.forEach((d) => DL.done.add(d.track.id));

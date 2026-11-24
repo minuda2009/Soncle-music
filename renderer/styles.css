@@ -1019,3 +1019,16 @@ body.acrylic #modal { background: rgb(0 0 0 / .32); }
 @media (prefers-reduced-transparency: reduce) {
   body.acrylic #ctxMenu, body.acrylic #queuePanel, body.acrylic .dialog { backdrop-filter: none; background: var(--surface-3); }
 }
+
+/* ---------- own caption buttons (Windows preview) ---------- */
+#winctl { position: fixed; top: 0; right: 0; z-index: 200; display: flex; height: var(--titlebar-h, 48px); -webkit-app-region: no-drag; }
+.wc-btn {
+  width: 46px; height: 100%; border: 0; background: transparent; color: var(--caption-fg, var(--on-surface));
+  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets"; font-size: 10px; cursor: default;
+  transition: background-color .1s linear; -webkit-app-region: no-drag;
+}
+.wc-btn:hover { background: rgb(var(--ov) / .08); }
+.wc-btn:active { background: rgb(var(--ov) / .05); color: color-mix(in srgb, var(--caption-fg, var(--on-surface)) 70%, transparent); }
+.wc-close:hover { background: #c42b1c; color: #fff; }
+.wc-close:active { background: #c42b1c; color: rgb(255 255 255 / .7); }
+.wc-btn:focus-visible { outline-offset: -2px; border-radius: 0; }

@@ -443,6 +443,8 @@ const api = {
   saveSession: (s) => { store.session = s; save(); },
   titlebarColor: DESKTOP ? (c) => hostPost({ type: 'titlebar', color: c }) : noop,
   toggleFullscreen: DESKTOP ? () => hostPost({ type: 'fullscreen' }) : noop,
+  windowControl: DESKTOP ? (action) => hostPost({ type: 'window', action }) : undefined,
+  onWindowState: DESKTOP ? (cb) => window.chrome?.webview?.addEventListener('message', (e) => { if (e.data?.type === 'windowState') cb(e.data); }) : undefined,
   onMediaAction: noop,       // handled through navigator.mediaSession above
   onDownload: noop,
   onWinState: noop,

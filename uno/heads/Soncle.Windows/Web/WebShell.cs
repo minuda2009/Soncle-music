@@ -153,6 +153,11 @@ internal sealed partial class WebShell : IDisposable
             bar.ButtonBackgroundColor = Colors.Transparent;
             bar.ButtonInactiveBackgroundColor = Colors.Transparent;
             SetCaptionForeground(window, dark: true);
+            // The WebView covers the whole window, so the system's caption buttons sat on top of the
+            // page's drag region: a click there was a title-bar click (nothing happened) and two were a
+            // double-click (maximise/restore). The page now draws minimise/maximise/close itself and
+            // the system title bar goes; the resize border stays.
+            if (window.AppWindow.Presenter is OverlappedPresenter p) p.SetBorderAndTitleBar(true, false);
         }
         catch (Exception e)
         {
@@ -283,7 +288,17 @@ internal sealed partial class WebShell : IDisposable
         }
         _window.AppWindow.Changed += (appWindow, e) =>
         {
-            if (e.DidPresenterChange || e.DidVisibilityChange) _ = UpdateMemoryAsync();
+            // minimise/restore doesn't reliably say "presenter changed", so check on every change
+            _ = UpdateMemoryAsync();
+            PostWindowState();
+        };
+        core.NavigationCompleted += (_, _) => PostWindowState();
+        // a click that activates the window goes to the page too, instead of only focusing the host
+        _window.Activated += (_, e) =>
+        {
+            if (e.WindowActivationState == Microsoft.UI.Xaml.WindowActivationState.Deactivated) return;
+            if (_suspended && _view.CoreWebView2 is { } c) Wake(c);   // never show a suspended (black) page
+            _view.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
         };
         core.Navigate(Origin + "/index.html");
         Log("started");
@@ -292,6 +307,7 @@ internal sealed partial class WebShell : IDisposable
     private bool _flushed;
     private bool _playing;
     private bool _suspended;
+    private bool _suspendPending;
 
     private bool Minimized => _window.AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } || !_window.AppWindow.IsVisible;
 
@@ -307,11 +323,17 @@ internal sealed partial class WebShell : IDisposable
         {
             var min = Minimized;
             core.MemoryUsageTargetLevel = min ? CoreWebView2MemoryUsageTargetLevel.Low : CoreWebView2MemoryUsageTargetLevel.Normal;
-            if (min && !_playing && !_suspended)
+            if (min && !_playing && !_suspended && !_suspendPending)
             {
+                // wait a while first: a quick minimise/restore shouldn't pay for a suspend + wake
+                _suspendPending = true;
+                await Task.Delay(TimeSpan.FromSeconds(20));
+                _suspendPending = false;
+                if (!Minimized || _playing || _suspended) return;
                 _view.Visibility = Visibility.Collapsed;   // suspension needs a hidden WebView
                 _suspended = await core.TrySuspendAsync();
                 if (!_suspended) _view.Visibility = Visibility.Visible;
+                else if (!Minimized) Wake(core);           // restored while it was suspending
             }
             else if (!min && _suspended)
             {
@@ -324,22 +346,51 @@ internal sealed partial class WebShell : IDisposable
         }
     }
 
+    private bool? _lastMax;
+
+    private void PostWindowState()
+    {
+        try
+        {
+            var max = _window.AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+            if (_lastMax == max || _view.CoreWebView2 is not { } core) return;
+            _lastMax = max;
+            core.PostWebMessageAsJson(max ? "{\"type\":\"windowState\",\"maximized\":true}" : "{\"type\":\"windowState\",\"maximized\":false}");
+        }
+        catch (Exception ex)
+        {
+            Log($"window-state-failed {ex.GetType().Name}");
+        }
+    }
+
     private void Wake(CoreWebView2 core)
     {
         if (!_suspended) return;
         _suspended = false;
         _view.Visibility = Visibility.Visible;
-        try { core.Resume(); } catch (Exception ex) { Log($"resume-failed {ex.GetType().Name}"); }
+        try { core.Resume(); }
+        catch (Exception ex)
+        {
+            // a page that won't resume is reloaded rather than left black
+            Log($"resume-failed {ex.GetType().Name}");
+            try { core.Reload(); } catch { /* ProcessFailed handles the rest */ }
+        }
     }
 
     /// <summary>
     /// Before the window closes, the page saves what it still holds (library, Flow data — the
     /// same "pause" the Android app gets when it goes to the background), then the window closes.
     /// </summary>
-    private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    private void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (_flushed || _view.CoreWebView2 is not { } core) return;
+        if (_flushed || _view.CoreWebView2 is null) return;
         args.Cancel = true;
+        CloseAfterFlush();
+    }
+
+    private async void CloseAfterFlush()
+    {
+        if (_flushed || _view.CoreWebView2 is not { } core) { _window.Close(); return; }
         _flushed = true;
         WindowPlacement.Save(_window);
         try
@@ -609,6 +660,20 @@ internal sealed partial class WebShell : IDisposable
                     break;
                 case "maximize":
                     ToggleMaximize();
+                    break;
+                case "window":
+                    switch (m.TryGetProperty("action", out var act) ? act.GetString() : null)
+                    {
+                        case "minimize":
+                            if (_window.AppWindow.Presenter is OverlappedPresenter mp) mp.Minimize();
+                            break;
+                        case "maximize":
+                            ToggleMaximize();
+                            break;
+                        case "close":
+                            CloseAfterFlush();
+                            break;
+                    }
                     break;
                 case "call":
                     _ = CallAsync(sender, m.Clone());
