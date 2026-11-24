@@ -66,6 +66,10 @@ internal sealed partial class WebShell : IDisposable
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
             ConnectTimeout = TimeSpan.FromSeconds(20),
             ConnectCallback = ConnectAsync,
+            // Like Node (the Electron app's main process): connect directly. .NET would otherwise
+            // follow Windows' proxy settings, including "automatically detect" (WPAD) and a proxy
+            // an old VPN left behind, and a stale one makes every request hang to the timeout.
+            UseProxy = false,
         })
         {
             Timeout = TimeSpan.FromSeconds(45),
