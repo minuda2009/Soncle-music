@@ -267,7 +267,7 @@ internal sealed partial class WebShell : IDisposable
             // the app plays without media keys rather than not opening
             Log($"media-session-unavailable {e.GetType().Name}");
         }
-        _window.AppWindow.Changed += (_, e) =>
+        _window.AppWindow.Changed += (appWindow, e) =>
         {
             if (e.DidPresenterChange || e.DidVisibilityChange) _ = UpdateMemoryAsync();
         };
