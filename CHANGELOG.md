@@ -15,6 +15,10 @@
   same natively), so songs play with the same stream clients as the desktop app.
 - Requests connect directly and IPv4-first, like the desktop app (Node), so a leftover system
   proxy or half-set-up IPv6 can't make them hang.
+- **Your library comes along.** On its first start the preview copies the desktop app's library
+  (liked songs, playlists, history, settings, Flow data) from `%APPDATA%\Soncle`. Copy only; the
+  desktop app is untouched and you sign in again.
+- **Media keys and Windows' media controls** work, through the native C# media session.
 - For now the preview keeps its library inside its own WebView profile, and has no sign-in, downloads or local files yet. A log is kept at
   `%LOCALAPPDATA%\Soncle Preview\soncle.log`. The Electron and Android apps are unchanged.
 

@@ -53,6 +53,7 @@ internal sealed partial class WebShell : IDisposable
     private readonly Window _window;
     private readonly BotGuardPageFactory _botGuardFactory;
     private IBotGuardPage? _botGuard;
+    private WebMediaSession? _media;
     private readonly HttpClient _http;
     private readonly string _root;
     private bool _disposed;
@@ -168,7 +169,7 @@ internal sealed partial class WebShell : IDisposable
         var options = new CoreWebView2EnvironmentOptions
         {
             // songs start from the player bar's own gesture or from media keys
-            AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required",
+            AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required --disable-features=HardwareMediaKeyHandling,MediaSessionService",
         };
         var env = await CoreWebView2Environment.CreateWithOptionsAsync("", Path.Combine(DataFolder, "WebView2"), options);
         await _view.EnsureCoreWebView2Async(env);
@@ -215,6 +216,20 @@ internal sealed partial class WebShell : IDisposable
             }
         };
         _window.AppWindow.Closing += OnClosing;
+        try
+        {
+            _media = new WebMediaSession(_window, _window.DispatcherQueue, (action, seekTime) =>
+            {
+                var data = new JsonObject { ["action"] = action };
+                if (seekTime is { } t) data["seekTime"] = t;
+                Reply(core, new JsonObject { ["type"] = "event", ["event"] = "mediaAction", ["data"] = data });
+            });
+        }
+        catch (Exception e)
+        {
+            // the app plays without media keys rather than not opening
+            Log($"media-session-unavailable {e.GetType().Name}");
+        }
         core.Navigate(Origin + "/index.html");
         Log("started");
     }
@@ -485,6 +500,13 @@ internal sealed partial class WebShell : IDisposable
                     data = new JsonObject { ["json"] = value?.ToJsonString() ?? "null" };
                     break;
                 }
+                case "mediaUpdate":
+                    if (args.ValueKind == JsonValueKind.Object) _media?.Update(args);
+                    data = new JsonObject();
+                    break;
+                case "carryOver":
+                    data = CarryOverDesktopLibrary();
+                    break;
                 case "botguardReset":
                     _botGuard?.Dispose();
                     _botGuard = null;
@@ -500,6 +522,22 @@ internal sealed partial class WebShell : IDisposable
             Log($"call-failed {method} {ex.GetType().Name}: {Redact(ex.Message)}");
             Reply(core, new JsonObject { ["type"] = "result", ["id"] = id, ["ok"] = false, ["error"] = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// The desktop app's library and Flow data from %APPDATA%\Soncle, as text, for the page's
+    /// first start (mobile/src/backend.js drops the cookie). Read only — nothing there changes.
+    /// </summary>
+    private static JsonObject CarryOverDesktopLibrary()
+    {
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Soncle");
+        var lib = Path.Combine(dir, "library.json");
+        if (!File.Exists(lib)) return new JsonObject();
+        var result = new JsonObject { ["library"] = File.ReadAllText(lib) };
+        var flow = Path.Combine(dir, "flow-features.json");
+        if (File.Exists(flow)) result["flow"] = File.ReadAllText(flow);
+        Log("carry-over found the desktop library");
+        return result;
     }
 
     private static void Reply(CoreWebView2 core, JsonObject msg)
@@ -635,6 +673,7 @@ internal sealed partial class WebShell : IDisposable
         if (_disposed) return;
         _disposed = true;
         _botGuard?.Dispose();
+        _media?.Dispose();
         _http.Dispose();
     }
 }

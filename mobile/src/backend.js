@@ -64,8 +64,27 @@ const saveAuth = () => files.write('auth.json', JSON.stringify({ cookie })).catc
 const save = saver('library.json', () => store);
 const flowSave = saver('flow-features.json', () => flowDb, 1500);
 
+// Windows: on the first start, bring over the desktop app's library (liked songs, playlists,
+// history, settings, Flow data) from %APPDATA%\\Soncle. Copy only; the sign-in cookie is left behind.
+async function carryOverDesktop() {
+  try {
+    const r = await Soncle.carryOver();
+    if (!r?.library) return null;
+    const lib = JSON.parse(r.library);
+    delete lib.cookie;
+    if (r.flow) await files.write('flow-features.json', r.flow).catch(() => {});
+    log('carried over the desktop library');
+    return lib;
+  } catch (e) {
+    log('carry-over skipped', e.message);
+    return null;
+  }
+}
+
 const ready = (async () => {
-  const raw = await readJson('library.json');
+  let raw = await readJson('library.json');
+  let carried = false;
+  if (!raw && DESKTOP) { raw = await carryOverDesktop(); carried = !!raw; }
   if (raw) {
     upgradeSettings(raw.settings);
     store = { ...defaults, ...raw, settings: { ...defaultSettings, ...(raw.settings || {}), eq: { ...defaultSettings.eq, ...(raw.settings?.eq || {}) } } };
@@ -76,6 +95,7 @@ const ready = (async () => {
   // that it can, turn them on once for people who already had the app.
   if (!DESKTOP && !store.settings.mobileProfiles) { store.settings.perDeviceSound = true; store.settings.autoDeviceEq = true; store.settings.mobileProfiles = 1; }
   flowDb = (await readJson('flow-features.json')) || {};
+  if (carried) save(true);
   yt.configure({ cache: 'yt', lang: store.settings.lang, location: store.settings.location });
   langSnap = store.settings.lang + '|' + store.settings.location;
   cookie = (await readJson('auth.json'))?.cookie || '';
