@@ -124,9 +124,11 @@ Order of the page:
   and text scaling.
 
 ### 4.5 Windows integration (Should, Uno Windows head)
-Mica stays across the whole window, as today (minuda2009, 24 Nov 2026: keep it; Mica samples the
-wallpaper once rather than blurring live, so it is cheap; measure it with the soak test anyway). The
-Mica setting can still turn it off. Taskbar thumb buttons + SMTC;
+Mica + acrylic (minuda2009, 24 Nov 2026): Mica stays the base layer across the whole window
+(title bar, rail, player bar, pages), and floating layers (menus, queue panel, dialogs) get in-app
+acrylic, a tinted blur of what is behind them. Roughly 70 % Mica, 30 % acrylic by area. Mica samples
+the wallpaper once, so it is cheap; acrylic blurs live, so it stays on small floating layers only and
+goes in the soak-test numbers. The Mica setting turns both off; "reduce transparency" turns acrylic off. Taskbar thumb buttons + SMTC;
 jump list (Flow, recent playlists); `CompactOverlay` mini player; a "Windows accent" swatch next to
 the accent colours; remember window size/position; single instance and YouTube Music links open in
 Soncle; optional close-to-tray / start with Windows. (Plan §7 has the APIs.)

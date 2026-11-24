@@ -997,3 +997,25 @@ body.mac .wl-skip { right: 20px; }
 .lv-main { min-width: 0; } .lv-main b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .lv-main span { font-size: 12px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .lv-side { display: flex; align-items: center; gap: 10px; font-size: 12px; flex: none; }
 .lv-tag { border: 1px solid var(--outline-var); border-radius: 999px; padding: 2px 8px; font-size: 11px; } .lv-tag.on { background: rgb(var(--ov) / .12); }
+
+/* ---------- Mica + acrylic (Windows preview) ----------
+   Mica is the window's base layer (title bar, rail, player bar, pages). Floating layers get
+   in-app acrylic: a tinted blur of what is behind them, plus a faint grain and a light edge. */
+body.acrylic {
+  --acrylic-tint: color-mix(in srgb, var(--surface-3) 82%, transparent);
+  --acrylic-edge: rgb(255 255 255 / .08);
+  --acrylic-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root.light body.acrylic { --acrylic-tint: color-mix(in srgb, var(--surface-3) 80%, transparent); --acrylic-edge: rgb(0 0 0 / .06); }
+body.acrylic #ctxMenu,
+body.acrylic #queuePanel,
+body.acrylic .dialog {
+  background: var(--acrylic-noise), var(--acrylic-tint);
+  -webkit-backdrop-filter: blur(48px) saturate(1.5);
+  backdrop-filter: blur(48px) saturate(1.5);
+  box-shadow: 0 0 0 1px var(--acrylic-edge) inset, 0 16px 48px rgb(var(--scrim) / .4);
+}
+body.acrylic #modal { background: rgb(0 0 0 / .32); }
+@media (prefers-reduced-transparency: reduce) {
+  body.acrylic #ctxMenu, body.acrylic #queuePanel, body.acrylic .dialog { backdrop-filter: none; background: var(--surface-3); }
+}

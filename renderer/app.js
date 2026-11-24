@@ -214,6 +214,8 @@ function applyAppearance() {
   // Motion style: "classic" (smooth and glowy, default) or "android" (Material 3 expressive specs)
   document.documentElement.classList.toggle('m-android', androidMotion());
   document.body.classList.toggle('mica', !!(INFO.micaSupported && S().mica));
+  // Windows preview: Mica for the window, acrylic for floating layers (menus, queue, dialogs)
+  document.body.classList.toggle('acrylic', !!(INFO.preview && INFO.micaSupported && S().mica));
   document.body.classList.toggle('compact', S().density === 'compact');
   if (S().dynamicColor && P.current) themeFromTrack(P.current, true); else applyStaticTheme();
   applyLyricsStyle();

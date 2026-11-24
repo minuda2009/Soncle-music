@@ -397,7 +397,7 @@ const api = {
   restore: withReady(restore),
   clearCache: withReady(async () => { yt.configure({}); return true; }),
   openExternal: async (u) => { if (/^https?:\/\//.test(u)) await Browser.open({ url: u }); return true; },
-  info: async () => ({ version: DESKTOP ? VERSION + ' (Windows preview)' : VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: DESKTOP && store.settings.mica !== false, micaSupported: DESKTOP, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
+  info: async () => ({ version: DESKTOP ? VERSION + ' (Windows preview)' : VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: DESKTOP && store.settings.mica !== false, micaSupported: DESKTOP, preview: DESKTOP, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
   licences: async () => (await fetch('THIRD_PARTY_NOTICES.md')).text(),
   hpSearch: withReady((q) => autoeq.search(String(q || '').slice(0, 80))),
   hpMatch: withReady((m) => autoeq.match(String(m || '').slice(0, 120)).catch(() => null)),

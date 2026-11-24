@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: Mica + acrylic. Mica stays behind the whole window; menus, the queue
+  panel and dialogs now use acrylic (a tinted blur of what's behind them). Turning off Mica turns off
+  both. The 1.0.0 desktop app and Android are unchanged.
 
 - **The Windows preview is now the whole Soncle app.** A small native C# window (Uno / WinUI 3)
   shows the same web UI the Android app runs, in WebView2: Home, Explore, search, albums, artists,
