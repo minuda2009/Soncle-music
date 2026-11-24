@@ -6,6 +6,7 @@ using Soncle.App.Playback;
 using Soncle.App.ViewModels;
 using Soncle.Audio;
 using Soncle.Core.Playback;
+using Soncle.Services;
 using Soncle.Streams;
 using Soncle.YouTube;
 using Soncle.YouTube.InnerTube;
@@ -64,10 +65,11 @@ internal sealed partial class PlaybackHost : IDisposable
         _downloader = new SongDownloader(cache, new HttpStreamFetcher(_http));
 
         Output = new WasapiAudioOutput();
-        Player = new EnginePlayer(Output, LoadSongAsync);
+        Volume = new VolumeOutput(Output);
+        Player = new EnginePlayer(Volume, LoadSongAsync);
         Controller = new PlaybackController(Player, new LazyStreams(this), options: new PlaybackOptions());
         Search = new SearchViewModel((q, ct) => SearchAsync(q, ct), Controller);
-        Bar = new PlayerBarViewModel(Controller, Player, Search.Find);
+        Bar = new PlayerBarViewModel(Controller, Player, Describe);
         Controller.Failed += (_, reason) => Log($"play-failed {reason}");
         if (botGuard is not null) PoTokens = new PoTokenMinter(botGuard, PoTokenMinter.HttpFetch(_http), log: Log);
     }
@@ -76,6 +78,8 @@ internal sealed partial class PlaybackHost : IDisposable
     public PoTokenMinter? PoTokens { get; }
 
     public WasapiAudioOutput Output { get; }
+    /// <summary>The player bar's volume, between the engine and the device.</summary>
+    public VolumeOutput Volume { get; }
     public EnginePlayer Player { get; }
     public PlaybackController Controller { get; }
     public SearchViewModel Search { get; }
@@ -109,6 +113,131 @@ internal sealed partial class PlaybackHost : IDisposable
     {
         var backend = await GetBackendAsync(ct);
         return await backend.Catalog.SearchAsync(query, "all", ct);
+    }
+
+    // ---- catalog (the pages) -----------------------------------------------------------------
+
+    /// <summary>The InnerTube catalog, once the session exists (created on first use).</summary>
+    public async Task<InnerTubeCatalogClient> CatalogAsync(CancellationToken ct = default) =>
+        (await GetBackendAsync(ct)).Catalog;
+
+    /// <summary>A full search page: songs, albums, artists, playlists.</summary>
+    public async Task<YtSearchPage> SearchPageAsync(string query, CancellationToken ct = default) =>
+        await (await CatalogAsync(ct)).SearchAsync(query, "all", ct);
+
+    // ---- queue --------------------------------------------------------------------------------
+
+    private readonly Dictionary<string, SongItem> _known = new(StringComparer.Ordinal);
+
+    /// <summary>What the player bar, Now Playing and the media session show for a queued id.</summary>
+    public SongItem? Describe(string id) =>
+        id is not null && _known.TryGetValue(id, out var s) ? s : Search.Find(id);
+
+    /// <summary>Raised on the UI thread when the queue's contents change (not on every song change).</summary>
+    public event EventHandler? QueueChanged;
+
+    /// <summary>Plays <paramref name="songs"/> from <paramref name="index"/> as the queue.</summary>
+    public Task PlaySongsAsync(IReadOnlyList<SongItem> songs, int index)
+    {
+        if (songs.Count == 0) return Task.CompletedTask;
+        foreach (var s in songs) _known[s.VideoId] = s;
+        index = Math.Clamp(index, 0, songs.Count - 1);
+        Controller.SetQueue(songs.Select(s => new QueueTrack(s.VideoId, s.Title, s.DurationSeconds)), index);
+        QueueChanged?.Invoke(this, EventArgs.Empty);
+        return Controller.PlayAtAsync(index);
+    }
+
+    /// <summary>
+    /// Plays one song now and fills the queue behind it with its YouTube Music radio, the way the
+    /// YouTube Music app does. The radio arrives a moment later; if the user has already moved on,
+    /// it is dropped.
+    /// </summary>
+    public async Task PlayWithRadioAsync(SongItem song)
+    {
+        await PlaySongsAsync(new[] { song }, 0);
+        try
+        {
+            var catalog = await CatalogAsync();
+            var radio = await catalog.UpNextAsync(song.VideoId);
+            var rest = radio.Select(SongItem.From).OfType<SongItem>().Where(s => s.VideoId != song.VideoId).ToList();
+            AppendIfStill(song.VideoId, rest);
+        }
+        catch (Exception e)
+        {
+            Log($"radio-failed {e.GetType().Name}");
+        }
+    }
+
+    /// <summary>Plays a playlist's / album's radio (YouTube Music's shuffle or radio id).</summary>
+    public async Task PlayRadioAsync(string playlistId, string? parameters = null)
+    {
+        var catalog = await CatalogAsync();
+        var list = (await catalog.UpNextAsync(null, playlistId, parameters)).Select(SongItem.From).OfType<SongItem>().ToList();
+        await PlaySongsAsync(list, 0);
+    }
+
+    /// <summary>Puts <paramref name="songs"/> right after the current song.</summary>
+    public void PlayNext(IReadOnlyList<SongItem> songs)
+    {
+        if (songs.Count == 0) return;
+        if (Controller.Current is null)
+        {
+            _ = PlaySongsAsync(songs, 0);
+            return;
+        }
+        foreach (var s in songs) _known[s.VideoId] = s;
+        var q = Controller.Queue.ToList();
+        var at = Controller.Index;
+        q.InsertRange(at + 1, songs.Select(s => new QueueTrack(s.VideoId, s.Title, s.DurationSeconds)));
+        Controller.SetQueue(q, at);
+        QueueChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Adds <paramref name="songs"/> at the end of the queue.</summary>
+    public void AddToQueue(IReadOnlyList<SongItem> songs)
+    {
+        if (songs.Count == 0) return;
+        if (Controller.Current is null)
+        {
+            _ = PlaySongsAsync(songs, 0);
+            return;
+        }
+        foreach (var s in songs) _known[s.VideoId] = s;
+        var q = Controller.Queue.ToList();
+        q.AddRange(songs.Select(s => new QueueTrack(s.VideoId, s.Title, s.DurationSeconds)));
+        Controller.SetQueue(q, Controller.Index);
+        QueueChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void AppendIfStill(string currentId, List<SongItem> rest)
+    {
+        if (rest.Count == 0 || Controller.Current?.Id != currentId) return;
+        foreach (var s in rest) _known[s.VideoId] = s;
+        var q = Controller.Queue.ToList();
+        var at = Controller.Index;
+        var have = new HashSet<string>(q.Select(t => t.Id), StringComparer.Ordinal);
+        q.AddRange(rest.Where(s => have.Add(s.VideoId)).Select(s => new QueueTrack(s.VideoId, s.Title, s.DurationSeconds)));
+        Controller.SetQueue(q, at);
+        QueueChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // ---- lyrics -------------------------------------------------------------------------------
+
+    /// <summary>Synced (LRCLIB) or plain lyrics for a song; null when none were found.</summary>
+    public async Task<LyricsFetchResult?> LyricsAsync(SongItem song, CancellationToken ct = default)
+    {
+        var artists = song.Artists.Split(", ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return await Lyrics.GetAsync(song.Title, string.IsNullOrEmpty(song.Album) ? null : song.Album, artists,
+            song.DurationSeconds > 0 ? song.DurationSeconds : null,
+            async (url, headers) =>
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                foreach (var kv in headers) req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+                req.Headers.TryAddWithoutValidation("User-Agent", "Soncle (https://github.com/minuda2009/Soncle-music)");
+                using var res = await _http.SendAsync(req, ct).ConfigureAwait(false);
+                var text = await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                return ((int)res.StatusCode, text);
+            });
     }
 
     private async Task<IAudioSource> LoadSongAsync(string id, CancellationToken ct)

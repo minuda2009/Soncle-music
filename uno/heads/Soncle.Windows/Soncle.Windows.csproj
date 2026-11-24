@@ -40,6 +40,8 @@
     <ProjectReference Include="../../src/Soncle.Streams/Soncle.Streams.csproj" />
     <ProjectReference Include="../../src/Soncle.YouTube/Soncle.YouTube.csproj" />
     <ProjectReference Include="../../src/Soncle.App/Soncle.App.csproj" />
+    <!-- Lyrics (LRCLIB + LRC parsing). -->
+    <ProjectReference Include="../../src/Soncle.Services/Soncle.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>

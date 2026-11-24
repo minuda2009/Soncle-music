@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased: Soncle Preview for Windows becomes a real player (C# app)
+
+- **Home, search, albums, artists and playlists.** The Windows preview now opens on the YouTube Music
+  home feed (carousels, song lists, moods) and search shows every kind of result with a top result.
+  Albums, artists and playlists open as their own pages with Play, Shuffle and Radio, and a
+  shelf's "More" opens its full page. Back (the arrow in the title bar or Alt+Left) goes through
+  where you have been.
+- **Playing works like YouTube Music.** Picking a song plays it and fills the queue with its radio;
+  picking a song in an album or playlist plays the list from there. Right-click a song for Play
+  next, Add to queue, Start radio, Go to album and Go to artist.
+- **Now Playing.** Click the song in the player bar (or press F) for large artwork over a soft wash
+  of its colours, synced lyrics from LRCLIB that follow the song (click a line to jump there) and
+  the queue (click a song to play it). F11 makes the window full screen.
+- **Player bar.** Shuffle, repeat (all / one), lyrics, queue, mute and a volume slider. The volume is
+  applied after the limiter, so it can only make the sound quieter, and it is remembered.
+- **Keyboard.** Space play/pause, Ctrl+Left/Right previous/next, Ctrl+K search, L lyrics, Q queue,
+  M mute, S shuffle, R repeat, Esc closes Now Playing.
+- The first-run notice that artists aren't paid through the app is shown here too.
+- Still to come in the preview: sign-in and the library, the Sound page controls (EQ, AutoEq,
+  transitions, devices), downloads and local files. The Electron and Android apps are unchanged.
+
 ## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done
 
 - **The C# port of Soncle's services is finished.** `Soncle.Services` now also has the **local

@@ -55,6 +55,17 @@ public sealed class YtPlaylistPage
     public bool HasMore { get; set; }
 }
 
+/// <summary>yt.mjs's <c>album()</c> result.</summary>
+public sealed class YtAlbumPage
+{
+    public string Id { get; set; } = "";
+    /// <summary>The album's OLAK… playlist id (for radio / shuffle), when the page carries it.</summary>
+    public string? PlaylistId { get; set; }
+    public YtHeaderInfo Info { get; set; } = new();
+    public List<YtItem> Tracks { get; set; } = new();
+    public List<YtShelf> Sections { get; set; } = new();
+}
+
 /// <summary>yt.mjs's <c>artist()</c> result.</summary>
 public sealed class YtArtistPage
 {
@@ -556,6 +567,39 @@ public static class Pages
             Fields = new HashSet<string>(t.Fields),
         }).ToList();
         return new YtPlaylistPage { Id = id, Info = info, Tracks = tracks, HasMore = !all && HasContinuation(shelf) };
+    }
+
+    /// <summary>
+    /// album(): the responsive/detail header, the track shelf (each track inherits the album's
+    /// artwork, artists and the album itself, as in yt.mjs) and any other carousels ("more from").
+    /// </summary>
+    public static YtAlbumPage Album(JsonElement raw, string id)
+    {
+        var contents = Prop(raw, "contents");
+        var header = FindRenderer(contents, "musicResponsiveHeaderRenderer", "musicDetailHeaderRenderer")
+            ?? FindRenderer(Prop(raw, "header"), "musicResponsiveHeaderRenderer", "musicDetailHeaderRenderer");
+        var info = HeaderInfo(header);
+        var shelves = CollectShelves(contents, new HashSet<string> { "musicShelfRenderer", "musicPlaylistShelfRenderer" });
+        var tracks = shelves.SelectMany(sh => sh.Items).Where(t => t.Type is "song" or "video" && !string.IsNullOrEmpty(t.Id)).ToList();
+        tracks = tracks.Select(t => new YtItem
+        {
+            Type = t.Type, Id = t.Id, Title = t.Title, Subtitle = t.Subtitle,
+            Thumb = string.IsNullOrEmpty(t.Thumb) ? info.Thumb : t.Thumb,
+            Artists = t.Artists is { Count: > 0 } && !string.IsNullOrEmpty(t.Artists[0].Name) ? t.Artists : info.Artists ?? new List<ArtistRef>(),
+            Album = new AlbumRef { Name = info.Title, Id = id },
+            Duration = t.Duration, Year = t.Year, Explicit = t.Explicit, IsVideo = t.IsVideo,
+            Params = t.Params, Color = t.Color, Plays = t.Plays,
+            Fields = new HashSet<string>(t.Fields),
+        }).ToList();
+        var sections = CollectShelves(contents, new HashSet<string> { "musicCarouselShelfRenderer" });
+        string? playlistId = null;
+        var canonical = Str(Prop(Prop(Prop(raw, "microformat"), "microformatDataRenderer"), "urlCanonical"));
+        if (canonical is not null)
+        {
+            var m = Regex.Match(canonical, @"list=([\w-]+)");
+            if (m.Success) playlistId = m.Groups[1].Value;
+        }
+        return new YtAlbumPage { Id = id, PlaylistId = playlistId, Info = info, Tracks = tracks, Sections = sections };
     }
 
     /// <summary>artist(): the immersive/visual header plus the shelf and carousel sections.</summary>

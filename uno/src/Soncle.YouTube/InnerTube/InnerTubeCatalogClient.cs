@@ -7,7 +7,7 @@ using Soncle.YouTube.Parsing;
 namespace Soncle.YouTube.InnerTube;
 
 /// <summary>
-/// The catalog side of InnerTube, anonymous: today only <c>search</c>. A port of what the JS app
+/// The catalog side of InnerTube, anonymous: search, home, album, artist, playlist, browse and up-next. A port of what the JS app
 /// gets from youtubei.js 18.1.0's <c>music.search(query, { type })</c> plus the two fallbacks in
 /// <c>yt.mjs</c>'s <c>search()</c>. The request is the one youtubei.js sends, byte for byte in
 /// meaning (see <c>fixtures/yt/expected/search-request.json</c>): the YouTube Music client
@@ -16,8 +16,6 @@ namespace Soncle.YouTube.InnerTube;
 /// </summary>
 public sealed class InnerTubeCatalogClient
 {
-    private const string SearchUrl = "https://www.youtube.com/youtubei/v1/search?prettyPrint=false&alt=json";
-
     // type:'song' and type:'album' are rejected by the YouTube Music API on some responses, so an
     // unknown type becomes 'all' (yt.mjs SAFE_SEARCH_TYPES).
     private static readonly HashSet<string> SafeSearchTypes = new() { "all", "song", "video", "album", "artist", "playlist" };
@@ -65,12 +63,23 @@ public sealed class InnerTubeCatalogClient
     public async Task<JsonElement> SearchRawAsync(string query, string type, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query)) throw new ArgumentException("query is required", nameof(query));
-        var profile = ClientProfile.Streaming["YTMUSIC"];
-        var context = _session.BuildContext();
-        profile.Apply(context);
+        var context = Context();
         var body = BuildSearchBody(query, type, context);
+        return await PostAsync("search", body, ct).ConfigureAwait(false);
+    }
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, SearchUrl)
+    private JsonObject Context()
+    {
+        var context = _session.BuildContext();
+        ClientProfile.Streaming["YTMUSIC"].Apply(context);
+        return context;
+    }
+
+    /// <summary>One anonymous YouTube Music (<c>WEB_REMIX</c>) call to <c>/youtubei/v1/{endpoint}</c>.</summary>
+    private async Task<JsonElement> PostAsync(string endpoint, JsonObject body, CancellationToken ct)
+    {
+        var profile = ClientProfile.Streaming["YTMUSIC"];
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"https://www.youtube.com/youtubei/v1/{endpoint}?prettyPrint=false&alt=json")
         {
             Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
         };
@@ -85,10 +94,62 @@ public sealed class InnerTubeCatalogClient
 
         using var res = await _http.SendAsync(req, ct).ConfigureAwait(false);
         if (!res.IsSuccessStatusCode)
-            throw new InvalidOperationException($"InnerTube search request failed with status code {(int)res.StatusCode}");
+            throw new InvalidOperationException($"InnerTube {endpoint} request failed with status code {(int)res.StatusCode}");
         var json = await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         using var doc = JsonDocument.Parse(json);
         return doc.RootElement.Clone();
+    }
+
+    /// <summary>One <c>/browse</c> call (home, album, artist, playlist, more pages).</summary>
+    public Task<JsonElement> BrowseRawAsync(string browseId, string? parameters = null, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(browseId)) throw new ArgumentException("browseId is required", nameof(browseId));
+        var body = new JsonObject { ["browseId"] = browseId };
+        if (!string.IsNullOrEmpty(parameters)) body["params"] = parameters;
+        body["context"] = Context();
+        return PostAsync("browse", body, ct);
+    }
+
+    /// <summary>yt.mjs <c>home()</c>: the YouTube Music home feed.</summary>
+    public async Task<YtHomePage> HomeAsync(CancellationToken ct = default) =>
+        Pages.Home(await BrowseRawAsync("FEmusic_home", null, ct).ConfigureAwait(false));
+
+    /// <summary>yt.mjs <c>album()</c>.</summary>
+    public async Task<YtAlbumPage> AlbumAsync(string id, CancellationToken ct = default) =>
+        Pages.Album(await BrowseRawAsync(id, null, ct).ConfigureAwait(false), id);
+
+    /// <summary>yt.mjs <c>artist()</c>.</summary>
+    public async Task<YtArtistPage> ArtistAsync(string id, CancellationToken ct = default) =>
+        Pages.Artist(await BrowseRawAsync(id, null, ct).ConfigureAwait(false), id);
+
+    /// <summary>yt.mjs <c>playlist()</c> (first page). Accepts a playlist id with or without <c>VL</c>.</summary>
+    public async Task<YtPlaylistPage> PlaylistAsync(string id, CancellationToken ct = default)
+    {
+        var bid = id.StartsWith("VL", StringComparison.Ordinal) ? id : "VL" + id;
+        return Pages.Playlist(await BrowseRawAsync(bid, null, ct).ConfigureAwait(false), id);
+    }
+
+    /// <summary>yt.mjs <c>browse()</c>: a generic page of shelves (a shelf's "more", a mood, a chart).</summary>
+    public async Task<YtBrowsePage> BrowseAsync(string browseId, string? parameters = null, CancellationToken ct = default) =>
+        Pages.Browse(await BrowseRawAsync(browseId, parameters, ct).ConfigureAwait(false));
+
+    /// <summary>
+    /// yt.mjs <c>upNext()</c> / <c>radio()</c>: the watch-next queue for a song (its automix radio) or
+    /// for a playlist. At least one of <paramref name="videoId"/> or <paramref name="playlistId"/>.
+    /// </summary>
+    public async Task<List<YtItem>> UpNextAsync(string? videoId, string? playlistId = null, string? parameters = null, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(videoId) && string.IsNullOrEmpty(playlistId))
+            throw new ArgumentException("videoId or playlistId is required", nameof(videoId));
+        var body = new JsonObject();
+        if (!string.IsNullOrEmpty(videoId)) body["videoId"] = videoId;
+        // a lone song gets its automix radio, like the YouTube Music app
+        body["playlistId"] = !string.IsNullOrEmpty(playlistId) ? playlistId : "RDAMVM" + videoId;
+        if (!string.IsNullOrEmpty(parameters)) body["params"] = parameters;
+        body["isAudioOnly"] = true;
+        body["enablePersistentPlaylistPanel"] = true;
+        body["context"] = Context();
+        return Pages.UpNext(await PostAsync("next", body, ct).ConfigureAwait(false));
     }
 
     /// <summary>
