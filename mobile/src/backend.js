@@ -18,6 +18,11 @@ import { Soncle, nativeFetch, mintPoToken, nativeSignIn, nativeSignOut, nativeAu
 
 const VERSION = '0.1.6';
 const native = Capacitor.isNativePlatform();
+// The Windows app (uno/heads/Soncle.Windows) runs this same bundle in WebView2, built with
+// `node build.mjs --desktop`: desktop layout, window actions through its host (desktop/host.js).
+// eslint-disable-next-line no-undef
+const DESKTOP = typeof SONCLE_DESKTOP !== 'undefined' && SONCLE_DESKTOP === true;
+const hostPost = (msg) => { try { window.chrome?.webview?.postMessage(msg); } catch { /* no host */ } };
 const TEST = globalThis.SONCLE_TEST || null;   // headless test harness only
 // Recent messages for "Copy diagnostic log" (Settings). Web addresses are cut to their host, so
 // no tokens, signatures or cookies end up in a bug report.
@@ -281,12 +286,12 @@ App.addListener?.('backButton', () => {
 }).catch?.(() => {});
 
 const noop = () => {};
-const later = (what) => { throw new Error(`${what} isn't in the Android app yet.`); };
+const later = (what) => { throw new Error(`${what} isn't in this app yet.`); };
 const withReady = (fn) => async (...a) => { await ready; return fn(...a); };
 
 const api = {
-  platform: 'android',
-  mobile: true,
+  platform: DESKTOP ? 'win32' : 'android',
+  mobile: !DESKTOP,
   home: withReady((chip) => yt.home(chip)),
   homeMore: withReady(() => yt.homeMore()),
   explore: withReady(() => yt.explore()),
@@ -370,7 +375,7 @@ const api = {
   restore: withReady(restore),
   clearCache: withReady(async () => { yt.configure({}); return true; }),
   openExternal: async (u) => { if (/^https?:\/\//.test(u)) await Browser.open({ url: u }); return true; },
-  info: async () => ({ version: VERSION, discord: false, platform: 'android', mobile: true, mica: false, micaSupported: false, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
+  info: async () => ({ version: VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: false, micaSupported: false, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
   licences: async () => (await fetch('THIRD_PARTY_NOTICES.md')).text(),
   hpSearch: withReady((q) => autoeq.search(String(q || '').slice(0, 80))),
   hpMatch: withReady((m) => autoeq.match(String(m || '').slice(0, 120)).catch(() => null)),
@@ -414,8 +419,8 @@ const api = {
   diagnostics: async () => [`Soncle ${VERSION} (Android) · ${navigator.userAgent.replace(/\s*\(KHTML.*$/, '')}`, ...LOG].join('\n'),
   sendState: noop,
   saveSession: (s) => { store.session = s; save(); },
-  titlebarColor: noop,
-  toggleFullscreen: noop,
+  titlebarColor: DESKTOP ? (c) => hostPost({ type: 'titlebar', color: c }) : noop,
+  toggleFullscreen: DESKTOP ? () => hostPost({ type: 'fullscreen' }) : noop,
   onMediaAction: noop,       // handled through navigator.mediaSession above
   onDownload: noop,
   onWinState: noop,

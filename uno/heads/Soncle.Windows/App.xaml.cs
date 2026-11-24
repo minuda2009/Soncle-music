@@ -26,16 +26,8 @@ public partial class App : Application
         // in MainPage draws the same string. Unpackaged, it otherwise comes from the exe, so set it
         // to the name the preview installs/runs under (docs/WINUI_PLAN.md §10).
         MainWindow = new Window { Title = WindowTitle };
-        WindowChrome.UseMica(MainWindow);
-        try
-        {
-            MediaControls = WindowChrome.UseMediaSession(MainWindow);
-        }
-        catch (Exception e)
-        {
-            // the app plays without a media session; it must not fail to open over one
-            System.Diagnostics.Trace.WriteLine($"Soncle media-session-unavailable {e.GetType().Name}");
-        }
+        // The web UI drives Windows' media controls through navigator.mediaSession in WebView2;
+        // the native media session (WindowChrome.UseMediaSession) returns with native playback.
 
         if (MainWindow.Content is not Frame rootFrame)
         {

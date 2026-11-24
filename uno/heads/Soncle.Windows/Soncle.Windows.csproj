@@ -50,6 +50,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Soncle's web UI, built for the desktop by `node mobile/build.mjs --desktop` (the Windows
+         workflow does it before publishing); served from web\ next to the exe by Web/WebShell.cs. -->
+    <None Include="../../../mobile/www-desktop/**/*"
+          Link="web/%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The BotGuard helper page, shared unchanged with the desktop and Android apps; served to the
          hidden WebView2 by Playback/WebViewBotGuardPage.cs (docs/WINUI_PLAN.md §6). -->
     <EmbeddedResource Include="../../../src/po_token.html" LogicalName="Soncle.po_token.html" />

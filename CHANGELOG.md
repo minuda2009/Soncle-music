@@ -1,25 +1,19 @@
 # Changelog
 
-## Unreleased: Soncle Preview for Windows becomes a real player (C# app)
+## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
 
-- **Home, search, albums, artists and playlists.** The Windows preview now opens on the YouTube Music
-  home feed (carousels, song lists, moods) and search shows every kind of result with a top result.
-  Albums, artists and playlists open as their own pages with Play, Shuffle and Radio, and a
-  shelf's "More" opens its full page. Back (the arrow in the title bar or Alt+Left) goes through
-  where you have been.
-- **Playing works like YouTube Music.** Picking a song plays it and fills the queue with its radio;
-  picking a song in an album or playlist plays the list from there. Right-click a song for Play
-  next, Add to queue, Start radio, Go to album and Go to artist.
-- **Now Playing.** Click the song in the player bar (or press F) for large artwork over a soft wash
-  of its colours, synced lyrics from LRCLIB that follow the song (click a line to jump there) and
-  the queue (click a song to play it). F11 makes the window full screen.
-- **Player bar.** Shuffle, repeat (all / one), lyrics, queue, mute and a volume slider. The volume is
-  applied after the limiter, so it can only make the sound quieter, and it is remembered.
-- **Keyboard.** Space play/pause, Ctrl+Left/Right previous/next, Ctrl+K search, L lyrics, Q queue,
-  M mute, S shuffle, R repeat, Esc closes Now Playing.
-- The first-run notice that artists aren't paid through the app is shown here too.
-- Still to come in the preview: sign-in and the library, the Sound page controls (EQ, AutoEq,
-  transitions, devices), downloads and local files. The Electron and Android apps are unchanged.
+- **The Windows preview is now the whole Soncle app.** A small native C# window (Uno / WinUI 3)
+  shows the same web UI the Android app runs, in WebView2: Home, Explore, search, albums, artists,
+  playlists, Now Playing with lyrics, the queue, Sound, Settings — everything you know.
+- **No Electron, no bundled Chromium, no Node.** WebView2 comes with Windows. The C# shell serves
+  the app's files, makes its web requests natively (like the Android app does, so YouTube, LRCLIB
+  and AutoEq work without browser limits), and handles the window: the page's own title bar drags
+  the window, double-click maximises, full screen, links open in your browser.
+- This is the first step of the hybrid plan: the UI stays as it is, and native parts (audio
+  engine, devices, notifications, sign-in) move into C# one at a time, measured as they go.
+- For now the preview uses the stream clients that need no PO token, keeps its library inside its
+  own WebView profile, and has no sign-in, downloads or local files yet. A log is kept at
+  `%LOCALAPPDATA%\Soncle Preview\soncle.log`. The Electron and Android apps are unchanged.
 
 ## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done
 

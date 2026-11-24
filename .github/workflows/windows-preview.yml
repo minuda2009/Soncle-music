@@ -5,7 +5,7 @@ name: Windows preview
 # (docs/WINUI_PLAN.md §4, §10).
 on:
   push:
-    paths: ['uno/**', '.github/workflows/windows-preview.yml']
+    paths: ['uno/**', 'mobile/**', 'renderer/**', 'src/**', '.github/workflows/windows-preview.yml']
   workflow_dispatch:
 
 permissions:
@@ -27,6 +27,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: uno/global.json
+      # The web UI the shell shows: the Android app's web layer, built for the desktop.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the web layer for Windows
+        working-directory: mobile
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node build.mjs --desktop
       # A failure here fails the job before anything touches the release, so the windows-preview
       # link keeps pointing at the last good build.
       - name: Publish the Soncle.Windows head
