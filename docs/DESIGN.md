@@ -124,7 +124,9 @@ Order of the page:
   and text scaling.
 
 ### 4.5 Windows integration (Should, Uno Windows head)
-Mica / Mica Alt only on title bar and rail (pages keep tonal surfaces); taskbar thumb buttons + SMTC;
+Mica stays across the whole window, as today (minuda2009, 24 Nov 2026: keep it; Mica samples the
+wallpaper once rather than blurring live, so it is cheap; measure it with the soak test anyway). The
+Mica setting can still turn it off. Taskbar thumb buttons + SMTC;
 jump list (Flow, recent playlists); `CompactOverlay` mini player; a "Windows accent" swatch next to
 the accent colours; remember window size/position; single instance and YouTube Music links open in
 Soncle; optional close-to-tray / start with Windows. (Plan §7 has the APIs.)
