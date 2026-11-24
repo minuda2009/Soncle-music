@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: songs should start faster. BotGuard (YouTube's anti-bot tokens)
+  starts with the app instead of on the first song, the next song starts downloading early as on
+  the phone, and a fallback no longer looks a song up twice. Each song's lookup time goes to the log.
 - Soncle Preview for Windows: Task Manager lists the app as "Soncle" instead of "Soncle.Windows".
 - Soncle Preview for Windows: the hidden page that makes YouTube's anti-bot tokens now runs inside
   Soncle's own browser (a private profile of its own) instead of starting a second browser with its

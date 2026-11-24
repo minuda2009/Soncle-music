@@ -36,7 +36,12 @@ function remember(kind, args) {
 for (const k of ['warn', 'error']) { const orig = console[k].bind(console); console[k] = (...a) => { remember(k, a); orig(...a); }; }
 window.addEventListener('error', (e) => remember('uncaught', [e.message]));
 window.addEventListener('unhandledrejection', (e) => remember('unhandled', [e.reason?.message || e.reason]));
-const log = (...a) => { remember('log', a); console.log('[soncle]', ...a); };
+const log = (...a) => {
+  remember('log', a);
+  console.log('[soncle]', ...a);
+  // Windows preview: page logs go to the host's soncle.log too (URLs are redacted there)
+  if (DESKTOP) { try { window.chrome?.webview?.postMessage({ type: 'log', text: a.map(String).join(' ').slice(0, 300) }); } catch { /* no host */ } }
+};
 
 // ---------- files in the app's private storage ----------
 const files = {
@@ -106,6 +111,8 @@ const ready = (async () => {
     // (on Windows: the host's hidden WebView2, see desktop/core.js)
     // youtube.com WebView (native.js / SonclePlugin.java).
     yt.setPoTokenProvider((id) => mintPoToken(id, log));
+    // Windows preview: start BotGuard now, so the first song doesn't wait for it (seconds)
+    if (DESKTOP) setTimeout(() => { const t0 = performance.now(); mintPoToken('warmup', log).then(() => log(`PO token ready in ${Math.round(performance.now() - t0)} ms`), (e) => log('PO token warmup failed: ' + e.message)); }, 1500);
   } else {
     yt.setStreamClients(['IOS', 'ANDROID_VR', 'TV', 'WEB_EMBEDDED']);
   }
@@ -126,7 +133,11 @@ function quality() {
 }
 async function stream(id, force = false) {
   if (TEST?.stream) return TEST.stream;
-  return yt.resolveStream(id, { quality: quality(), force, fetchImpl: gv });
+  if (!DESKTOP) return yt.resolveStream(id, { quality: quality(), force, fetchImpl: gv });
+  const t0 = performance.now();
+  return yt.resolveStream(id, { quality: quality(), force, fetchImpl: gv }).then(
+    (r) => { log(`stream ${id} via ${r.client} in ${Math.round(performance.now() - t0)} ms`); return r; },
+    (e) => { log(`stream ${id} failed after ${Math.round(performance.now() - t0)} ms: ${e.message}`); throw e; });
 }
 // googlevideo requests go through native code so Origin/Referer/User-Agent reach the server as set
 const gv = (url, opts) => (native ? nativeFetch(url, opts) : fetch(url, opts));
@@ -332,7 +343,7 @@ const api = {
   rate: withReady((id, like) => (store.settings.syncLikes && cookie ? yt.rate(id, like) : false)),
   prefetch: withReady(async (id) => {
     const s = await stream(id);
-    if (native && !TEST) nativeStreamUrl(id, false);   // start downloading it now (see SoncleStreams.java)
+    if ((native || (DESKTOP && !desktopStreamsOff)) && !TEST) nativeStreamUrl(id, false);   // start downloading it now (SoncleStreams.java / WebStreams.cs)
     return { client: s.client, lufs: ytLufs(s.loudnessDb), mime: s.mime, bitrate: s.bitrate };
   }),
   lyrics: withReady((t) => lyrics(t)),
@@ -357,7 +368,7 @@ const api = {
     } catch (e) {
       hostPost({ type: 'log', text: 'native stream failed for playback: ' + (e?.message || e) });
     }
-    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, true)), quality: quality() }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
+    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, false)), quality: quality() }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
   } : undefined,
   range: withReady((id, from, to) => range(id, from, to)),
 
