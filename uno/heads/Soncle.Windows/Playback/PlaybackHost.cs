@@ -103,8 +103,32 @@ internal sealed partial class PlaybackHost : IDisposable
     }
 
     /// <summary>One line for the debugger / trace listeners; URLs are cut out (they carry tokens).</summary>
-    public static void Log(string message) =>
-        Trace.WriteLine("Soncle " + UrlPattern().Replace(message, "<url>"));
+    public static void Log(string message)
+    {
+        var line = "Soncle " + Redact(message);
+        Trace.WriteLine(line);
+        try
+        {
+            // %LOCALAPPDATA%\Soncle Preview\soncle.log, so a tester can send it; capped at ~1 MB
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Soncle Preview");
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "soncle.log");
+            lock (LogGate)
+            {
+                if (File.Exists(file) && new FileInfo(file).Length > 1_000_000) File.Delete(file);
+                File.AppendAllText(file, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) + " " + line + Environment.NewLine);
+            }
+        }
+        catch
+        {
+            // logging must never break the app
+        }
+    }
+
+    private static readonly object LogGate = new();
+
+    /// <summary>A message with URLs cut out (they carry tokens).</summary>
+    public static string Redact(string message) => UrlPattern().Replace(message ?? "", "<url>");
 
     [GeneratedRegex(@"\b\w+://\S+")]
     private static partial Regex UrlPattern();

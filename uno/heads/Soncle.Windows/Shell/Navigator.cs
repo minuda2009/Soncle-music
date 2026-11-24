@@ -71,9 +71,11 @@ internal sealed class Navigator
         }
         catch (Exception e)
         {
-            Playback.PlaybackHost.Log($"page-failed {page.Key} {e.GetType().Name}: {e.Message}");
+            Playback.PlaybackHost.Log($"page-failed {page.Key} {e}");
+            var why = e is AggregateException { InnerException: { } inner } ? inner : e;
             content = Ui.Message("Couldn't load this page",
-                "Check your connection and try again. If it keeps happening, YouTube may have changed something on its side.",
+                "Check your connection and try again. If it keeps happening, YouTube may have changed something on its side.\n\n"
+                + $"Details: {why.GetType().Name}: {Playback.PlaybackHost.Redact(why.Message)}",
                 "Try again", Reload);
         }
         if (seq != _seq) return;
