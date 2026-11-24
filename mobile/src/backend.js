@@ -71,10 +71,10 @@ const ready = (async () => {
     store = { ...defaults, ...raw, settings: { ...defaultSettings, ...(raw.settings || {}), eq: { ...defaultSettings.eq, ...(raw.settings?.eq || {}) } } };
   }
   Object.assign(store.settings, MOBILE_SETTINGS);
-  if (!store.settings.mobileQuality) { store.settings.quality = 'auto'; store.settings.mobileQuality = 1; }   // phones start on Auto
+  if (!DESKTOP && !store.settings.mobileQuality) { store.settings.quality = 'auto'; store.settings.mobileQuality = 1; }   // phones start on Auto
   // Older Android builds forced per-device profiles off (the phone couldn't tell the output); now
   // that it can, turn them on once for people who already had the app.
-  if (!store.settings.mobileProfiles) { store.settings.perDeviceSound = true; store.settings.autoDeviceEq = true; store.settings.mobileProfiles = 1; }
+  if (!DESKTOP && !store.settings.mobileProfiles) { store.settings.perDeviceSound = true; store.settings.autoDeviceEq = true; store.settings.mobileProfiles = 1; }
   flowDb = (await readJson('flow-features.json')) || {};
   yt.configure({ cache: 'yt', lang: store.settings.lang, location: store.settings.location });
   langSnap = store.settings.lang + '|' + store.settings.location;
@@ -375,7 +375,7 @@ const api = {
   restore: withReady(restore),
   clearCache: withReady(async () => { yt.configure({}); return true; }),
   openExternal: async (u) => { if (/^https?:\/\//.test(u)) await Browser.open({ url: u }); return true; },
-  info: async () => ({ version: VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: false, micaSupported: false, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
+  info: async () => ({ version: DESKTOP ? VERSION + ' (Windows preview)' : VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: false, micaSupported: false, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
   licences: async () => (await fetch('THIRD_PARTY_NOTICES.md')).text(),
   hpSearch: withReady((q) => autoeq.search(String(q || '').slice(0, 80))),
   hpMatch: withReady((m) => autoeq.match(String(m || '').slice(0, 120)).catch(() => null)),
@@ -426,6 +426,11 @@ const api = {
   onWinState: noop,
   onDuck: noop
 };
+// The Windows app finds its output device the desktop way (in the shared UI), not through the
+// phone's native output reporting.
+if (DESKTOP) {
+  for (const k of ['audioOutput', 'onAudioOutput', 'bluetoothPermission', 'requestBluetoothPermission']) delete api[k];
+}
 let importCancelled = false;
 const importListeners = [];
 

@@ -147,16 +147,52 @@ internal sealed partial class WebShell : IDisposable
         };
         core.NavigationStarting += (_, e) =>
         {
-            // the app never navigates away from itself; links go to the browser
-            if (!e.Uri.StartsWith(Origin + "/", StringComparison.OrdinalIgnoreCase))
+            // the app never navigates away from itself; links go to the browser. blob:/data:
+            // (a backup being saved) and about: stay with WebView2.
+            if (!e.Uri.StartsWith(Origin + "/", StringComparison.OrdinalIgnoreCase)
+                && !e.Uri.StartsWith("blob:", StringComparison.OrdinalIgnoreCase)
+                && !e.Uri.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+                && !e.Uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
             {
                 e.Cancel = true;
                 OpenExternal(e.Uri);
             }
         };
-        core.ProcessFailed += (_, e) => Log($"webview-process-failed {e.ProcessFailedKind}");
+        core.ProcessFailed += (sender, e) =>
+        {
+            Log($"webview-process-failed {e.ProcessFailedKind}");
+            // a crashed or killed page comes back instead of leaving a blank window
+            if (e.ProcessFailedKind is CoreWebView2ProcessFailedKind.RenderProcessExited or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
+            {
+                try { sender.Reload(); } catch (Exception ex) { Log($"reload-failed {ex.GetType().Name}"); }
+            }
+        };
+        _window.AppWindow.Closing += OnClosing;
         core.Navigate(Origin + "/index.html");
         Log("started");
+    }
+
+    private bool _flushed;
+
+    /// <summary>
+    /// Before the window closes, the page saves what it still holds (library, Flow data — the
+    /// same "pause" the Android app gets when it goes to the background), then the window closes.
+    /// </summary>
+    private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_flushed || _view.CoreWebView2 is not { } core) return;
+        args.Cancel = true;
+        _flushed = true;
+        try
+        {
+            core.PostWebMessageAsJson("{\"type\":\"pause\"}");
+            await Task.Delay(600);
+        }
+        catch (Exception ex)
+        {
+            Log($"flush-failed {ex.GetType().Name}");
+        }
+        _window.Close();
     }
 
     // ---- requests -----------------------------------------------------------------------------
