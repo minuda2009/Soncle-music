@@ -1032,3 +1032,5 @@ body.acrylic #modal { background: rgb(0 0 0 / .32); }
 .wc-close:hover { background: #c42b1c; color: #fff; }
 .wc-close:active { background: #c42b1c; color: rgb(255 255 255 / .7); }
 .wc-btn:focus-visible { outline-offset: -2px; border-radius: 0; }
+/* keep Now Playing's "Playing from" clear of the caption buttons */
+body.own-caption .np-top { padding-right: 154px; }

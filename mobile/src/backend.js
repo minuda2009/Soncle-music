@@ -160,6 +160,7 @@ const streamKeys = new Map();   // key → { id, s }, oldest first
 const keyFor = new Map();       // video id → its current key
 let streamSeq = 0;
 function dropKey(k) { streamKeys.delete(k); Soncle.forgetStream({ key: k }).catch(() => {}); }
+let desktopStreamsOff = false;   // Windows preview: set once the host's stream proxy fails
 function nativeStreamUrl(id, force) {
   let key = keyFor.get(id);
   if (force || !key) {
@@ -340,10 +341,24 @@ const api = {
     // On the phone a reload keeps the song's download (it retries and refreshes its own URL);
     // only a song whose lookup failed is looked up again.
     // Windows: the C# host's port of the same stream proxy (Web/WebStreams.cs)
-    if (native || DESKTOP) return nativeStreamUrl(t.id, false);
+    if (native) return nativeStreamUrl(t.id, false);
+    if (DESKTOP && !desktopStreamsOff) return nativeStreamUrl(t.id, false);
     if (bust) yt.invalidateStream(t.id);
     return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, !!bust)), quality: quality() }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
   },
+  // Windows preview: the host's stream proxy failed for this song. Note why in the host's log,
+  // then play through the in-page path (as the phone's web build does) from now on.
+  srcFallback: DESKTOP ? async (t) => {
+    if (desktopStreamsOff) return null;
+    desktopStreamsOff = true;
+    try {
+      const r = await fetch(nativeStreamUrl(t.id, false), { headers: { Range: 'bytes=0-1' } });
+      hostPost({ type: 'log', text: `native stream failed for playback: HTTP ${r.status} ${r.statusText} ${r.headers.get('content-type') || ''}` });
+    } catch (e) {
+      hostPost({ type: 'log', text: 'native stream failed for playback: ' + (e?.message || e) });
+    }
+    return mediaSourceUrl(t.id, { stream: async (id) => { await ready; return { ...(await stream(id, true)), quality: quality() }; }, range: (s, a, b) => rangeOf(s, t.id, a, b), log });
+  } : undefined,
   range: withReady((id, from, to) => range(id, from, to)),
 
   signIn: withReady(async () => {

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: if a song won't start through the new native stream proxy, Soncle
+  now plays it through the in-page streaming path instead of failing ("no supported source"), and
+  writes the reason to its log. "Playing from" in Now Playing no longer sits under the window buttons.
 - Soncle Preview for Windows: minimise, maximise and close now respond to one click. They sat on top
   of the page's drag area, so a click was taken as a title-bar click and two as a double-click
   (restore). The app now draws its own buttons. Clicking into the window from another app also

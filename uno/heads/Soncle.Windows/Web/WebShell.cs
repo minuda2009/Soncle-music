@@ -678,6 +678,10 @@ internal sealed partial class WebShell : IDisposable
                 case "call":
                     _ = CallAsync(sender, m.Clone());
                     break;
+                case "log":
+                    if (m.TryGetProperty("text", out var lt) && lt.GetString() is { } text)
+                        Log("page: " + Redact(text.Length > 300 ? text[..300] : text));
+                    break;
                 case "titlebar":
                     // the page sends the caption *symbol* colour (light symbols on a dark page)
                     if (m.TryGetProperty("color", out var c) && c.GetString() is { } color && IsLight(color) is { } light)

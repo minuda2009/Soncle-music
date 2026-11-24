@@ -186,7 +186,7 @@ internal sealed class WebStreams
         }
         var offset = (int)(start - (long)piece * Chunk);
         var count = (int)(end - start + 1);
-        var headers = $"Content-Type: {e.Mime}\nAccept-Ranges: bytes\nContent-Range: bytes {start}-{end}/{e.Length}\nCache-Control: no-cache\n{WebShell.Cors}";
+        var headers = $"Content-Type: {e.Mime}\nContent-Length: {count}\nAccept-Ranges: bytes\nContent-Range: bytes {start}-{end}/{e.Length}\nCache-Control: no-cache\n{WebShell.Cors}";
         return env.CreateWebResourceResponse(new MemoryStream(bytes, offset, count, writable: false).AsRandomAccessStream(), 206, "Partial Content", headers);
     }
 

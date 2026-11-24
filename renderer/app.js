@@ -2256,7 +2256,14 @@ async function loadTrack(t, tok, { startAt = 0, autoplay = true } = {}) {
     setStreamInfo(t, info);
     // pause pressed while the stream was being looked up (seconds on a phone): load, but don't start
     const auto = autoplay && !P.holdStart;
-    await engine.load(t, { src: srcFor(t), lufs: lufsFor(t, info), startAt, autoplay: auto });
+    try {
+      await engine.load(t, { src: srcFor(t), lufs: lufsFor(t, info), startAt, autoplay: auto });
+    } catch (e) {
+      // the Windows preview can fall back from its native stream proxy to the in-page path
+      const alt = tok === P.loadToken && api.srcFallback && !isLocal(t) ? await api.srcFallback(t).catch(() => null) : null;
+      if (!alt) throw e;
+      await engine.load(t, { src: alt, lufs: lufsFor(t, info), startAt, autoplay: auto });
+    }
     if (tok !== P.loadToken) return;
     if (!P.streamInfo?.txt.includes('kHz')) setStreamInfo(t, info);
     P.errors = 0;
