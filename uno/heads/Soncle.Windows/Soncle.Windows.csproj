@@ -12,6 +12,10 @@
     <!-- The preview shares the shipping app's icon but nothing else: its own name, its own app id,
          installed side by side (docs/WINUI_PLAN.md §10). -->
     <ApplicationTitle>Soncle Preview</ApplicationTitle>
+    <!-- what Task Manager shows for the app process (its file description), instead of "Soncle.Windows" -->
+    <AssemblyTitle>Soncle</AssemblyTitle>
+    <Product>Soncle</Product>
+    <Company>minuda2009</Company>
     <ApplicationId>com.minuda2009.soncle.preview</ApplicationId>
     <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>

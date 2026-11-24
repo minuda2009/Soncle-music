@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: Task Manager lists the app as "Soncle" instead of "Soncle.Windows".
 - Soncle Preview for Windows: the hidden page that makes YouTube's anti-bot tokens now runs inside
   Soncle's own browser (a private profile of its own) instead of starting a second browser with its
   own GPU and network processes.
