@@ -450,6 +450,21 @@ const api = {
 // The Windows app finds its output device the desktop way (in the shared UI), not through the
 // phone's native output reporting.
 if (DESKTOP) {
+  // Local music: the C# host's port of the desktop app's local library (Web/WebLocalFiles.cs);
+  // files play from /_soncle/local/<id>, like mstream:// did on the desktop app.
+  Object.assign(api, {
+    localFolders: () => Soncle.localFolders(),
+    localAddFolder: () => Soncle.localAddFolder(),
+    localRemoveFolder: (dir) => Soncle.localRemoveFolder({ dir }),
+    localScan: () => Soncle.localScan(),
+    localTracks: () => Soncle.localTracks(),
+    localOpen: (paths) => Soncle.localOpen({ paths: paths || [] }),
+    localPending: () => Soncle.localPending(),
+    localReveal: (id) => Soncle.localReveal({ id }),
+    onLocalProgress: (fn) => { Soncle.addListener('localProgress', fn); },
+  });
+  const phoneSrcFor = api.srcFor;
+  api.srcFor = (t, bust) => (/^lc_[0-9a-f]{16}$/.test(t?.id || '') ? `${location.origin}/_soncle/local/${t.id}${bust ? '?r=' + Date.now() : ''}` : phoneSrcFor(t, bust));
   for (const k of ['audioOutput', 'onAudioOutput', 'bluetoothPermission', 'requestBluetoothPermission']) delete api[k];
 }
 let importCancelled = false;

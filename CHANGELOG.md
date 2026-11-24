@@ -19,7 +19,10 @@
   (liked songs, playlists, history, settings, Flow data) from `%APPDATA%\Soncle`. Copy only; the
   desktop app is untouched and you sign in again.
 - **Media keys and Windows' media controls** work, through the native C# media session.
-- For now the preview keeps its library inside its own WebView profile, and has no sign-in, downloads or local files yet. A log is kept at
+- **Local files** are back, on the C# port of the desktop app's local library (TagLib tags, cover
+  art, folders, rescans, "open files", Explorer's "Open with"); your folders come over from the
+  desktop app on the first start.
+- For now the preview keeps its library inside its own WebView profile, and has no sign-in or downloads yet. A log is kept at
   `%LOCALAPPDATA%\Soncle Preview\soncle.log`. The Electron and Android apps are unchanged.
 
 ## Unreleased: C# app — local files and Discord ported, all of `uno/`'s planned libraries done

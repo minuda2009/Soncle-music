@@ -11,7 +11,8 @@ export const Capacitor = {
   getPlatform: () => 'windows',
 };
 
-const HOST_METHODS = new Set(['botguardLoad', 'botguardExec', 'botguardReset', 'mediaUpdate', 'carryOver']);
+const HOST_METHODS = new Set(['botguardLoad', 'botguardExec', 'botguardReset', 'mediaUpdate', 'carryOver',
+  'localFolders', 'localAddFolder', 'localRemoveFolder', 'localScan', 'localTracks', 'localOpen', 'localPending', 'localReveal']);
 const events = new Map();   // Soncle plugin events from the host, e.g. mediaAction
 const pending = new Map();
 let seq = 0;

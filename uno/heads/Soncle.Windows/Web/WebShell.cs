@@ -54,6 +54,7 @@ internal sealed partial class WebShell : IDisposable
     private readonly BotGuardPageFactory _botGuardFactory;
     private IBotGuardPage? _botGuard;
     private WebMediaSession? _media;
+    private WebLocalFiles? _local;
     private readonly HttpClient _http;
     private readonly string _root;
     private bool _disposed;
@@ -218,6 +219,14 @@ internal sealed partial class WebShell : IDisposable
         _window.AppWindow.Closing += OnClosing;
         try
         {
+            _local = new WebLocalFiles(DataFolder, _window, Origin);
+        }
+        catch (Exception e)
+        {
+            Log($"local-files-unavailable {e.GetType().Name}: {e.Message}");
+        }
+        try
+        {
             _media = new WebMediaSession(_window, _window.DispatcherQueue, (action, seekTime) =>
             {
                 var data = new JsonObject { ["action"] = action };
@@ -277,7 +286,31 @@ internal sealed partial class WebShell : IDisposable
             _ = RelayAsync(sender, e, uri, deferral);
             return;
         }
+        if (WebLocalFiles.Handles(uri.AbsolutePath) && _local is { } local)
+        {
+            var deferral = e.GetDeferral();
+            var range = e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null;
+            _ = ServeLocalAsync(sender.Environment, e, local, uri, range, deferral);
+            return;
+        }
         e.Response = ServeFile(sender.Environment, uri);
+    }
+
+    private static async Task ServeLocalAsync(CoreWebView2Environment env, CoreWebView2WebResourceRequestedEventArgs e, WebLocalFiles local, Uri uri, string? range, global::Windows.Foundation.Deferral deferral)
+    {
+        try
+        {
+            e.Response = await local.ServeAsync(env, uri, range);
+        }
+        catch (Exception ex)
+        {
+            Log($"local-serve-failed {ex.GetType().Name}");
+            try { e.Response = env.CreateWebResourceResponse(null, 500, "Internal Server Error", ""); } catch { /* gone */ }
+        }
+        finally
+        {
+            deferral.Complete();
+        }
     }
 
     private CoreWebView2WebResourceResponse ServeFile(CoreWebView2Environment env, Uri uri)
@@ -481,7 +514,9 @@ internal sealed partial class WebShell : IDisposable
         var args = m.TryGetProperty("args", out var a) ? a : default;
         try
         {
-            JsonObject data;
+            JsonNode data;
+            string Arg(string k) => args.ValueKind == JsonValueKind.Object && args.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+            var local = _local;
             switch (method)
             {
                 case "botguardLoad":
@@ -506,6 +541,41 @@ internal sealed partial class WebShell : IDisposable
                     break;
                 case "carryOver":
                     data = CarryOverDesktopLibrary();
+                    break;
+                case "localFolders":
+                    data = local?.Folders() ?? new JsonArray();
+                    break;
+                case "localAddFolder":
+                    data = local is null ? new JsonArray() : await local.AddFolderAsync();
+                    break;
+                case "localRemoveFolder":
+                    data = local?.RemoveFolder(Arg("dir")) ?? new JsonArray();
+                    break;
+                case "localScan":
+                    data = local is null ? new JsonObject { ["count"] = 0 } : await local.ScanAsync(p =>
+                        _window.DispatcherQueue.TryEnqueue(() => Reply(core, new JsonObject
+                        {
+                            ["type"] = "event",
+                            ["event"] = "localProgress",
+                            ["data"] = new JsonObject { ["done"] = p.Done, ["total"] = p.Total, ["finished"] = p.Finished },
+                        })));
+                    break;
+                case "localTracks":
+                    data = local?.Tracks() ?? new JsonArray();
+                    break;
+                case "localOpen":
+                {
+                    var paths = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("paths", out var ps) && ps.ValueKind == JsonValueKind.Array
+                        ? ps.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToList()
+                        : null;
+                    data = local is null ? new JsonArray() : await local.OpenAsync(paths);
+                    break;
+                }
+                case "localPending":
+                    data = local is null ? new JsonArray() : await local.PendingAsync();
+                    break;
+                case "localReveal":
+                    data = JsonValue.Create(local?.Reveal(Arg("id")) ?? false);
                     break;
                 case "botguardReset":
                     _botGuard?.Dispose();
@@ -674,6 +744,7 @@ internal sealed partial class WebShell : IDisposable
         _disposed = true;
         _botGuard?.Dispose();
         _media?.Dispose();
+        try { _local?.Flush(); } catch { /* best effort */ }
         _http.Dispose();
     }
 }
