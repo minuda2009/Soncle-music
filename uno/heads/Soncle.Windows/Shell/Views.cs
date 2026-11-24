@@ -111,7 +111,7 @@ internal sealed class Views
     }
 
     /// <summary>A list of song rows; picking one plays the whole list from there.</summary>
-    private UIElement SongList(IReadOnlyList<YtItem> items, bool numbered = false, bool showAlbum = true)
+    private StackPanel SongList(IReadOnlyList<YtItem> items, bool numbered = false, bool showAlbum = true)
     {
         var pairs = items.Select(i => (Item: i, Song: SongItem.From(i))).Where(p => p.Song is not null).ToList();
         var songs = pairs.Select(p => p.Song!).ToList();

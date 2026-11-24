@@ -131,7 +131,7 @@ internal sealed partial class PlaybackHost : IDisposable
 
     /// <summary>What the player bar, Now Playing and the media session show for a queued id.</summary>
     public SongItem? Describe(string id) =>
-        id is not null && _known.TryGetValue(id, out var s) ? s : Search.Find(id);
+        _known.TryGetValue(id, out var s) ? s : Search.Find(id);
 
     /// <summary>Raised on the UI thread when the queue's contents change (not on every song change).</summary>
     public event EventHandler? QueueChanged;
