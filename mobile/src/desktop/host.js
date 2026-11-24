@@ -8,7 +8,9 @@ export const post = (msg) => {
   try { window.chrome?.webview?.postMessage(msg); } catch { /* not inside the Windows app */ }
 };
 
-const RELAY = '/_soncle/http?u=';
+// the host's services live on their own name; the app's files come from WebView2's folder mapping
+export const SERVICES = 'https://host.soncle.local';
+const RELAY = SERVICES + '/_soncle/http?u=';
 const nativeFetch = window.fetch.bind(window);
 
 async function relayFetch(input, init = {}) {
@@ -27,17 +29,17 @@ async function relayFetch(input, init = {}) {
     body = init.body;
   }
   const u = new URL(url, location.href);
-  if (u.origin === location.origin || !/^https?:$/.test(u.protocol)) return nativeFetch(input, init);
-  // every header (User-Agent, Origin, Referer and friends included) travels as one JSON header;
-  // the host puts them back on the real request
+  if (u.origin === location.origin || u.origin === SERVICES || !/^https?:$/.test(u.protocol)) return nativeFetch(input, init);
+  // every header (User-Agent, Origin, Referer and friends included) travels as JSON in the URL;
+  // the host puts them back on the real request. No custom header, so no CORS preflight.
   const all = {};
   headers.forEach((v, k) => { all[k] = v; });
-  return nativeFetch(RELAY + encodeURIComponent(u.href), {
+  return nativeFetch(RELAY + encodeURIComponent(u.href) + '&h=' + encodeURIComponent(JSON.stringify(all)), {
     method,
     body,
     signal,
-    headers: { 'x-soncle-headers': JSON.stringify(all) },
     cache: 'no-store',
+    credentials: 'omit',
   });
 }
 

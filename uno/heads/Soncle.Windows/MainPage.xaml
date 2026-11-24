@@ -3,12 +3,13 @@
     x:Class="Soncle.Windows.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="#0E0E13">
+    Background="Transparent">
 
     <!-- The whole window is Soncle's web UI (the same one the Android app runs), in WebView2;
          Web/WebShell.cs serves it and gives it what a browser can't (docs/WINUI_PLAN.md). -->
     <Grid>
-        <WebView2 x:Name="Web" DefaultBackgroundColor="#0E0E13" />
+        <!-- Transparent, so Mica shows through where the page lets it (body.mica in styles.css). -->
+        <WebView2 x:Name="Web" DefaultBackgroundColor="Transparent" />
 
         <!-- WinUI's own drag region is this 1x1 spot; the page marks its title bar itself
              (-webkit-app-region: drag), as in the Electron app. -->

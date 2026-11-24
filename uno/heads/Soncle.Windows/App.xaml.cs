@@ -26,8 +26,8 @@ public partial class App : Application
         // in MainPage draws the same string. Unpackaged, it otherwise comes from the exe, so set it
         // to the name the preview installs/runs under (docs/WINUI_PLAN.md §10).
         MainWindow = new Window { Title = WindowTitle };
-        // The web UI drives Windows' media controls through navigator.mediaSession in WebView2;
-        // the native media session (WindowChrome.UseMediaSession) returns with native playback.
+        // Mica behind the page (the page decides how much shows, like the desktop app's setting)
+        WindowChrome.UseMica(MainWindow);
 
         if (MainWindow.Content is not Frame rootFrame)
         {

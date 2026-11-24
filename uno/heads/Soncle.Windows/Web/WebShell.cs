@@ -34,7 +34,14 @@ internal sealed partial class WebShell : IDisposable
 {
     public const string Host = "app.soncle.local";
     private const string Origin = "https://" + Host;
+    /// <summary>The host's own services (relay, local files) live on a second name: the app's
+    /// files come from WebView2's fast folder mapping, which can't be intercepted.</summary>
+    public const string ServiceHost = "host.soncle.local";
+    private const string ServiceOrigin = "https://" + ServiceHost;
     private const string RelayPath = "/_soncle/http";
+
+    /// <summary>Lets the app's page read the services' answers (and media from them).</summary>
+    public const string Cors = "Access-Control-Allow-Origin: " + "https://" + Host + "\nAccess-Control-Expose-Headers: *\nAccess-Control-Allow-Methods: GET, POST, HEAD, OPTIONS\nAccess-Control-Allow-Headers: *\nAccess-Control-Max-Age: 86400";
 
     private static readonly HashSet<string> SkipRequestHeaders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -213,7 +220,8 @@ internal sealed partial class WebShell : IDisposable
             e.Handled = true;
         };
 
-        core.AddWebResourceRequestedFilter(Origin + "/*", CoreWebView2WebResourceContext.All);
+        core.SetVirtualHostNameToFolderMapping(Host, _root, CoreWebView2HostResourceAccessKind.Allow);
+        core.AddWebResourceRequestedFilter(ServiceOrigin + "/*", CoreWebView2WebResourceContext.All);
         core.WebResourceRequested += OnResourceRequested;
         core.WebMessageReceived += OnMessage;
         core.NewWindowRequested += (_, e) =>
@@ -246,7 +254,7 @@ internal sealed partial class WebShell : IDisposable
         _window.AppWindow.Closing += OnClosing;
         try
         {
-            _local = new WebLocalFiles(DataFolder, _window, Origin);
+            _local = new WebLocalFiles(DataFolder, _window, ServiceOrigin);
         }
         catch (Exception e)
         {
@@ -354,6 +362,11 @@ internal sealed partial class WebShell : IDisposable
             e.Response = sender.Environment.CreateWebResourceResponse(null, 400, "Bad Request", "");
             return;
         }
+        if (string.Equals(e.Request.Method, "OPTIONS", StringComparison.OrdinalIgnoreCase))
+        {
+            e.Response = sender.Environment.CreateWebResourceResponse(null, 204, "No Content", Cors);
+            return;
+        }
         if (string.Equals(uri.AbsolutePath, RelayPath, StringComparison.Ordinal))
         {
             var deferral = e.GetDeferral();
@@ -439,7 +452,7 @@ internal sealed partial class WebShell : IDisposable
             var target = QueryValue(uri.Query, "u");
             if (target is null || !Uri.TryCreate(target, UriKind.Absolute, out var to) || (to.Scheme != Uri.UriSchemeHttps && to.Scheme != Uri.UriSchemeHttp))
             {
-                e.Response = env.CreateWebResourceResponse(null, 400, "Bad Request", "");
+                e.Response = env.CreateWebResourceResponse(null, 400, "Bad Request", Cors);
                 return;
             }
 
@@ -454,7 +467,10 @@ internal sealed partial class WebShell : IDisposable
                 req.Content = new ByteArrayContent(body);
             }
 
-            var json = e.Request.Headers.Contains("x-soncle-headers") ? e.Request.Headers.GetHeader("x-soncle-headers") : null;
+            // the page's headers come as JSON in the URL (?h=), so the request stays a "simple" one
+            // with no CORS preflight; the old header form is still read
+            var json = QueryValue(uri.Query, "h")
+                ?? (e.Request.Headers.Contains("x-soncle-headers") ? e.Request.Headers.GetHeader("x-soncle-headers") : null);
             if (!string.IsNullOrEmpty(json))
             {
                 using var doc = JsonDocument.Parse(json);
@@ -491,6 +507,7 @@ internal sealed partial class WebShell : IDisposable
             }
             var status = (int)res.StatusCode;
             var stream = status is 204 or 304 || method == HttpMethod.Head ? null : new MemoryStream(bytes, writable: false).AsRandomAccessStream();
+            headers.Append(Cors).Append('\n');
             var reason = string.IsNullOrEmpty(res.ReasonPhrase) ? "OK" : res.ReasonPhrase;
             try
             {
@@ -500,7 +517,7 @@ internal sealed partial class WebShell : IDisposable
             {
                 // WebView2 refused a header: answer with only the ones the page needs
                 Log($"relay-headers-refused {hx.GetType().Name}");
-                var basic = new StringBuilder();
+                var basic = new StringBuilder(Cors + "\n");
                 if (res.Content.Headers.ContentType is { } ct) basic.Append("Content-Type: ").Append(ct).Append('\n');
                 if (res.Content.Headers.ContentRange is { } cr) basic.Append("Content-Range: ").Append(cr).Append('\n');
                 var again = status is 204 or 304 || method == HttpMethod.Head ? null : new MemoryStream(bytes, writable: false).AsRandomAccessStream();
@@ -515,7 +532,7 @@ internal sealed partial class WebShell : IDisposable
                 // the reason travels in the status text, so the page's error message shows it
                 var why = new string(($"Relay {ex.GetType().Name}: " + Redact(ex.InnerException?.Message ?? ex.Message))
                     .Where(ch => ch >= 0x20 && ch < 0x7F).Take(180).ToArray());
-                e.Response = env.CreateWebResourceResponse(null, 502, why, "");
+                e.Response = env.CreateWebResourceResponse(null, 502, why, Cors);
             }
             catch
             {

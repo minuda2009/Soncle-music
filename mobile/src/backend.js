@@ -89,7 +89,7 @@ const ready = (async () => {
     upgradeSettings(raw.settings);
     store = { ...defaults, ...raw, settings: { ...defaultSettings, ...(raw.settings || {}), eq: { ...defaultSettings.eq, ...(raw.settings?.eq || {}) } } };
   }
-  Object.assign(store.settings, MOBILE_SETTINGS);
+  Object.assign(store.settings, DESKTOP ? { closeToTray: false, smartDuck: 'off', discord: false } : MOBILE_SETTINGS);
   if (!DESKTOP && !store.settings.mobileQuality) { store.settings.quality = 'auto'; store.settings.mobileQuality = 1; }   // phones start on Auto
   // Older Android builds forced per-device profiles off (the phone couldn't tell the output); now
   // that it can, turn them on once for people who already had the app.
@@ -396,7 +396,7 @@ const api = {
   restore: withReady(restore),
   clearCache: withReady(async () => { yt.configure({}); return true; }),
   openExternal: async (u) => { if (/^https?:\/\//.test(u)) await Browser.open({ url: u }); return true; },
-  info: async () => ({ version: DESKTOP ? VERSION + ' (Windows preview)' : VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: false, micaSupported: false, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
+  info: async () => ({ version: DESKTOP ? VERSION + ' (Windows preview)' : VERSION, discord: false, platform: DESKTOP ? 'win32' : 'android', mobile: !DESKTOP, mica: DESKTOP && store.settings.mica !== false, micaSupported: DESKTOP, dark: matchMedia('(prefers-color-scheme: dark)').matches }),
   licences: async () => (await fetch('THIRD_PARTY_NOTICES.md')).text(),
   hpSearch: withReady((q) => autoeq.search(String(q || '').slice(0, 80))),
   hpMatch: withReady((m) => autoeq.match(String(m || '').slice(0, 120)).catch(() => null)),
@@ -464,7 +464,7 @@ if (DESKTOP) {
     onLocalProgress: (fn) => { Soncle.addListener('localProgress', fn); },
   });
   const phoneSrcFor = api.srcFor;
-  api.srcFor = (t, bust) => (/^lc_[0-9a-f]{16}$/.test(t?.id || '') ? `${location.origin}/_soncle/local/${t.id}${bust ? '?r=' + Date.now() : ''}` : phoneSrcFor(t, bust));
+  api.srcFor = (t, bust) => (/^lc_[0-9a-f]{16}$/.test(t?.id || '') ? `https://host.soncle.local/_soncle/local/${t.id}${bust ? '?r=' + Date.now() : ''}` : phoneSrcFor(t, bust));
   for (const k of ['audioOutput', 'onAudioOutput', 'bluetoothPermission', 'requestBluetoothPermission']) delete api[k];
 }
 let importCancelled = false;

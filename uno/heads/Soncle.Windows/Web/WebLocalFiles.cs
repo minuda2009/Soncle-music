@@ -130,20 +130,20 @@ internal sealed class WebLocalFiles
         var rest = uri.AbsolutePath[Prefix.Length..];
         var art = rest.EndsWith("/art", StringComparison.Ordinal);
         var id = art ? rest[..^4] : rest.TrimEnd('/');
-        if (!LocalLibrary.IsLocalId(id)) return env.CreateWebResourceResponse(null, 404, "Not Found", "");
+        if (!LocalLibrary.IsLocalId(id)) return env.CreateWebResourceResponse(null, 404, "Not Found", WebShell.Cors);
 
         if (art)
         {
             var a = await _lib.ArtworkAsync(id);
             if (a is not null)
-                return env.CreateWebResourceResponse(new MemoryStream(a.Data, writable: false).AsRandomAccessStream(), 200, "OK", $"Content-Type: {a.Mime}\nCache-Control: max-age=86400");
+                return env.CreateWebResourceResponse(new MemoryStream(a.Data, writable: false).AsRandomAccessStream(), 200, "OK", $"Content-Type: {a.Mime}\nCache-Control: max-age=86400\n{WebShell.Cors}");
             var svg = System.Text.Encoding.UTF8.GetBytes(LocalLibrary.PlaceholderArt(id));
-            return env.CreateWebResourceResponse(new MemoryStream(svg, writable: false).AsRandomAccessStream(), 200, "OK", "Content-Type: image/svg+xml");
+            return env.CreateWebResourceResponse(new MemoryStream(svg, writable: false).AsRandomAccessStream(), 200, "OK", "Content-Type: image/svg+xml\n" + WebShell.Cors);
         }
 
         var file = _lib.PathFor(id);
         if (file is null || !File.Exists(file))
-            return env.CreateWebResourceResponse(null, 404, "File not found - it may have been moved or deleted.", "");
+            return env.CreateWebResourceResponse(null, 404, "File not found - it may have been moved or deleted.", WebShell.Cors);
         var mime = LocalLibrary.Mime.TryGetValue(Path.GetExtension(file), out var m) ? m : "audio/mpeg";
         var size = new FileInfo(file).Length;
 
@@ -156,7 +156,7 @@ internal sealed class WebLocalFiles
             if (spec.Length > 1 && long.TryParse(spec[1], out var e)) end = e;
             partial = true;
         }
-        if (start >= size) return env.CreateWebResourceResponse(null, 416, "Range Not Satisfiable", $"Content-Range: bytes */{size}");
+        if (start >= size) return env.CreateWebResourceResponse(null, 416, "Range Not Satisfiable", $"Content-Range: bytes */{size}\n{WebShell.Cors}");
         end = Math.Min(Math.Min(end, size - 1), start + MaxChunk - 1);
         if (!partial && end < size - 1) partial = true;   // a big file comes in pieces too
 
@@ -172,7 +172,7 @@ internal sealed class WebLocalFiles
                 read += n;
             }
         }
-        var headers = $"Content-Type: {mime}\nAccept-Ranges: bytes\nCache-Control: no-cache";
+        var headers = $"Content-Type: {mime}\nAccept-Ranges: bytes\nCache-Control: no-cache\n{WebShell.Cors}";
         if (partial) headers += $"\nContent-Range: bytes {start}-{end}/{size}";
         return env.CreateWebResourceResponse(new MemoryStream(buf, writable: false).AsRandomAccessStream(),
             partial ? 206 : 200, partial ? "Partial Content" : "OK", headers);
