@@ -408,7 +408,7 @@ internal sealed partial class WebShell : IDisposable
         if (_tray is not null) return;
         try
         {
-            _tray = new TrayIcon(Path.Combine(AppContext.BaseDirectory, "icon.ico"), OnTray);
+            _tray = new TrayIcon(Path.Combine(AppContext.BaseDirectory, "tray.ico"), OnTray);
             _tray.Update(_trackTitle, _trackArtist, _playing);
         }
         catch (Exception ex)
