@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased: Soncle Preview for Windows runs the full Soncle UI (C# shell + WebView2)
+- Soncle Preview for Windows: the mini player works (a small always-on-top window, as in 1.0.0),
+  and "Keep running in the tray" works: closing the window keeps music playing, and the tray icon
+  has Play/Pause, Next, Previous, Show Soncle and Quit.
+- Soncle Preview for Windows: changing any setting no longer turns Mica and the tray option off.
 - Soncle Preview for Windows: songs should start faster. BotGuard (YouTube's anti-bot tokens)
   starts with the app instead of on the first song, the next song starts downloading early as on
   the phone, and a fallback no longer looks a song up twice. Each song's lookup time goes to the log.

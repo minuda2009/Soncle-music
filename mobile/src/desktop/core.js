@@ -12,7 +12,7 @@ export const Capacitor = {
 };
 
 const HOST_METHODS = new Set(['botguardLoad', 'botguardExec', 'botguardReset', 'mediaUpdate', 'carryOver', 'registerStream', 'forgetStream',
-  'localFolders', 'localAddFolder', 'localRemoveFolder', 'localScan', 'localTracks', 'localOpen', 'localPending', 'localReveal']);
+  'localFolders', 'localAddFolder', 'localRemoveFolder', 'localScan', 'localTracks', 'localOpen', 'localPending', 'localReveal', 'setMini']);
 const events = new Map();   // Soncle plugin events from the host, e.g. mediaAction
 const pending = new Map();
 let seq = 0;

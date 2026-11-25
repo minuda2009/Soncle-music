@@ -1034,3 +1034,5 @@ body.acrylic #modal { background: rgb(0 0 0 / .32); }
 .wc-btn:focus-visible { outline-offset: -2px; border-radius: 0; }
 /* keep Now Playing's "Playing from" clear of the caption buttons */
 body.own-caption .np-top { padding-right: 154px; }
+/* the mini player has its own expand button; the window buttons would cover its controls */
+body.mini #winctl { display: none; }

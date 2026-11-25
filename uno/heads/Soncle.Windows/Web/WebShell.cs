@@ -385,14 +385,140 @@ internal sealed partial class WebShell : IDisposable
     {
         if (_flushed || _view.CoreWebView2 is null) return;
         args.Cancel = true;
+        if (_closeToTray && !_quitting)
+        {
+            // "Keep running in the tray": the window goes, the music keeps playing
+            WindowPlacement.Save(_window);
+            EnsureTray();
+            _window.AppWindow.Hide();
+            _ = UpdateMemoryAsync();
+            return;
+        }
         CloseAfterFlush();
     }
+
+    // ---- tray ---------------------------------------------------------------------------------
+
+    private TrayIcon? _tray;
+    private bool _closeToTray, _quitting;
+    private string _trackTitle = "", _trackArtist = "";
+
+    private void EnsureTray()
+    {
+        if (_tray is not null) return;
+        try
+        {
+            _tray = new TrayIcon(Path.Combine(AppContext.BaseDirectory, "icon.ico"), OnTray);
+            _tray.Update(_trackTitle, _trackArtist, _playing);
+        }
+        catch (Exception ex)
+        {
+            Log($"tray-failed {ex.GetType().Name}");
+        }
+    }
+
+    private void SetTray(bool enabled)
+    {
+        _closeToTray = enabled;
+        if (enabled) EnsureTray();
+        else if (_window.AppWindow.IsVisible) { _tray?.Dispose(); _tray = null; }
+    }
+
+    private void OnTray(TrayIcon.Command cmd)
+    {
+        var core = _view.CoreWebView2;
+        switch (cmd)
+        {
+            case TrayIcon.Command.Show:
+                ShowFromTray();
+                break;
+            case TrayIcon.Command.PlayPause:
+            case TrayIcon.Command.Next:
+            case TrayIcon.Command.Previous:
+                if (core is null) break;
+                Wake(core);
+                var action = cmd == TrayIcon.Command.Next ? "nexttrack" : cmd == TrayIcon.Command.Previous ? "previoustrack" : _playing ? "pause" : "play";
+                Reply(core, new JsonObject { ["type"] = "event", ["event"] = "mediaAction", ["data"] = new JsonObject { ["action"] = action } });
+                break;
+            case TrayIcon.Command.Quit:
+                _quitting = true;
+                ShowFromTray();
+                CloseAfterFlush();
+                break;
+        }
+    }
+
+    private void ShowFromTray()
+    {
+        try
+        {
+            if (_view.CoreWebView2 is { } core) Wake(core);
+            _window.AppWindow.Show();
+            if (_window.AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } p) p.Restore();
+            _window.Activate();
+            if (!_closeToTray) { _tray?.Dispose(); _tray = null; }
+        }
+        catch (Exception ex)
+        {
+            Log($"tray-show-failed {ex.GetType().Name}");
+        }
+    }
+
+    // ---- mini player --------------------------------------------------------------------------
+
+    private (global::Windows.Graphics.RectInt32 Bounds, bool Maximized)? _miniPrev;
+
+    private bool SetMini(bool on)
+    {
+        try
+        {
+            var aw = _window.AppWindow;
+            if (aw.Presenter is not OverlappedPresenter p) return false;
+            var scale = GetDpiForWindow(WindowNative.GetWindowHandle(_window)) / 96.0;
+            if (on && _miniPrev is null)
+            {
+                var max = p.State == OverlappedPresenterState.Maximized;
+                if (aw.Presenter.Kind == AppWindowPresenterKind.FullScreen) aw.SetPresenter(AppWindowPresenterKind.Overlapped);
+                if (max) p.Restore();
+                _miniPrev = (new global::Windows.Graphics.RectInt32(aw.Position.X, aw.Position.Y, aw.Size.Width, aw.Size.Height), max);
+                int w = (int)(420 * scale), h = (int)(170 * scale);
+                var area = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(aw.Id, Microsoft.UI.Windowing.DisplayAreaFallback.Nearest).WorkArea;
+                var x = Math.Clamp(aw.Position.X + aw.Size.Width - w - (int)(20 * scale), area.X, area.X + area.Width - w);
+                var y = Math.Clamp(aw.Position.Y + aw.Size.Height - h - (int)(20 * scale), area.Y, area.Y + area.Height - h);
+                p.IsResizable = false;
+                p.IsMaximizable = false;
+                p.IsAlwaysOnTop = true;
+                aw.MoveAndResize(new global::Windows.Graphics.RectInt32(x, y, w, h));
+            }
+            else if (!on && _miniPrev is { } prev)
+            {
+                p.IsAlwaysOnTop = false;
+                p.IsResizable = true;
+                p.IsMaximizable = true;
+                aw.MoveAndResize(prev.Bounds);
+                if (prev.Maximized) p.Maximize();
+                _miniPrev = null;
+            }
+            return _miniPrev is not null;
+        }
+        catch (Exception ex)
+        {
+            Log($"mini-failed {ex.GetType().Name}");
+            return _miniPrev is not null;
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
 
     private async void CloseAfterFlush()
     {
         if (_flushed || _view.CoreWebView2 is not { } core) { _window.Close(); return; }
         _flushed = true;
+        if (_miniPrev is not null) SetMini(false);   // remember the normal window, not the mini one
         WindowPlacement.Save(_window);
+        _tray?.Dispose();
+        _tray = null;
         try
         {
             core.PostWebMessageAsJson("{\"type\":\"pause\"}");
@@ -678,6 +804,9 @@ internal sealed partial class WebShell : IDisposable
                 case "call":
                     _ = CallAsync(sender, m.Clone());
                     break;
+                case "tray":
+                    SetTray(m.TryGetProperty("enabled", out var te) && te.ValueKind == JsonValueKind.True);
+                    break;
                 case "log":
                     if (m.TryGetProperty("text", out var lt) && lt.GetString() is { } text)
                         Log("page: " + Redact(text.Length > 300 ? text[..300] : text));
@@ -734,8 +863,14 @@ internal sealed partial class WebShell : IDisposable
                         var title = Arg("title");
                         var artist = Arg("artist");
                         _window.Title = _playing && title.Length > 0 ? (artist.Length > 0 ? $"{title} \u2022 {artist}" : title) : "Soncle Preview";
+                        _trackTitle = title;
+                        _trackArtist = artist;
+                        _tray?.Update(title, artist, _playing);
                     }
                     data = new JsonObject();
+                    break;
+                case "setMini":
+                    data = new JsonObject { ["mini"] = SetMini(args.ValueKind == JsonValueKind.Object && args.TryGetProperty("on", out var on) && on.ValueKind == JsonValueKind.True) };
                     break;
                 case "carryOver":
                     data = CarryOverDesktopLibrary();

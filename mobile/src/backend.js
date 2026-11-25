@@ -61,6 +61,8 @@ function saver(name, get, ms = 600) {
 
 // Things the phone app doesn't do (yet) are switched off rather than shown broken.
 const MOBILE_SETTINGS = { mica: false, closeToTray: false, smartDuck: 'off', discord: false };
+// Windows preview: what it can't do yet (Mica and the tray it can)
+const DESKTOP_SETTINGS = { smartDuck: 'off', discord: false };
 let store = structuredClone(defaults);
 let flowDb = {};
 let langSnap = '';
@@ -94,7 +96,8 @@ const ready = (async () => {
     upgradeSettings(raw.settings);
     store = { ...defaults, ...raw, settings: { ...defaultSettings, ...(raw.settings || {}), eq: { ...defaultSettings.eq, ...(raw.settings?.eq || {}) } } };
   }
-  Object.assign(store.settings, DESKTOP ? { closeToTray: false, smartDuck: 'off', discord: false } : MOBILE_SETTINGS);
+  Object.assign(store.settings, DESKTOP ? DESKTOP_SETTINGS : MOBILE_SETTINGS);
+  if (DESKTOP) hostPost({ type: 'tray', enabled: !!store.settings.closeToTray });
   if (!DESKTOP && !store.settings.mobileQuality) { store.settings.quality = 'auto'; store.settings.mobileQuality = 1; }   // phones start on Auto
   // Older Android builds forced per-device profiles off (the phone couldn't tell the output); now
   // that it can, turn them on once for people who already had the app.
@@ -397,7 +400,8 @@ const api = {
     if (key === 'cookie' || key === 'downloads') return false;
     store[key] = value;
     if (key === 'settings' && value) {
-      Object.assign(value, MOBILE_SETTINGS);
+      Object.assign(value, DESKTOP ? DESKTOP_SETTINGS : MOBILE_SETTINGS);
+      if (DESKTOP) hostPost({ type: 'tray', enabled: !!value.closeToTray });
       // only when the content language/region actually changed (it restarts the YouTube session)
       const snap = value.lang + '|' + value.location;
       if (snap !== langSnap) { langSnap = snap; yt.configure({ lang: value.lang, location: value.location }); }
@@ -418,7 +422,7 @@ const api = {
   onAudioOutput: (fn) => nativeOnAudioOutput(fn),
   bluetoothPermission: async () => nativeBluetoothPermission(),
   requestBluetoothPermission: async () => (await nativeRequestBluetoothPermission()).granted === true,
-  setMini: async () => false,
+  setMini: DESKTOP ? (on) => Soncle.setMini({ on: !!on }).then((r) => !!r?.mini).catch(() => false) : async () => false,
   backup: withReady(backup),
   restore: withReady(restore),
   clearCache: withReady(async () => { yt.configure({}); return true; }),
